@@ -42,9 +42,9 @@ new #[Layout('layouts.app')] class extends Component {
     <form wire:submit="confirmPassword">
         <!-- Password -->
         <div>
-            <x-input-label for="password" :value="__('Password')" />
+            <x-form.input-label for="password" :value="__('Password')" />
 
-            <x-text-input
+            <x-form.input
                 wire:model="password"
                 id="password"
                 class="mt-1 block w-full"
@@ -54,13 +54,13 @@ new #[Layout('layouts.app')] class extends Component {
                 autocomplete="current-password"
             />
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
+            <x-form.input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 
         <div class="mt-4 flex justify-end">
-            <x-primary-button>
+            <x-common.button type="submit" variant="primary">
                 {{ __('Confirm') }}
-            </x-primary-button>
+            </x-common.button>
         </div>
     </form>
 </div>

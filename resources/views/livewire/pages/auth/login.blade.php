@@ -24,14 +24,11 @@ new #[Layout('layouts.app')] class extends Component {
 }; ?>
 
 <div>
-    <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
-
     <form wire:submit="login">
         <!-- Email Address -->
         <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input
+            <x-form.input-label for="email" :value="__('Email')" />
+            <x-form.input
                 wire:model="form.email"
                 id="email"
                 class="mt-1 block w-full"
@@ -41,14 +38,14 @@ new #[Layout('layouts.app')] class extends Component {
                 autofocus
                 autocomplete="username"
             />
-            <x-input-error :messages="$errors->get('form.email')" class="mt-2" />
+            <x-form.input-error :messages="$errors->get('form.email')" class="mt-2" />
         </div>
 
         <!-- Password -->
         <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+            <x-form.input-label for="password" :value="__('Password')" />
 
-            <x-text-input
+            <x-form.input
                 wire:model="form.password"
                 id="password"
                 class="mt-1 block w-full"
@@ -58,7 +55,7 @@ new #[Layout('layouts.app')] class extends Component {
                 autocomplete="current-password"
             />
 
-            <x-input-error :messages="$errors->get('form.password')" class="mt-2" />
+            <x-form.input-error :messages="$errors->get('form.password')" class="mt-2" />
         </div>
 
         <!-- Remember Me -->
@@ -86,9 +83,9 @@ new #[Layout('layouts.app')] class extends Component {
                 </a>
             @endif
 
-            <x-primary-button class="ms-3">
+            <x-common.button type="submit" variant="primary">
                 {{ __('Log in') }}
-            </x-primary-button>
+            </x-common.button>
         </div>
     </form>
 </div>

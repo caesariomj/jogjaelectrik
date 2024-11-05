@@ -39,13 +39,15 @@ new #[Layout('layouts.app')] class extends Component {
     </div>
 
     <!-- Session Status -->
-    <x-auth-session-status class="mb-4" :status="session('status')" />
+    @if (session('status'))
+        <p class="mb-4">{{ session('status') }}</p>
+    @endif
 
     <form wire:submit="sendPasswordResetLink">
         <!-- Email Address -->
         <div>
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input
+            <x-form.input-label for="email" :value="__('Email')" />
+            <x-form.input
                 wire:model="email"
                 id="email"
                 class="mt-1 block w-full"
@@ -54,13 +56,13 @@ new #[Layout('layouts.app')] class extends Component {
                 required
                 autofocus
             />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+            <x-form.input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 
         <div class="mt-4 flex items-center justify-end">
-            <x-primary-button>
+            <x-common.button type="submit" variant="primary">
                 {{ __('Email Password Reset Link') }}
-            </x-primary-button>
+            </x-common.button>
         </div>
     </form>
 </div>

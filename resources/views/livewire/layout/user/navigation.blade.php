@@ -23,21 +23,25 @@ new class extends Component {
                 <!-- Logo -->
                 <div class="flex shrink-0 items-center">
                     <a href="{{ route('dashboard') }}" wire:navigate>
-                        <x-application-logo class="block h-9 w-auto fill-current text-gray-800" />
+                        <x-common.application-logo class="block h-9 w-auto fill-current text-gray-800" />
                     </a>
                 </div>
 
                 <!-- Navigation Links -->
                 <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
-                    <x-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
+                    <x-user.nav-link
+                        :href="route('dashboard')"
+                        :active="request()->routeIs('dashboard')"
+                        wire:navigate
+                    >
                         {{ __('Dashboard') }}
-                    </x-nav-link>
+                    </x-user.nav-link>
                 </div>
             </div>
 
             @auth
                 <div class="hidden sm:ms-6 sm:flex sm:items-center">
-                    <x-dropdown align="right" width="48">
+                    <x-common.dropdown align="right" width="48">
                         <x-slot name="trigger">
                             <button
                                 class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
@@ -65,18 +69,18 @@ new class extends Component {
                         </x-slot>
 
                         <x-slot name="content">
-                            <x-dropdown-link :href="route('profile')" wire:navigate>
+                            <x-common.dropdown-link :href="route('profile')" wire:navigate>
                                 {{ __('Profile') }}
-                            </x-dropdown-link>
+                            </x-common.dropdown-link>
 
                             <!-- Authentication -->
                             <button wire:click="logout" class="w-full text-start">
-                                <x-dropdown-link>
+                                <x-common.dropdown-link>
                                     {{ __('Log Out') }}
-                                </x-dropdown-link>
+                                </x-common.dropdown-link>
                             </button>
                         </x-slot>
-                    </x-dropdown>
+                    </x-common.dropdown>
                 </div>
             @else
                 <a href="{{ route('login') }}" wire:navigate>Login</a>
@@ -115,9 +119,13 @@ new class extends Component {
     <!-- Responsive Navigation Menu -->
     <div :class="{ 'block': open, 'hidden': !open }" class="hidden sm:hidden">
         <div class="space-y-1 pb-3 pt-2">
-            <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')" wire:navigate>
+            <x-user.responsive-nav-link
+                :href="route('dashboard')"
+                :active="request()->routeIs('dashboard')"
+                wire:navigate
+            >
                 {{ __('Dashboard') }}
-            </x-responsive-nav-link>
+            </x-user.responsive-nav-link>
         </div>
 
         @auth
@@ -134,15 +142,15 @@ new class extends Component {
                 </div>
 
                 <div class="mt-3 space-y-1">
-                    <x-responsive-nav-link :href="route('profile')" wire:navigate>
+                    <x-user.responsive-nav-link :href="route('profile')" wire:navigate>
                         {{ __('Profile') }}
-                    </x-responsive-nav-link>
+                    </x-user.responsive-nav-link>
 
                     <!-- Authentication -->
                     <button wire:click="logout" class="w-full text-start">
-                        <x-responsive-nav-link>
+                        <x-user.responsive-nav-link>
                             {{ __('Log Out') }}
-                        </x-responsive-nav-link>
+                        </x-user.responsive-nav-link>
                     </button>
                 </div>
             </div>

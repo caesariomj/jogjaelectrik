@@ -46,9 +46,9 @@ new #[Layout('layouts.app')] class extends Component {
     @endif
 
     <div class="mt-4 flex items-center justify-between">
-        <x-primary-button wire:click="sendVerification">
+        <x-common.button variant="primary" wire:click="sendVerification">
             {{ __('Resend Verification Email') }}
-        </x-primary-button>
+        </x-common.button>
 
         <button
             wire:click="logout"

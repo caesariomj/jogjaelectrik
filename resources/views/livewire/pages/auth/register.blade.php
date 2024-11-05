@@ -41,8 +41,8 @@ new #[Layout('layouts.app')] class extends Component {
     <form wire:submit="register">
         <!-- Name -->
         <div>
-            <x-input-label for="name" :value="__('Name')" />
-            <x-text-input
+            <x-form.input-label for="name" :value="__('Name')" />
+            <x-form.input
                 wire:model="name"
                 id="name"
                 class="mt-1 block w-full"
@@ -52,13 +52,13 @@ new #[Layout('layouts.app')] class extends Component {
                 autofocus
                 autocomplete="name"
             />
-            <x-input-error :messages="$errors->get('name')" class="mt-2" />
+            <x-form.input-error :messages="$errors->get('name')" class="mt-2" />
         </div>
 
         <!-- Email Address -->
         <div class="mt-4">
-            <x-input-label for="email" :value="__('Email')" />
-            <x-text-input
+            <x-form.input-label for="email" :value="__('Email')" />
+            <x-form.input
                 wire:model="email"
                 id="email"
                 class="mt-1 block w-full"
@@ -67,14 +67,14 @@ new #[Layout('layouts.app')] class extends Component {
                 required
                 autocomplete="username"
             />
-            <x-input-error :messages="$errors->get('email')" class="mt-2" />
+            <x-form.input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
 
         <!-- Password -->
         <div class="mt-4">
-            <x-input-label for="password" :value="__('Password')" />
+            <x-form.input-label for="password" :value="__('Password')" />
 
-            <x-text-input
+            <x-form.input
                 wire:model="password"
                 id="password"
                 class="mt-1 block w-full"
@@ -84,14 +84,14 @@ new #[Layout('layouts.app')] class extends Component {
                 autocomplete="new-password"
             />
 
-            <x-input-error :messages="$errors->get('password')" class="mt-2" />
+            <x-form.input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
 
         <!-- Confirm Password -->
         <div class="mt-4">
-            <x-input-label for="password_confirmation" :value="__('Confirm Password')" />
+            <x-form.input-label for="password_confirmation" :value="__('Confirm Password')" />
 
-            <x-text-input
+            <x-form.input
                 wire:model="password_confirmation"
                 id="password_confirmation"
                 class="mt-1 block w-full"
@@ -101,7 +101,7 @@ new #[Layout('layouts.app')] class extends Component {
                 autocomplete="new-password"
             />
 
-            <x-input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
+            <x-form.input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
         </div>
 
         <div class="mt-4 flex items-center justify-end">
@@ -113,9 +113,9 @@ new #[Layout('layouts.app')] class extends Component {
                 {{ __('Already registered?') }}
             </a>
 
-            <x-primary-button class="ms-4">
+            <x-common.button type="submit" variant="primary" class="ms-4">
                 {{ __('Register') }}
-            </x-primary-button>
+            </x-common.button>
         </div>
     </form>
 </div>
