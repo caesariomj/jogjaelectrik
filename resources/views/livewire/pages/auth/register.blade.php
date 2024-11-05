@@ -8,7 +8,7 @@ use Illuminate\Validation\Rules;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
-new #[Layout('layouts.guest')] class extends Component {
+new #[Layout('layouts.app')] class extends Component {
     public string $name = '';
     public string $email = '';
     public string $password = '';
@@ -29,9 +29,11 @@ new #[Layout('layouts.guest')] class extends Component {
 
         event(new Registered(($user = User::create($validated))));
 
+        $user->assignRole('user');
+
         Auth::login($user);
 
-        $this->redirect(route('dashboard', absolute: false), navigate: true);
+        $this->redirect(route('home', absolute: false), navigate: true);
     }
 }; ?>
 
