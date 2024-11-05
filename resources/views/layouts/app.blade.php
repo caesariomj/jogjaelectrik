@@ -4,6 +4,6 @@
     <livewire:layout.navigation />
 
     <main>
-        @yield('content')
+        @yield('content', $slot ?? '')
     </main>
 @endsection
