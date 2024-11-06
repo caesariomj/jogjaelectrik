@@ -6,14 +6,14 @@
 ])
 
 @php
-    $baseClasses = "inline-flex items-center justify-center rounded-md font-medium transition-all focus:outline-none";
+    $baseClasses = "inline-flex items-center justify-center gap-x-2 rounded-full px-8 py-3 text-sm font-semibold transition-all focus:outline-none";
 
     $variants = [
-        "primary" => "bg-primary text-white hover:bg-blue-600 focus:ring-2 focus:ring-blue-400 focus:ring-offset-2",
-        "secondary" => "bg-gray-200 text-gray-900 hover:bg-gray-300 focus:ring-2 focus:ring-gray-400 focus:ring-offset-2",
-        "danger" => "bg-rose-500 text-white hover:bg-red-600 focus:ring-2 focus:ring-red-400 focus:ring-offset-2",
-        "success" => "bg-emerald-500 text-white hover:bg-green-600 focus:ring-2 focus:ring-green-400 focus:ring-offset-2",
-        "outline" => "border-2 border-gray-300 text-gray-600 hover:bg-gray-50 focus:ring-2 focus:ring-offset-2",
+        "primary" => "bg-primary text-white hover:bg-primary-600 focus:ring-2 focus:ring-primary-400 focus:ring-offset-2",
+        "secondary" => "bg-neutral-100 text-black hover:bg-neutral-200 focus:ring-2 focus:ring-neutral-300 focus:ring-offset-2",
+        "danger" => "bg-red-500 text-white hover:bg-red-600 focus:ring-2 focus:ring-red-400 focus:ring-offset-2",
+        "success" => "bg-teal-500 text-white hover:bg-teal-600 focus:ring-2 focus:ring-teal-400 focus:ring-offset-2",
+        "outline" => "border border-black text-black hover:bg-neutral-100",
     ];
 
     $disabledClasses = $disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer";
