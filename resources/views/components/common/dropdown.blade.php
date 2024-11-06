@@ -17,7 +17,6 @@
     <div @click="open = ! open">
         {{ $trigger }}
     </div>
-
     <div
         x-show="open"
         x-transition:enter="transition duration-200 ease-out"

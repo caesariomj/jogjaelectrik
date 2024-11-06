@@ -15,44 +15,114 @@ new class extends Component {
     }
 }; ?>
 
-<nav x-data="{ open: false }" class="border-b border-gray-100 bg-white">
-    <!-- Primary Navigation Menu -->
-    <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div class="flex h-16 justify-between">
-            <div class="flex">
-                <!-- Logo -->
-                <div class="flex shrink-0 items-center">
-                    <a href="{{ route('dashboard') }}" wire:navigate>
-                        <x-common.application-logo class="block h-9 w-auto fill-current text-gray-800" />
-                    </a>
-                </div>
+<header class="sticky top-0 border-b border-neutral-300 bg-white">
+    <nav
+        x-data="{
+            open: false,
+            toggleNav() {
+                this.open = ! this.open
 
-                <!-- Navigation Links -->
-                <div class="hidden space-x-8 sm:-my-px sm:ms-10 sm:flex">
+                if (this.open) {
+                    document.body.style.overflow = 'hidden'
+                    document.querySelector('main').style.overflow = 'hidden'
+                    document.getElementById('responsive-navbar').style.overflowY =
+                        'scroll'
+                } else {
+                    document.body.style.overflow = ''
+                    document.querySelector('main').style.overflow = ''
+                    document.getElementById('responsive-navbar').style.overflow = ''
+                }
+            },
+        }"
+        class="relative flex items-center justify-between px-4 md:px-6"
+    >
+        <div class="flex h-14 items-center">
+            <a href="{{ route('home') }}" wire:navigate>
+                <x-common.application-logo class="block h-9 w-auto fill-current text-primary" />
+            </a>
+            <ul class="hidden md:-my-px md:ms-8 md:flex md:items-center md:space-x-4 lg:ms-12 lg:space-x-8">
+                <li>
                     <x-user.nav-link
-                        :href="route('dashboard')"
-                        :active="request()->routeIs('dashboard')"
+                        :href="route('home')"
+                        :active="request()->routeIs('home')"
+                        class="h-14"
                         wire:navigate
                     >
-                        {{ __('Dashboard') }}
+                        Beranda
                     </x-user.nav-link>
-                </div>
-            </div>
-
+                </li>
+            </ul>
+        </div>
+        <div class="flex items-center space-x-2">
+            <button type="button" class="rounded-full p-2 text-black hover:bg-neutral-100">
+                <svg
+                    class="size-5"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <circle cx="11" cy="11" r="8" />
+                    <path d="m21 21-4.3-4.3" />
+                </svg>
+            </button>
             @auth
-                <div class="hidden sm:ms-6 sm:flex sm:items-center">
+                <button type="button" class="relative rounded-full p-2 text-black hover:bg-neutral-100">
+                    <svg
+                        class="size-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+                        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+                    </svg>
+                    <span class="sr-only">notifikasi masuk</span>
+                    <div
+                        class="absolute -end-2 -top-2 inline-flex size-6 items-center justify-center rounded-full border border-white bg-red-500 text-xs font-semibold text-white"
+                    >
+                        9+
+                    </div>
+                </button>
+                <button type="button" class="relative rounded-full p-2 text-black hover:bg-neutral-100">
+                    <svg
+                        class="size-5"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <circle cx="8" cy="21" r="1" />
+                        <circle cx="19" cy="21" r="1" />
+                        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
+                    </svg>
+                    <span class="sr-only">total produk di keranjang belanja</span>
+                    <div
+                        class="absolute -end-2 -top-2 inline-flex size-6 items-center justify-center rounded-full border border-white bg-red-500 text-xs font-semibold text-white"
+                    >
+                        9+
+                    </div>
+                </button>
+                <div class="hidden md:flex md:items-center md:ps-2 lg:ps-4">
                     <x-common.dropdown align="right" width="48">
                         <x-slot name="trigger">
-                            <button
-                                class="inline-flex items-center rounded-md border border-transparent bg-white px-3 py-2 text-sm font-medium leading-4 text-gray-500 transition duration-150 ease-in-out hover:text-gray-700 focus:outline-none"
-                            >
-                                <div
+                            <x-common.button variant="secondary" class="!px-4">
+                                <p
                                     x-data="{{ json_encode(['name' => auth()->user()->name]) }}"
                                     x-text="name"
                                     x-on:profile-updated.window="name = $event.detail.name"
-                                ></div>
-
-                                <div class="ms-1">
+                                ></p>
+                                <div>
                                     <svg
                                         class="h-4 w-4 fill-current"
                                         xmlns="http://www.w3.org/2000/svg"
@@ -65,35 +135,62 @@ new class extends Component {
                                         />
                                     </svg>
                                 </div>
-                            </button>
+                            </x-common.button>
                         </x-slot>
-
                         <x-slot name="content">
                             <x-common.dropdown-link :href="route('profile')" wire:navigate>
-                                {{ __('Profile') }}
+                                <svg
+                                    class="size-4"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <circle cx="12" cy="8" r="5" />
+                                    <path d="M20 21a8 8 0 0 0-16 0" />
+                                </svg>
+                                Profil Saya
                             </x-common.dropdown-link>
-
-                            <!-- Authentication -->
                             <button wire:click="logout" class="w-full text-start">
-                                <x-common.dropdown-link>
-                                    {{ __('Log Out') }}
+                                <x-common.dropdown-link class="text-red-500 hover:bg-red-50">
+                                    <svg
+                                        class="size-4"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    >
+                                        <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                        <polyline points="16 17 21 12 16 7" />
+                                        <line x1="21" x2="9" y1="12" y2="12" />
+                                    </svg>
+                                    Keluar
                                 </x-common.dropdown-link>
                             </button>
                         </x-slot>
                     </x-common.dropdown>
                 </div>
             @else
-                <a href="{{ route('login') }}" wire:navigate>Login</a>
-                <a href="{{ route('register') }}" wire:navigate>Register</a>
+                <div class="hidden space-x-2 md:block">
+                    <x-common.button :href="route('register')" variant="secondary" wire:navigate>
+                        Registrasi
+                    </x-common.button>
+                    <x-common.button :href="route('login')" variant="primary" wire:navigate>Masuk</x-common.button>
+                </div>
             @endauth
-
-            <!-- Hamburger -->
-            <div class="-me-2 flex items-center sm:hidden">
+            <div class="-me-2 flex items-center md:hidden">
                 <button
-                    @click="open = ! open"
-                    class="inline-flex items-center justify-center rounded-md p-2 text-gray-400 transition duration-150 ease-in-out hover:bg-gray-100 hover:text-gray-500 focus:bg-gray-100 focus:text-gray-500 focus:outline-none"
+                    type="button"
+                    class="relative rounded-full p-2 text-black hover:bg-neutral-100"
+                    @click="toggleNav()"
                 >
-                    <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                    <svg class="size-5" stroke="currentColor" fill="none" viewBox="0 0 24 24">
                         <path
                             :class="{ 'hidden': open, 'inline-flex': !open }"
                             class="inline-flex"
@@ -114,46 +211,79 @@ new class extends Component {
                 </button>
             </div>
         </div>
-    </div>
-
-    <!-- Responsive Navigation Menu -->
-    <div :class="{ 'block': open, 'hidden': !open }" class="hidden sm:hidden">
-        <div class="space-y-1 pb-3 pt-2">
-            <x-user.responsive-nav-link
-                :href="route('dashboard')"
-                :active="request()->routeIs('dashboard')"
-                wire:navigate
-            >
-                {{ __('Dashboard') }}
-            </x-user.responsive-nav-link>
-        </div>
-
-        @auth
-            <!-- Responsive Settings Options -->
-            <div class="border-t border-gray-200 pb-1 pt-4">
-                <div class="px-4">
-                    <div
-                        class="text-base font-medium text-gray-800"
-                        x-data="{{ json_encode(['name' => auth()->user()->name]) }}"
-                        x-text="name"
-                        x-on:profile-updated.window="name = $event.detail.name"
-                    ></div>
-                    <div class="text-sm font-medium text-gray-500">{{ auth()->user()->email }}</div>
-                </div>
-
-                <div class="mt-3 space-y-1">
-                    <x-user.responsive-nav-link :href="route('profile')" wire:navigate>
-                        {{ __('Profile') }}
+        <div
+            id="responsive-navbar"
+            :class="{ 'block': open, 'hidden': !open }"
+            class="absolute right-0 top-full hidden h-[calc(100vh-3.5rem-1px)] w-full bg-white md:hidden"
+        >
+            <ul class="space-y-1 pb-3 pt-2">
+                <li>
+                    <x-user.responsive-nav-link
+                        :href="route('home')"
+                        :active="request()->routeIs('home')"
+                        wire:navigate
+                    >
+                        Beranda
                     </x-user.responsive-nav-link>
-
-                    <!-- Authentication -->
-                    <button wire:click="logout" class="w-full text-start">
-                        <x-user.responsive-nav-link>
-                            {{ __('Log Out') }}
+                </li>
+            </ul>
+            @auth
+                <div class="border-t border-neutral-300 pb-1 pt-4">
+                    <div class="px-4">
+                        <p
+                            class="text-sm font-medium text-black"
+                            x-data="{{ json_encode(['name' => auth()->user()->name]) }}"
+                            x-text="name"
+                            x-on:profile-updated.window="name = $event.detail.name"
+                        ></p>
+                        <p class="text-sm font-medium text-black/75">{{ auth()->user()->email }}</p>
+                    </div>
+                    <div class="mt-3 space-y-1">
+                        <x-user.responsive-nav-link :href="route('profile')" wire:navigate>
+                            <svg
+                                class="size-4"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <circle cx="12" cy="8" r="5" />
+                                <path d="M20 21a8 8 0 0 0-16 0" />
+                            </svg>
+                            Profil Saya
                         </x-user.responsive-nav-link>
-                    </button>
+                        <button wire:click="logout" class="w-full text-start">
+                            <x-user.responsive-nav-link class="!text-red-500 hover:border-red-300 hover:bg-red-50">
+                                <svg
+                                    class="size-4"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                                    <polyline points="16 17 21 12 16 7" />
+                                    <line x1="21" x2="9" y1="12" y2="12" />
+                                </svg>
+                                Keluar
+                            </x-user.responsive-nav-link>
+                        </button>
+                    </div>
                 </div>
-            </div>
-        @endauth
-    </div>
-</nav>
+            @else
+                <div class="m-4 block space-x-2 md:hidden">
+                    <x-common.button :href="route('register')" variant="secondary" wire:navigate>
+                        Registrasi
+                    </x-common.button>
+                    <x-common.button :href="route('login')" variant="primary" wire:navigate>Masuk</x-common.button>
+                </div>
+            @endauth
+        </div>
+    </nav>
+</header>
