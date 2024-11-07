@@ -15,7 +15,7 @@ new class extends Component {
     }
 }; ?>
 
-<header class="sticky top-0 border-b border-neutral-300 bg-white">
+<header class="sticky top-0 z-10 border-b border-neutral-300 bg-white">
     <nav
         x-data="{
             open: false,
