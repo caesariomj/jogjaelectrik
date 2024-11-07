@@ -10,7 +10,12 @@
             })"
     {{ $attributes->merge(['class' => 'relative w-full overflow-hidden']) }}
 >
-    <div class="relative min-h-[75svh] w-full md:min-h-[95svh]">
+    <div
+        class="relative min-h-[75svh] w-full md:min-h-[95svh]"
+        x-on:touchstart="handleTouchStart($event)"
+        x-on:touchmove="handleTouchMove($event)"
+        x-on:touchend="handleTouchEnd()"
+    >
         <template x-for="(slide, index) in slides">
             <figure
                 x-show="currentSlideIndex == index + 1"
