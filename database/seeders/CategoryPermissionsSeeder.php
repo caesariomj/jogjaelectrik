@@ -14,6 +14,7 @@ class CategoryPermissionsSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
+            'view category details',
             'create categories',
             'edit categories',
             'delete categories',
