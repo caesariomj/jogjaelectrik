@@ -28,9 +28,11 @@ class CategoryPermissionsSeeder extends Seeder
         $adminRole = Role::findByName('admin');
         $superAdminRole = Role::findByName('super_admin');
 
+        $adminRole->givePermissionTo('view category details');
         $adminRole->givePermissionTo('create categories');
         $adminRole->givePermissionTo('edit categories');
         $adminRole->givePermissionTo('delete categories');
+        $superAdminRole->givePermissionTo('view category details');
         $superAdminRole->givePermissionTo('create categories');
         $superAdminRole->givePermissionTo('edit categories');
         $superAdminRole->givePermissionTo('delete categories');
