@@ -2,6 +2,20 @@
 @tailwind components;
 @tailwind utilities;
 
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    border-radius: 9999px;
+    background-color: #e5e5e5;
+}
+
+::-webkit-scrollbar-thumb {
+    border-radius: 9999px;
+    background-color: #a3a3a3;
+}
+
 h1 {
     font-size: 2.5rem;
     font-weight: 700;
