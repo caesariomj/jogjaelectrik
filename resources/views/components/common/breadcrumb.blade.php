@@ -1,0 +1,87 @@
+@php
+    if (request()->is('/')) {
+        return;
+    }
+
+    $segments = request()->segments();
+    $breadcrumbs = [];
+    $path = '';
+
+    $breadcrumbs[] = [
+        'name' => 'Beranda',
+        'url' => url('/'),
+    ];
+
+    if ($segments[0] === 'admin') {
+        if (count($segments) > 1 && $segments[1] !== 'dashboard') {
+            $breadcrumbs[] = [
+                'name' => 'Dashboard',
+                'url' => url('/admin/dashboard'),
+            ];
+        }
+
+        array_shift($segments);
+
+        foreach ($segments as $key => $segment) {
+            $path .= '/' . $segment;
+
+            if ($key == 1 && preg_match('/^manajemen-[\w-]+$/', $segments[0]) && ! in_array($segment, ['tambah', 'ubah', 'edit'])) {
+                $breadcrumbs[] = [
+                    'name' => ucwords(str_replace('-', ' ', $segment)),
+                    'url' => url('/admin' . $path . '/detail'),
+                ];
+            } else {
+                $breadcrumbs[] = [
+                    'name' => ucwords(str_replace('-', ' ', $segment)),
+                    'url' => url('/admin' . $path),
+                ];
+            }
+        }
+    } else {
+        foreach ($segments as $segment) {
+            $path .= '/' . $segment;
+
+            $breadcrumbs[] = [
+                'name' => ucwords(str_replace('-', ' ', $segment)),
+                'url' => url($path),
+            ];
+        }
+    }
+@endphp
+
+<nav
+    {{ $attributes->merge(['aria-label' => 'breadcrumb']) }}
+>
+    <ol class="flex flex-wrap items-center gap-y-4 whitespace-nowrap">
+        @foreach ($breadcrumbs as $index => $breadcrumb)
+            @if ($index + 1 < count($breadcrumbs))
+                <li class="inline-flex items-center">
+                    <a
+                        class="flex items-center text-sm font-medium tracking-tight text-black/70 hover:text-black"
+                        href="{{ $breadcrumb['url'] }}"
+                    >
+                        {{ $breadcrumb['name'] }}
+                    </a>
+                    <svg
+                        class="mx-4 size-4 shrink-0 text-black/40"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                    >
+                        <path d="m9 18 6-6-6-6" />
+                    </svg>
+                </li>
+            @else
+                <li class="inline-flex items-center text-sm font-medium tracking-tight text-black" aria-current="page">
+                    {{ $breadcrumb['name'] }}
+                </li>
+            @endif
+        @endforeach
+    </ol>
+</nav>
