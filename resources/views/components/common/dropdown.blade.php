@@ -1,35 +1,44 @@
-@props(['align' => 'right', 'width' => '48', 'contentClasses' => 'bg-white py-1'])
+@props([
+    'align' => 'right',
+    'width' => '48',
+    'contentClasses' => 'bg-white py-1',
+    'placement' => null,
+])
 
 @php
-    $alignmentClasses = match ($align) {
-        'left' => 'start-0 ltr:origin-top-left rtl:origin-top-right',
-        'top' => 'origin-top',
-        default => 'end-0 ltr:origin-top-right rtl:origin-top-left',
-    };
-
     $width = match ($width) {
         '48' => 'w-48',
         default => $width,
     };
+
+    $defaultPlacement = match ($align) {
+        'left' => 'bottom-start',
+        'top' => 'top',
+        default => 'bottom-end',
+    };
+
+    $placement = $placement ?? $defaultPlacement;
 @endphp
 
-<div class="relative" x-data="{ open: false }" @click.outside="open = false" @close.stop="open = false">
-    <div @click="open = ! open">
+<div
+    x-data="dropdownPopper()"
+    @click.outside="close"
+    @close.stop="close"
+    data-placement="{{ $placement }}"
+    class="relative inline-block"
+>
+    <div @click="toggle" x-ref="button" class="inline-flex items-center">
         {{ $trigger }}
     </div>
     <div
         x-show="open"
-        x-transition:enter="transition duration-200 ease-out"
-        x-transition:enter-start="scale-95 opacity-0"
-        x-transition:enter-end="scale-100 opacity-100"
-        x-transition:leave="transition duration-75 ease-in"
-        x-transition:leave-start="scale-100 opacity-100"
-        x-transition:leave-end="scale-95 opacity-0"
-        class="{{ $width }} {{ $alignmentClasses }} absolute z-50 mt-2 rounded-md shadow-lg"
-        style="display: none"
-        @click="open = false"
+        x-ref="panel"
+        x-transition.opacity.duration.200ms
+        @click="close"
+        class="{{ $width }} absolute z-10 rounded-md shadow-lg"
+        x-cloak
     >
-        <div class="{{ $contentClasses }} rounded-md ring-1 ring-black ring-opacity-5">
+        <div class="{{ $contentClasses }} rounded-md bg-white ring-1 ring-black ring-opacity-5">
             {{ $content }}
         </div>
     </div>
