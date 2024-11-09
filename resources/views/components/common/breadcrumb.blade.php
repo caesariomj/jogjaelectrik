@@ -59,6 +59,7 @@
                     <a
                         class="flex items-center text-sm font-medium tracking-tight text-black/70 hover:text-black"
                         href="{{ $breadcrumb['url'] }}"
+                        wire:navigate
                     >
                         {{ $breadcrumb['name'] }}
                     </a>
