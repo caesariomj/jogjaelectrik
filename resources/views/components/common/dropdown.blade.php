@@ -26,6 +26,7 @@
     @close.stop="close"
     data-placement="{{ $placement }}"
     class="relative inline-block"
+    wire:ignore
 >
     <div @click="toggle" x-ref="button" class="inline-flex items-center">
         {{ $trigger }}
