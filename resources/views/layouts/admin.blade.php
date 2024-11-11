@@ -20,6 +20,8 @@
         }"
         class="flex w-full"
     >
+        <x-common.alert />
+
         <x-admin.sidebar />
 
         <div class="flex flex-1 flex-col">
