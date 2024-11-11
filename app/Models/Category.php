@@ -45,6 +45,14 @@ class Category extends Model
     }
 
     /**
+     * Category-related functions.
+     */
+    public function scopeFindBySlug($query, string $slug)
+    {
+        return $query->where('slug', $slug);
+    }
+
+    /**
      * The "booted" method of the model.
      */
     public static function boot(): void
