@@ -58,11 +58,9 @@ new class extends Component {
                     stroke-linejoin="round"
                 >
                     <circle cx="11" cy="11" r="8" />
-
                     <path d="m21 21-4.3-4.3" />
                 </svg>
             </div>
-
             <div class="relative">
                 <input
                     wire:model.debounce.live="search"
@@ -72,7 +70,6 @@ new class extends Component {
                     aria-expanded="false"
                     placeholder="Cari data kategori produk berdasarkan nama..."
                 />
-
                 <div
                     wire:loading
                     wire:target="search"
@@ -91,7 +88,6 @@ new class extends Component {
                         />
                     </svg>
                 </div>
-
                 @if ($search)
                     <button
                         wire:click="resetSearch"

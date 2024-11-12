@@ -60,17 +60,16 @@ new class extends Component {
             </div>
         @endcan
     </fieldset>
-
     <div class="flex flex-col justify-end gap-4 p-4 md:flex-row">
         <x-common.button
             :href="route('admin.categories.index')"
             wire:loading.class="opacity-50 pointer-events-none"
             wire:target="save"
             variant="secondary"
+            wire:navigate
         >
             Batal
         </x-common.button>
-
         <x-common.button wire:loading.attr="disabled" wire:target="save" type="submit" variant="primary">
             <span wire:loading.remove wire:target="save">Simpan</span>
             <span

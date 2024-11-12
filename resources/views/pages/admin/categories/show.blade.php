@@ -35,15 +35,13 @@
             <div class="flex flex-col items-center gap-1 border-b border-neutral-300 py-2 md:flex-row">
                 <dt class="w-full text-black/70 md:w-1/3">Ditambahkan Pada</dt>
                 <dd class="w-full font-medium text-black md:w-2/3">
-                    {{-- {{ convertTimestamp($category->created_at) }} --}}
-                    {{ $category->created_at }}
+                    {{ formatTimestamp($category->created_at) }}
                 </dd>
             </div>
             <div class="flex flex-col items-center gap-1 border-b border-neutral-300 py-2 md:flex-row">
                 <dt class="w-full text-black/70 md:w-1/3">Terakhir Diubah Pada</dt>
                 <dd class="w-full font-medium text-black md:w-2/3">
-                    {{-- {{ convertTimestamp($category->updated_at) }} --}}
-                    {{ $category->updated_at }}
+                    {{ formatTimestamp($category->updated_at) }}
                 </dd>
             </div>
         </dl>

@@ -60,7 +60,7 @@ class CategoryController extends Controller
      */
     public function show(string $slug): View|RedirectResponse
     {
-        $category = Category::findBySlug($slug)->first();
+        $category = Category::withCount('subcategories')->findBySlug($slug)->first();
 
         if (! $category) {
             session()->flash('error', 'Data kategori tidak ditemukan.');
