@@ -1,6 +1,6 @@
 <aside
     :class="{'-translate-x-full': !isOpen, 'translate-x-0': isOpen}"
-    class="fixed inset-y-0 left-0 z-40 h-screen w-64 transform border-e border-neutral-300 bg-white text-black transition-transform duration-300 ease-in-out lg:sticky lg:top-0 lg:translate-x-0"
+    class="fixed inset-y-0 start-0 z-50 h-screen w-64 transform border-e border-neutral-300 bg-white text-black transition-transform duration-300 ease-in-out lg:translate-x-0"
 >
     <div class="flex items-center justify-between p-4">
         <a href="{{ route('home') }}" class="flex w-fit items-center gap-x-4">
@@ -13,8 +13,8 @@
             </svg>
         </button>
     </div>
-    <div id="sidebar-nav" class="h-[calc(100%-4.3rem)] overflow-y-hidden hover:overflow-y-auto">
-        <nav class="p-4">
+    <div id="sidebar-nav" class="h-[calc(100%-4.2rem)] overflow-y-hidden hover:overflow-y-auto">
+        <nav class="px-4 py-2">
             <ul class="space-y-1.5">
                 <li>
                     <x-admin.side-link

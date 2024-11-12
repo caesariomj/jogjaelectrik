@@ -18,13 +18,12 @@
                 }
             },
         }"
-        class="flex w-full"
     >
         <x-common.alert />
 
         <x-admin.sidebar />
 
-        <div class="flex flex-1 flex-col">
+        <div class="h-full w-full lg:pl-64">
             <livewire:layout.admin.navigation />
 
             <x-common.breadcrumb class="px-4 pt-4 md:px-6" />
