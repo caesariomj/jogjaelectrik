@@ -2,11 +2,32 @@
 
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\SubcategoryController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'role:admin|super_admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
+
+    Route::prefix('manajemen-produk')->name('products.')->group(function () {
+        Route::get('/', [ProductController::class, 'index'])->name('index');
+        Route::get('/tambah', [ProductController::class, 'create'])->name('create');
+        Route::post('/', [ProductController::class, 'store'])->name('store');
+        Route::get('/{slug}/detail', [ProductController::class, 'show'])->name('show');
+        Route::get('/{slug}/ubah', [ProductController::class, 'edit'])->name('edit');
+        Route::patch('/{product}', [ProductController::class, 'update'])->name('update');
+        Route::delete('/{product}', [ProductController::class, 'destroy'])->name('destroy');
+    });
+
+    Route::prefix('manajemen-gambar-produk')->name('product-images.')->group(function () {
+        Route::delete('/{image}', [ProductController::class, 'destroyImage'])->name('destroy');
+    });
+
+    Route::prefix('manajemen-arsip-produk')->name('archived-products.')->group(function () {
+        Route::get('/', [ProductController::class, 'archive'])->name('index');
+        Route::patch('/{id}', [ProductController::class, 'restore'])->name('restore');
+        Route::delete('/{id}', [ProductController::class, 'forceDelete'])->name('forceDelete');
+    });
 
     Route::prefix('manajemen-kategori')->name('categories.')->group(function () {
         Route::get('/', [CategoryController::class, 'index'])->name('index');
