@@ -17,6 +17,14 @@ new class extends Component {
     {
         $validated = $this->form->validate();
 
+        if ($validated['isPrimary']) {
+            if (Category::countPrimary() >= 2) {
+                $this->addError('form.isPrimary', 'Maksimal kategori utama adalah 2.');
+
+                return;
+            }
+        }
+
         $controller->update($validated, $this->form->category);
 
         session()->flash('success', 'Data kategori ' . $validated['name'] . ' berhasil diubah.');

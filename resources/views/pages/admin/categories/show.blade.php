@@ -21,7 +21,21 @@
                     --}}
                 </dt>
                 <dd class="w-full font-medium text-black md:w-2/3">
-                    {{ $category->is_primary ? 'Ya' : 'Tidak' }}
+                    @if ($category->is_primary)
+                        <span
+                            class="inline-flex items-center gap-x-1.5 rounded-full bg-teal-100 px-3 py-1 text-xs font-medium tracking-tight text-teal-800"
+                        >
+                            <span class="inline-block size-1.5 rounded-full bg-teal-800"></span>
+                            Ya
+                        </span>
+                    @else
+                        <span
+                            class="inline-flex items-center gap-x-1.5 rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium tracking-tight text-neutral-800"
+                        >
+                            <span class="inline-block size-1.5 rounded-full bg-neutral-800"></span>
+                            Tidak
+                        </span>
+                    @endif
                 </dd>
             </div>
             <div class="flex flex-col items-center gap-1 border-b border-neutral-300 py-2 md:flex-row">
@@ -52,7 +66,7 @@
                     :href="route('admin.categories.edit', ['slug' => $category->slug])"
                     wire:navigate
                 >
-                    Edit
+                    Ubah
                 </x-common.button>
             @endcan
 

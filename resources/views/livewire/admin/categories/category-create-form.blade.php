@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Admin\CategoryController;
 use App\Livewire\Forms\CategoryForm;
+use App\Models\Category;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -10,6 +11,14 @@ new class extends Component {
     public function save(CategoryController $controller)
     {
         $validated = $this->form->validate();
+
+        if ($validated['isPrimary']) {
+            if (Category::countPrimary() >= 2) {
+                $this->addError('form.isPrimary', 'Maksimal kategori utama adalah 2.');
+
+                return;
+            }
+        }
 
         $controller->store($validated);
 

@@ -17,9 +17,10 @@ new class extends Component {
     #[Computed]
     public function categories()
     {
-        return \App\Models\Category::when($this->search !== '', function ($query) {
-            return $query->where('name', 'like', '%' . $this->search . '%');
-        })
+        return \App\Models\Category::withCount('products')
+            ->when($this->search !== '', function ($query) {
+                return $query->where('name', 'like', '%' . $this->search . '%');
+            })
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate(10);
     }
@@ -72,7 +73,7 @@ new class extends Component {
                 />
                 <div
                     wire:loading
-                    wire:target="search"
+                    wire:target="search,resetSearch"
                     class="pointer-events-none absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                 >
                     <svg
@@ -92,7 +93,7 @@ new class extends Component {
                     <button
                         wire:click="resetSearch"
                         wire:loading.remove
-                        wire:target="search"
+                        wire:target="search,resetSearch"
                         type="button"
                         class="absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                     >
@@ -271,11 +272,13 @@ new class extends Component {
                         <td class="p-4 font-normal tracking-tight text-black/80" align="left">
                             {{ $loop->index + 1 . '.' }}
                         </td>
-                        <td class="p-4 font-medium tracking-tight text-black" align="left">
-                            {{ ucfirst($category->name) }}
+                        <td class="min-w-56 p-4 font-medium tracking-tight text-black" align="left">
+                            {{ ucwords($category->name) }}
                         </td>
-                        <td class="p-4 font-normal tracking-tight text-black/80" align="center">100</td>
-                        <td class="p-4" align="center">
+                        <td class="min-w-36 p-4 font-normal tracking-tight text-black/80" align="center">
+                            {{ $category->products_count }}
+                        </td>
+                        <td class="min-w-40 p-4" align="center">
                             @if ($category->is_primary)
                                 <span
                                     class="inline-flex items-center gap-x-1.5 rounded-full bg-teal-100 px-3 py-1 text-xs font-medium tracking-tight text-teal-800"
@@ -292,7 +295,7 @@ new class extends Component {
                                 </span>
                             @endif
                         </td>
-                        <td class="p-4 font-normal tracking-tight text-black/80" align="center">
+                        <td class="min-w-56 p-4 font-normal tracking-tight text-black/80" align="center">
                             {{ formatTimestamp($category->created_at) }}
                         </td>
                         <td class="relative px-4 py-2" align="right">

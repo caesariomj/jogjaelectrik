@@ -18,6 +18,7 @@ new class extends Component {
     public function subcategories()
     {
         return \App\Models\Subcategory::with('category')
+            ->withCount('products')
             ->when($this->search !== '', function ($query) {
                 return $query
                     ->where('subcategories.name', 'like', '%' . $this->search . '%')
@@ -88,7 +89,7 @@ new class extends Component {
                 />
                 <div
                     wire:loading
-                    wire:target="search"
+                    wire:target="search,resetSearch"
                     class="pointer-events-none absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                 >
                     <svg
@@ -108,7 +109,7 @@ new class extends Component {
                     <button
                         wire:click="resetSearch"
                         wire:loading.remove
-                        wire:target="search"
+                        wire:target="search,resetSearch"
                         type="button"
                         class="absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                     >
@@ -287,14 +288,16 @@ new class extends Component {
                         <td class="p-4 font-normal tracking-tight text-black/80" align="left">
                             {{ $loop->index + 1 . '.' }}
                         </td>
-                        <td class="p-4 font-medium tracking-tight text-black" align="left">
+                        <td class="min-w-56 p-4 font-medium tracking-tight text-black" align="left">
                             {{ ucfirst($subcategory->name) }}
                         </td>
-                        <td class="p-4 font-normal tracking-tight text-black/80" align="left">
+                        <td class="min-w-56 p-4 font-normal tracking-tight text-black/80" align="left">
                             {{ ucwords($subcategory->category->name) }}
                         </td>
-                        <td class="p-4 font-normal tracking-tight text-black/80" align="center">100</td>
-                        <td class="p-4 font-normal tracking-tight text-black/80" align="center">
+                        <td class="min-w-36 p-4 font-normal tracking-tight text-black/80" align="center">
+                            {{ $subcategory->products_count }}
+                        </td>
+                        <td class="min-w-56 p-4 font-normal tracking-tight text-black/80" align="center">
                             {{ formatTimestamp($subcategory->created_at) }}
                         </td>
                         <td class="relative px-4 py-2" align="right">
