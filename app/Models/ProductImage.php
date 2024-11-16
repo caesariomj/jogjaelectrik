@@ -55,4 +55,17 @@ class ProductImage extends Model
     {
         return $this->belongsTo(Product::class);
     }
+
+    /**
+     * Product-related functions.
+     */
+    public function scopeThumbnail($query)
+    {
+        return $query->where('is_thumbnail', true);
+    }
+
+    public function scopeNonThumbnail($query)
+    {
+        return $query->where('is_thumbnail', false);
+    }
 }
