@@ -13,7 +13,7 @@ class SubcategoryController extends Controller
     /**
      * Display a listing of the subcategory.
      */
-    public function index()
+    public function index(): View
     {
         $this->authorize('viewAny', Subcategory::class);
 
@@ -60,7 +60,7 @@ class SubcategoryController extends Controller
      */
     public function show(string $slug): View|RedirectResponse
     {
-        $subcategory = Subcategory::with('category')->findBySlug($slug)->first();
+        $subcategory = Subcategory::with('category')->withCount('products')->findBySlug($slug)->first();
 
         if (! $subcategory) {
             session()->flash('error', 'Data subkategori tidak ditemukan.');
@@ -125,7 +125,7 @@ class SubcategoryController extends Controller
     /**
      * Remove the specified subcategory from storage.
      */
-    public function destroy(Subcategory $subcategory)
+    public function destroy(Subcategory $subcategory): RedirectResponse
     {
         try {
             $this->authorize('delete', $subcategory);

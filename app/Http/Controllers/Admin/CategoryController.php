@@ -60,7 +60,7 @@ class CategoryController extends Controller
      */
     public function show(string $slug): View|RedirectResponse
     {
-        $category = Category::withCount('subcategories')->findBySlug($slug)->first();
+        $category = Category::withCount(['subcategories', 'products'])->findBySlug($slug)->first();
 
         if (! $category) {
             session()->flash('error', 'Data kategori tidak ditemukan.');
@@ -125,7 +125,7 @@ class CategoryController extends Controller
     /**
      * Remove the specified category from storage.
      */
-    public function destroy(Category $category)
+    public function destroy(Category $category): RedirectResponse
     {
         try {
             $this->authorize('delete', $category);
