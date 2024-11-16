@@ -1,4 +1,4 @@
-<div aria-label="Notifikasi" role="region" class="pointer-events-none fixed inset-x-0 top-4 z-50 px-4 sm:px-6 lg:px-8">
+<div aria-label="Notifikasi" role="region" class="pointer-events-none sticky inset-x-0 top-4 z-50 px-4 sm:px-6 lg:px-8">
     <div class="pointer-events-auto mx-auto max-w-2xl">
         @if (session()->has('success'))
             <div
@@ -53,7 +53,7 @@
             </div>
         @endif
 
-        @if (session()->has('failed'))
+        @if (session()->has('error'))
             <div
                 x-data="{ show: true }"
                 x-show="show"
@@ -82,7 +82,7 @@
                             </svg>
                         </div>
                         <div role="heading" aria-level="2" class="ml-3 text-sm font-medium text-red-800">
-                            {{ session('failed') }}
+                            {{ session('error') }}
                         </div>
                     </div>
                     <div class="ml-auto pl-3" role="navigation">
