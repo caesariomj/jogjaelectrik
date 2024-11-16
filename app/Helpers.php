@@ -33,3 +33,10 @@ if (! function_exists('formatTimestamp')) {
         return "$day $month $year - $hourMinute";
     }
 }
+
+if (! function_exists('formatPrice')) {
+    function formatPrice(string $price): string
+    {
+        return number_format($price, 0, ',', '.');
+    }
+}
