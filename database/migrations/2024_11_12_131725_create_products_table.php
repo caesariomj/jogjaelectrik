@@ -22,12 +22,12 @@ return new class extends Migration
             $table->decimal('base_price_discount', 10, 2)->nullable();
             $table->boolean('is_active');
             $table->string('warranty', 100);
-            $table->string('material', 50);
+            $table->string('material', 100);
             $table->string('dimension', 50);
             $table->string('package', 100);
             $table->unsignedSmallInteger('weight');
             $table->unsignedSmallInteger('power')->nullable();
-            $table->unsignedSmallInteger('voltage')->nullable();
+            $table->string('voltage', 50)->nullable();
             $table->softDeletes();
             $table->timestamps();
         });
@@ -55,8 +55,8 @@ return new class extends Migration
 
         Schema::create('variant_combinations', function (Blueprint $table) {
             $table->uuid('id')->primary()->unique();
-            $table->foreignUuid('product_variant_id')->unique()->constrained()->cascadeOnDelete();
-            $table->foreignUuid('variation_variant_id')->unique()->constrained()->cascadeOnDelete();
+            $table->foreignUuid('product_variant_id')->constrained()->cascadeOnDelete();
+            $table->foreignUuid('variation_variant_id')->constrained()->cascadeOnDelete();
         });
     }
 
