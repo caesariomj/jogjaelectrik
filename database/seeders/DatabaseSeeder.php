@@ -16,6 +16,7 @@ class DatabaseSeeder extends Seeder
             AdminPageAccessSeeder::class,
             CategoryPermissionsSeeder::class,
             SubcategoryPermissionsSeeder::class,
+            ProductPermissionsSeeder::class,
         ]);
     }
 }
