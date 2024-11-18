@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             CategoryPermissionsSeeder::class,
             SubcategoryPermissionsSeeder::class,
             ProductPermissionsSeeder::class,
+            DiscountPermissionsSeeder::class,
         ]);
     }
 }
