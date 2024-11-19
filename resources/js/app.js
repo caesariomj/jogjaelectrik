@@ -1,6 +1,8 @@
 import './bootstrap';
 import { createPopper } from '@popperjs/core/lib/popper-lite';
 
+import datepickerComponent from './components/datepicker';
+
 window.Popper = { createPopper };
 
 document.addEventListener('alpine:init', () => {
@@ -139,4 +141,6 @@ document.addEventListener('alpine:init', () => {
             },
         }),
     );
+
+    Alpine.data('flatpickr', datepickerComponent);
 });

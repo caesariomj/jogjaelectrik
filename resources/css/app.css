@@ -1,3 +1,5 @@
+@import 'flatpickr/dist/flatpickr.min.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -58,6 +60,105 @@ small {
 
 [x-cloak] {
     display: none !important;
+}
+
+.flatpickr-calendar {
+    background: white;
+    border-radius: 0.5rem;
+    box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+    border: 1px solid #d4d4d4;
+    font-family: inherit;
+}
+
+/* Month navigation buttons */
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+    color: #6b7280;
+}
+
+.flatpickr-months .flatpickr-prev-month:hover,
+.flatpickr-months .flatpickr-next-month:hover {
+    color: #374151;
+}
+
+/* Current month display */
+.flatpickr-current-month {
+    font-size: 1rem;
+    color: rgba(12, 12, 12, 1);
+}
+
+/* Weekday labels */
+.flatpickr-weekdays {
+    background: transparent;
+}
+
+.flatpickr-weekday {
+    color: #6b7280;
+    font-weight: 500 !important;
+}
+
+/* Calendar days */
+.flatpickr-day {
+    border-radius: 0.375rem;
+    color: rgba(12, 12, 12, 1);
+    font-weight: 500;
+}
+
+/* Hover state */
+.flatpickr-day:hover {
+    background: #fff4ed;
+    border-color: #fff4ed;
+    color: #fd5722;
+}
+
+/* Selected date */
+.flatpickr-day.selected {
+    background: #fd5722;
+    border-color: #fd5722;
+    color: white;
+}
+
+.flatpickr-day.selected:hover {
+    background: #fd5722;
+    border-color: #fd5722;
+    color: white;
+}
+
+/* Today's date */
+.flatpickr-day.today {
+    background: #e5e5e5;
+    border-color: #e5e5e5;
+}
+
+.flatpickr-day.today.selected,
+.flatpickr-day.flatpickr-day.today.selected:hover {
+    background: #fd5722;
+    border-color: #fd5722;
+    color: white;
+}
+
+.flatpickr-day.today:hover {
+    background: #fff4ed;
+    border-color: #fff4ed;
+    color: rgba(12, 12, 12, 1);
+}
+
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay {
+    color: rgba(12, 12, 12, 0.5);
+}
+
+.flatpickr-day.nextMonthDay.selected {
+    background: #fd5722;
+    border-color: #fd5722;
+    color: white;
+}
+
+/* Disabled dates */
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.flatpickr-disabled:hover {
+    color: #d1d5db;
+    cursor: not-allowed;
 }
 
 @media (min-width: 640px) {
