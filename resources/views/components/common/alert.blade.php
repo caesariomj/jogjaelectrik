@@ -1,4 +1,4 @@
-<div aria-label="Notifikasi" role="region" class="pointer-events-none sticky inset-x-0 top-4 z-50 px-4 sm:px-6 lg:px-8">
+<div aria-label="Notifikasi" role="region" class="pointer-events-none fixed inset-x-0 top-4 z-50 px-4 sm:px-6 lg:px-8">
     <div class="pointer-events-auto mx-auto max-w-2xl">
         @if (session()->has('success'))
             <div
