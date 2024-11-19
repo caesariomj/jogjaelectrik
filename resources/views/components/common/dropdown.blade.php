@@ -6,10 +6,7 @@
 ])
 
 @php
-    $width = match ($width) {
-        '48' => 'w-48',
-        default => $width,
-    };
+    $width = 'w-' . $width;
 
     $defaultPlacement = match ($align) {
         'left' => 'bottom-start',
@@ -21,7 +18,7 @@
 @endphp
 
 <div
-    x-data="dropdownPopper()"
+    x-data="dropdown()"
     @click.outside="close"
     @close.stop="close"
     data-placement="{{ $placement }}"
