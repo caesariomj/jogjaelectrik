@@ -64,4 +64,12 @@ class ProductVariant extends Model
     {
         return $this->hasMany(VariantCombination::class);
     }
+
+    /**
+     * Product-related functions.
+     */
+    public function scopeFindVariantSku($query, string $variantSku)
+    {
+        return $query->where('variant_sku', $variantSku);
+    }
 }
