@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             SubcategoryPermissionsSeeder::class,
             ProductPermissionsSeeder::class,
             DiscountPermissionsSeeder::class,
+            CartPermissionsSeeder::class,
         ]);
     }
 }
