@@ -86,4 +86,24 @@ class CartPolicy
 
         return true;
     }
+
+    /**
+     * Determine whether the user can use the discount on the model.
+     */
+    public function applyDiscount(?User $user, Cart $cart): bool|Response
+    {
+        if (! $user) {
+            return $this->deny('Silakan masuk terlebih dahulu untuk menerapkan diskon.', 401);
+        }
+
+        if (! $user->can('apply discounts')) {
+            return $this->deny('Anda tidak memiliki izin untuk menerapkan diskon pada keranjang belanja ini.', 403);
+        }
+
+        if ($user->id !== $cart->user_id) {
+            return $this->deny('Anda hanya dapat menerapkan diskon pada keranjang belanja Anda sendiri.', 403);
+        }
+
+        return true;
+    }
 }
