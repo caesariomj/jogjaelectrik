@@ -33,6 +33,7 @@ class Cart extends Model
      */
     protected $fillable = [
         'user_id',
+        'discount_id',
     ];
 
     /**
@@ -41,6 +42,11 @@ class Cart extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function discount(): BelongsTo
+    {
+        return $this->belongsTo(Discount::class);
     }
 
     public function items(): HasMany
