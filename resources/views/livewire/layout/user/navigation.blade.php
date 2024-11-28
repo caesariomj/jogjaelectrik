@@ -69,6 +69,16 @@ new class extends Component {
                         Beranda
                     </x-user.nav-link>
                 </li>
+                <li>
+                    <x-user.nav-link
+                        :href="route('products')"
+                        :active="request()->routeIs('products*')"
+                        class="h-14"
+                        wire:navigate
+                    >
+                        Produk
+                    </x-user.nav-link>
+                </li>
             </ul>
         </div>
         <div class="flex items-center space-x-2">
@@ -277,6 +287,15 @@ new class extends Component {
                         wire:navigate
                     >
                         Beranda
+                    </x-user.responsive-nav-link>
+                </li>
+                <li>
+                    <x-user.responsive-nav-link
+                        :href="route('products')"
+                        :active="request()->routeIs('products.*')"
+                        wire:navigate
+                    >
+                        Produk
                     </x-user.responsive-nav-link>
                 </li>
             </ul>
