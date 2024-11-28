@@ -4,6 +4,24 @@ use App\Livewire\Actions\Logout;
 use Livewire\Volt\Component;
 
 new class extends Component {
+    public int $cartItemsCount = 0;
+
+    public function mount()
+    {
+        if (auth()->check()) {
+            $this->updateCartItemsCount();
+        }
+    }
+
+    private function updateCartItemsCount()
+    {
+        $this->cartItemsCount = auth()->user()->cart
+            ? auth()
+                ->user()
+                ->cart->items->count()
+            : 0;
+    }
+
     /**
      * Log the current user out of the application.
      */
@@ -91,28 +109,45 @@ new class extends Component {
                         9+
                     </div>
                 </button>
-                <button type="button" class="relative rounded-full p-2 text-black hover:bg-neutral-100">
-                    <svg
-                        class="size-5"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
+                @can('view own cart')
+                    <button
+                        x-on:click.prevent.stop="$dispatch('open-offcanvas', 'cart-offcanvas-summary')"
+                        type="button"
+                        class="relative rounded-full p-2 text-black hover:bg-neutral-100"
                     >
-                        <circle cx="8" cy="21" r="1" />
-                        <circle cx="19" cy="21" r="1" />
-                        <path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12" />
-                    </svg>
-                    <span class="sr-only">total produk di keranjang belanja</span>
-                    <div
-                        class="absolute -end-2 -top-2 inline-flex size-6 items-center justify-center rounded-full border border-white bg-red-500 text-xs font-semibold text-white"
-                    >
-                        9+
-                    </div>
-                </button>
+                        <svg
+                            class="size-5"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <circle cx="8" cy="21" r="1" />
+                            <circle cx="19" cy="21" r="1" />
+                            <path
+                                d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"
+                            />
+                        </svg>
+                        <span class="sr-only">total produk di keranjang belanja</span>
+                        @if ($cartItemsCount > 0)
+                            <div
+                                class="absolute -end-2 -top-2 inline-flex size-6 items-center justify-center rounded-full border border-white bg-red-500 text-xs font-semibold text-white"
+                            >
+                                {{ $cartItemsCount > 9 ? '9+' : $cartItemsCount }}
+                            </div>
+                        @endif
+                    </button>
+                    @push('overlays')
+                        <x-common.offcanvas name="cart-offcanvas-summary">
+                            <x-slot name="title">Ringkasan Keranjang Belanja Saya</x-slot>
+                            <livewire:user.cart-item-list />
+                        </x-common.offcanvas>
+                    @endpush
+                @endcan
+
                 <div class="hidden md:flex md:items-center md:ps-2 lg:ps-4">
                     <x-common.dropdown align="right" width="48">
                         <x-slot name="trigger">
