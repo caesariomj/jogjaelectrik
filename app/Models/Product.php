@@ -86,6 +86,11 @@ class Product extends Model
         return $query->where('slug', $slug);
     }
 
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
     public function scopeTotalStock()
     {
         return $this->variants()->sum('stock');
