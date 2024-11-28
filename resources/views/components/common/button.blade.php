@@ -6,7 +6,7 @@
 ])
 
 @php
-    $baseClasses = "inline-flex items-center justify-center gap-x-2 rounded-full px-8 py-3 text-sm font-semibold transition-all focus:outline-none disabled:cursor-not-allowed disabled:opacity-50";
+    $baseClasses = "inline-flex items-center justify-center gap-x-2 rounded-full px-8 py-3 text-sm font-semibold transition-colors focus:outline-none disabled:cursor-not-allowed disabled:opacity-50";
 
     $variants = [
         "primary" => "bg-primary text-white hover:bg-primary-600 focus:ring-2 focus:ring-primary-400 focus:ring-offset-2",
