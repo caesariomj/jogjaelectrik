@@ -13,10 +13,10 @@ class CheckoutPageAccessSeeder extends Seeder
      */
     public function run(): void
     {
-        Permission::updateOrCreate(['name' => 'access admin page'], ['name' => 'access admin page']);
+        Permission::updateOrCreate(['name' => 'access checkout page'], ['name' => 'access checkout page']);
 
         $userRole = Role::findByName('user');
 
-        $userRole->givePermissionTo('access admin page');
+        $userRole->givePermissionTo('access checkout page');
     }
 }
