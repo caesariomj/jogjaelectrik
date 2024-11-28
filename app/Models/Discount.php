@@ -60,4 +60,42 @@ class Discount extends Model
     {
         return $query->where('code', 'LIKE', "%{$code}%");
     }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+
+    public function scopeUsable($query)
+    {
+        return $query->where(function ($query) {
+            $query->whereNull('start_date')->orWhere('start_date', '<=', now());
+        })
+            ->where(function ($query) {
+                $query->whereNull('end_date')->orWhere('end_date', '>=', now());
+            })
+            ->where(function ($query) {
+                $query->whereNull('usage_limit')->orWhereColumn('usage_limit', '>', 'used_count');
+            });
+    }
+
+    public function isValid(float $cartTotal)
+    {
+        if (! is_null($this->minimum_purchase) && $cartTotal < $this->minimum_purchase) {
+            return 'Diskon hanya berlaku untuk pembelian minimal Rp '.formatPrice($this->minimum_purchase).'.';
+        }
+
+        return true;
+    }
+
+    public function calculateDiscount(float $cartTotal): float
+    {
+        if ($this->type === 'fixed') {
+            return min($this->value, $cartTotal);
+        } elseif ($this->type === 'percentage') {
+            return $cartTotal * ($this->value / 100);
+        }
+
+        return 0;
+    }
 }
