@@ -4,7 +4,7 @@
 ])
 
 <div
-    x-data="carousel({
+    x-data="bannerCarousel({
                 slides: @js($slides),
                 intervalTime: {{ $autoplayInterval }},
             })"
@@ -74,15 +74,15 @@
             ></button>
         </template>
     </div>
-    <nav class="absolute -bottom-1 right-0 z-[2] flex gap-x-4 rounded-br-3xl rounded-tl-3xl bg-white p-4">
+    <nav class="absolute -bottom-1 right-0 z-[2] flex gap-x-4 rounded-br-3xl rounded-tl-3xl p-4">
         <button
             type="button"
-            class="relative rounded-full bg-neutral-200 p-2 text-black hover:bg-neutral-300"
+            class="relative rounded-full bg-white p-2 text-black hover:bg-neutral-100"
             aria-label="previous slide"
             x-on:click="previous()"
         >
             <svg
-                class="size-5 pr-0.5"
+                class="size-6 pr-0.5"
                 xmlns="http://www.w3.org/2000/svg"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -95,7 +95,7 @@
         </button>
         <button
             type="button"
-            class="relative rounded-full bg-neutral-200 p-2 text-black hover:bg-neutral-300"
+            class="relative rounded-full bg-white p-2 text-black hover:bg-neutral-100"
             aria-label="next slide"
             x-on:click="next()"
         >
@@ -105,7 +105,7 @@
                 stroke="currentColor"
                 fill="none"
                 stroke-width="2"
-                class="size-5 pl-0.5"
+                class="size-6 pl-0.5"
                 aria-hidden="true"
             >
                 <path stroke-linecap="round" stroke-linejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
@@ -113,85 +113,3 @@
         </button>
     </nav>
 </div>
-
-@push('scripts')
-    <script>
-        document.addEventListener('alpine:init', () => {
-            Alpine.data(
-                'carousel',
-                (
-                    data = {
-                        slides: [],
-                        intervalTime: 0,
-                    },
-                ) => ({
-                    slides: data.slides,
-                    autoplayIntervalTime: data.intervalTime,
-                    currentSlideIndex: 1,
-                    touchStartX: null,
-                    touchEndX: null,
-                    swipeThreshold: 50,
-                    isPaused: false,
-                    autoplayInterval: null,
-
-                    init() {
-                        if (this.autoplayIntervalTime > 0) {
-                            this.autoplay();
-                        }
-                    },
-
-                    previous() {
-                        if (this.currentSlideIndex > 1) {
-                            this.currentSlideIndex = this.currentSlideIndex - 1;
-                        } else {
-                            this.currentSlideIndex = this.slides.length;
-                        }
-                    },
-
-                    next() {
-                        if (this.currentSlideIndex < this.slides.length) {
-                            this.currentSlideIndex = this.currentSlideIndex + 1;
-                        } else {
-                            this.currentSlideIndex = 1;
-                        }
-                    },
-
-                    handleTouchStart(event) {
-                        this.touchStartX = event.touches[0].clientX;
-                    },
-
-                    handleTouchMove(event) {
-                        this.touchEndX = event.touches[0].clientX;
-                    },
-
-                    handleTouchEnd() {
-                        if (this.touchEndX) {
-                            if (this.touchStartX - this.touchEndX > this.swipeThreshold) {
-                                this.next();
-                            }
-                            if (this.touchStartX - this.touchEndX < -this.swipeThreshold) {
-                                this.previous();
-                            }
-                            this.touchStartX = null;
-                            this.touchEndX = null;
-                        }
-                    },
-
-                    autoplay() {
-                        this.autoplayInterval = setInterval(() => {
-                            if (!this.isPaused) {
-                                this.next();
-                            }
-                        }, this.autoplayIntervalTime);
-                    },
-
-                    setAutoplayIntervalTime(newIntervalTime) {
-                        clearInterval(this.autoplayInterval);
-                        this.autoplayIntervalTime = newIntervalTime;
-                        this.autoplay();
-                    },
-                }),
-            );
-        });
-    </script>
-@endpush
