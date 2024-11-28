@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Cart extends Model
 {
@@ -60,5 +61,20 @@ class Cart extends Model
     public function scopeFindBySlug($query, string $slug)
     {
         return $query->where('slug', $slug);
+    }
+
+    public function calculateTotalPrice()
+    {
+        return $this->items()
+            ->join('product_variants', 'cart_items.product_variant_id', '=', 'product_variants.id')
+            ->sum(DB::raw('cart_items.quantity * product_variants.price'));
+    }
+
+    public function calculateTotalWeight()
+    {
+        return $this->items()
+            ->join('product_variants', 'cart_items.product_variant_id', '=', 'product_variants.id')
+            ->join('products', 'product_variants.product_id', '=', 'products.id')
+            ->sum(DB::raw('cart_items.quantity * products.weight'));
     }
 }
