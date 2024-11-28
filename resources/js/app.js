@@ -2,6 +2,7 @@ import './bootstrap';
 
 import datepickerComponent from './components/datepicker';
 import dropdownComponent from './components/dropdown';
+import productSliderComponent from './components/productSlider';
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('dropdown', dropdownComponent);
@@ -66,4 +67,5 @@ document.addEventListener('alpine:init', () => {
     );
 
     Alpine.data('flatpickr', datepickerComponent);
+    Alpine.data('productSlider', productSliderComponent);
 });
