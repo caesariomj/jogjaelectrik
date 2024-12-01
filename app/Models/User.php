@@ -6,6 +6,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -22,9 +23,13 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
+        'city_id',
         'name',
         'email',
         'password',
+        'phone_number',
+        'address',
+        'postal_code',
     ];
 
     /**
@@ -53,6 +58,11 @@ class User extends Authenticatable
     /**
      * Model relations.
      */
+    public function city(): BelongsTo
+    {
+        return $this->belongsTo(City::class);
+    }
+
     public function cart(): HasOne
     {
         return $this->hasOne(Cart::class);
