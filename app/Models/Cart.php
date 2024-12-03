@@ -67,7 +67,7 @@ class Cart extends Model
     {
         return $this->items()
             ->join('product_variants', 'cart_items.product_variant_id', '=', 'product_variants.id')
-            ->sum(DB::raw('cart_items.quantity * product_variants.price'));
+            ->sum(DB::raw('cart_items.quantity * COALESCE(product_variants.price_discount, product_variants.price)'));
     }
 
     public function calculateTotalWeight()
