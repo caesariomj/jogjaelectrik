@@ -211,7 +211,9 @@ new class extends Component {
                     $cart->items()->create([
                         'product_variant_id' => $this->productVariant->id,
                         'quantity' => $validated['quantity'],
-                        'price' => $this->productVariant->price,
+                        'price' => $this->productVariant->price_discount
+                            ? $this->productVariant->price_discount
+                            : $this->productVariant->price,
                     ]);
                 }
             });
