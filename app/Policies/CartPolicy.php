@@ -106,4 +106,24 @@ class CartPolicy
 
         return true;
     }
+
+    /**
+     * Determine whether the user can access the checkout page.
+     */
+    public function checkout(?User $user, Cart $cart): bool|Response
+    {
+        if (! $user) {
+            return $this->deny('Silakan masuk terlebih dahulu untuk mengakses halaman checkout.', 401);
+        }
+
+        if (! $user->can('access checkout page')) {
+            return $this->deny('Anda tidak memiliki izin untuk mengakses halaman checkout.', 403);
+        }
+
+        if ($user->id !== $cart->user_id) {
+            return $this->deny('Anda hanya dapat melakukan checkout menggunakan keranjang belanja Anda sendiri.', 403);
+        }
+
+        return true;
+    }
 }
