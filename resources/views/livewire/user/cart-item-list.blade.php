@@ -974,7 +974,9 @@ new class extends Component {
                                 </dd>
                             </dl>
                             <hr class="mb-8 mt-4 border-neutral-300" />
-                            <x-common.button class="w-full" variant="primary">Checkout</x-common.button>
+                            <x-common.button :href="route('checkout')" class="w-full" variant="primary" wire:navigate>
+                                Checkout
+                            </x-common.button>
                         </aside>
                     @endif
                 @endcan
