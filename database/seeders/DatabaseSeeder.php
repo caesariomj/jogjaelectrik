@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             DiscountPermissionsSeeder::class,
             CartPermissionsSeeder::class,
             CheckoutPageAccessSeeder::class,
+            OrderPermissionsSeeder::class,
         ]);
     }
 }
