@@ -12,12 +12,6 @@ export default (
     openedWithKeyboard: false,
 
     init() {
-        if (this.autoplayIntervalTime > 0) {
-            this.autoplay();
-        }
-    },
-
-    init() {
         if (this.selectedOption) {
             const entireData = this.findDataByValue(this.options, this.selectedOption);
             if (entireData) {
@@ -27,7 +21,7 @@ export default (
     },
 
     findDataByValue(data, value) {
-        return data.find((item) => item.value === value);
+        return data.find((item) => item.value == value);
     },
 
     setSelectedOption(option) {
