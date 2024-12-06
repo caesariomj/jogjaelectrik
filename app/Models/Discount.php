@@ -80,7 +80,7 @@ class Discount extends Model
         return $query->where('is_active', true);
     }
 
-    public function scopeUsable($query)
+    public function scopeUsable($query, $userId = null)
     {
         return $query->where(function ($query) {
             $query->whereNull('start_date')->orWhere('start_date', '<=', now());
@@ -90,6 +90,13 @@ class Discount extends Model
             })
             ->where(function ($query) {
                 $query->whereNull('usage_limit')->orWhereColumn('usage_limit', '>', 'used_count');
+            })
+            ->whereDoesntHave('orderDiscounts', function ($query) use ($userId) {
+                $query->where('is_used', true)
+                    ->whereHas('order', function ($query) use ($userId) {
+                        $query->where('user_id', $userId)
+                            ->whereNotNull('id');
+                    });
             });
     }
 
