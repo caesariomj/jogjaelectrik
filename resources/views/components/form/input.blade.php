@@ -4,10 +4,10 @@
 ])
 
 <input
-    @disabled($disabled)
     {{
         $attributes->merge([
-            'class' => 'rounded-md shadow-sm focus:border-primary focus:ring-primary ' . ($hasError ? 'border-red-500' : 'border-neutral-300'),
+            'class' => 'py-3 px-4 text-sm rounded-md shadow-sm focus:border-primary focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed ' . ($hasError ? 'border-red-500' : 'border-neutral-300'),
         ])
     }}
+    @disabled($disabled)
 />

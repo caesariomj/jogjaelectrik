@@ -2,6 +2,7 @@
     'options' => [],
     'name' => '',
     'selectedOption' => null,
+    'disabled' => false,
 ])
 
 <div
@@ -12,11 +13,12 @@
             })"
     x-on:keydown="handleKeydownOnOptions($event)"
     x-on:keydown.esc.window="isOpen = false, openedWithKeyboard = false"
+    {{ $attributes }}
 >
     <div class="relative">
         <button
             type="button"
-            class="inline-flex w-full items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-wide text-neutral-600 transition hover:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+            class="inline-flex w-full items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-tight text-black shadow-sm transition hover:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
             role="combobox"
             aria-controls="{{ $name }}-list"
             aria-haspopup="listbox"
@@ -49,7 +51,7 @@
         <div
             x-show="isOpen || openedWithKeyboard"
             id="{{ $name }}-list"
-            class="absolute left-0 top-12 z-10 w-full overflow-hidden rounded-md border border-neutral-300 bg-white shadow-lg"
+            class="absolute left-0 top-12 z-[1] w-full overflow-hidden rounded-md border border-neutral-300 bg-white shadow-lg"
             role="listbox"
             aria-label="industries list"
             x-on:click.outside="isOpen = false, openedWithKeyboard = false"
