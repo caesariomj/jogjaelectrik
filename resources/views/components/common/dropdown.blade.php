@@ -1,12 +1,15 @@
 @props([
     'align' => 'right',
-    'width' => '48',
+    'width' => '',
     'contentClasses' => 'bg-white py-1',
     'placement' => null,
 ])
 
 @php
-    $width = 'w-' . $width;
+    $width = match ($width) {
+        '48' => 'w-48',
+        default => 'w-48',
+    };
 
     $defaultPlacement = match ($align) {
         'left' => 'bottom-start',
@@ -17,14 +20,7 @@
     $placement = $placement ?? $defaultPlacement;
 @endphp
 
-<div
-    x-data="dropdown()"
-    @click.outside="close"
-    @close.stop="close"
-    data-placement="{{ $placement }}"
-    class="relative inline-block"
-    wire:ignore
->
+<div x-data="dropdown()" class="relative inline-block" @click.outside="close" @close.stop="close" wire:ignore>
     <div @click="toggle" x-ref="button" class="inline-flex items-center">
         {{ $trigger }}
     </div>
@@ -36,7 +32,7 @@
         class="{{ $width }} absolute z-10 rounded-md shadow-lg"
         x-cloak
     >
-        <div class="{{ $contentClasses }} rounded-md bg-white ring-1 ring-black ring-opacity-5">
+        <div class="{{ $contentClasses }} rounded-md ring-1 ring-black ring-opacity-5">
             {{ $content }}
         </div>
     </div>

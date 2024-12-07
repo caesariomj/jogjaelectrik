@@ -19,7 +19,7 @@ export default () => ({
             this.popperInstance.destroy();
         }
 
-        const placement = this.$el.dataset.placement || 'bottom-start';
+        const placement = 'bottom-end';
 
         this.popperInstance = createPopper(this.$refs.button, this.$refs.panel, {
             placement: placement,
@@ -48,15 +48,7 @@ export default () => ({
                     name: 'computeStyles',
                     options: {
                         gpuAcceleration: false,
-                        adaptive: false,
-                    },
-                },
-                {
-                    name: 'eventListeners',
-                    enabled: true,
-                    options: {
-                        scroll: true,
-                        resize: true,
+                        adaptive: true,
                     },
                 },
             ],
