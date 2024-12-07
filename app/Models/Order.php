@@ -86,6 +86,11 @@ class Order extends Model
         return $query->where('order_number', $orderNumber);
     }
 
+    public function scopeExpired($query)
+    {
+        return $query->where('status', 'waiting_payment')->where('created_at', '<=', \Carbon\Carbon::now()->subDay());
+    }
+
     private static function generateOrderNumber()
     {
         $date = now()->format('Ymd');
