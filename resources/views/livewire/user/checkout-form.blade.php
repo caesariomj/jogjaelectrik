@@ -8,6 +8,7 @@ use App\Services\ShippingService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Livewire\Attributes\Locked;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -18,23 +19,22 @@ new class extends Component {
     public Collection $provinces;
     public Collection $cities;
 
+    #[Locked]
     public array $supportedCourierExpeditions = [
         [
-            'code' => 'jne',
             'name' => 'jalur nugraha ekakurir',
+            'code' => 'jne',
         ],
         [
-            'code' => 'pos',
             'name' => 'pos indonesia',
+            'code' => 'pos',
         ],
         [
-            'code' => 'tiki',
             'name' => 'titipan kilat',
+            'code' => 'tiki',
         ],
     ];
-
     public array $selectedCourierServices = [];
-
     public array $supportedPaymentMethods = [
         [
             'name' => 'QRIS',
@@ -136,6 +136,8 @@ new class extends Component {
 
     public function updatedFormShippingCourier()
     {
+        $this->selectedCourierServices = [];
+        $this->form->shippingCourierServiceTax = 0;
         $this->getSelectedCourierServices();
     }
 
@@ -144,8 +146,6 @@ new class extends Component {
         if (! $this->form->city || ! $this->form->totalWeight || ! $this->form->shippingCourier) {
             return;
         }
-
-        $this->selectedCourierServices = [];
 
         try {
             $result = $this->shippingService->calculateShippingCost(
@@ -306,8 +306,6 @@ new class extends Component {
             session()->flash('success', 'Pesanan anda berhasil dibuat.');
             return $this->redirectRoute('orders.success', ['orderNumber' => $orderNumber], navigate: true);
         } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
-            throw $authException;
-
             $errorMessage = $authException->getMessage();
 
             if ($authException->getCode() === 401) {
@@ -318,8 +316,6 @@ new class extends Component {
             session()->flash('error', $errorMessage);
             return $this->redirect(request()->header('Referer'), true);
         } catch (\Illuminate\Database\QueryException $queryException) {
-            throw $queryException;
-
             \Illuminate\Support\Facades\Log::error('Database error during transaction', [
                 'error' => $queryException->getMessage(),
                 'exception_trace' => $queryException->getTraceAsString(),
@@ -328,8 +324,6 @@ new class extends Component {
             session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
             return $this->redirect(request()->header('Referer'), true);
         } catch (\App\Exceptions\ApiRequestException $apiException) {
-            throw $apiException;
-
             \Illuminate\Support\Facades\Log::error('Payment processing failed in controller', [
                 'message' => $apiException->getMessage(),
                 'status_code' => $apiException->getStatusCode(),
@@ -339,8 +333,6 @@ new class extends Component {
             session('error', 'Terjadi kesalahan tak terduga pada sistem. Silakan coba beberapa saat lagi');
             return $this->redirect(request()->header('Referer'), true);
         } catch (\Throwable $th) {
-            throw $th;
-
             \Illuminate\Support\Facades\Log::error('Unexpected error occurred', [
                 'error' => $th->getMessage(),
                 'exception_trace' => $th->getTraceAsString(),
@@ -563,6 +555,8 @@ new class extends Component {
                                     :labelAttributes="
                                         [
                                             'for' => 'expedition-' . $expedition['code'],
+                                            'wire:loading.class' => 'opacity-50 !cursor-not-allowed hover:bg-white',
+                                            'wire:target' => 'form.shippingCourier,form.city',
                                         ]
                                     "
                                     :hasError="$errors->has('form.shippingCourier')"
@@ -680,6 +674,8 @@ new class extends Component {
                                         :labelAttributes="
                                             [
                                                 'for' => 'expedition-' . strtolower($service['courier_code']) . '-service-' . strtolower($service['service']),
+                                                'wire:loading.class' => 'opacity-50 !cursor-not-allowed hover:bg-white',
+                                                'wire:target' => 'form.shippingCourier,form.city',
                                             ]
                                         "
                                         :hasError="$errors->has('form.shippingCourierService')"
@@ -850,20 +846,18 @@ new class extends Component {
                     Rp {{ formatPrice($form->totalPrice) }}
                 </dd>
                 <dt class="mb-1 text-start tracking-tight text-black/70">Potongan Diskon</dt>
-                <dd class="mb-1 text-end font-medium tracking-tight text-teal-500">
-                    @if ($form->discountAmount <= 0)
-                        &mdash;
-                    @else
-                        - Rp {{ formatPrice($form->discountAmount) }}
-                    @endif
+                <dd
+                    @class([
+                        'mb-1 text-end font-medium tracking-tight',
+                        'text-black' => ! $form->discountAmount,
+                        'text-teal-500' => $form->discountAmount,
+                    ])
+                >
+                    - Rp {{ $form->discountAmount ? formatPrice($form->discountAmount) : '0' }}
                 </dd>
                 <dt class="inline-flex gap-x-2 text-start tracking-tight text-black/70">Ongkos Kirim</dt>
                 <dd class="text-end font-medium tracking-tight text-black">
-                    @if ($form->shippingCourierServiceTax <= 0)
-                        &mdash;
-                    @else
-                        + Rp {{ formatPrice($form->shippingCourierServiceTax) }}
-                    @endif
+                    + Rp {{ $form->shippingCourierServiceTax ? formatPrice($form->shippingCourierServiceTax) : '0' }}
                 </dd>
             </dl>
             <hr class="my-4 border-neutral-300" />

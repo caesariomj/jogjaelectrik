@@ -4,23 +4,20 @@ use App\Models\Cart;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Volt\Component;
 
 new class extends Component {
-    public string $context = 'offcanvas';
-
     public ?Cart $cart = null;
-
     public ?Collection $items = null;
 
+    #[Locked]
+    public string $context = 'offcanvas';
     public float $totalPrice = 0;
-
     public float $totalWeight = 0;
-
     public ?string $discountCode = null;
-
-    public ?float $discountAmount = null;
+    public float $discountAmount = 0;
 
     public function mount($context = 'offcanvas')
     {
@@ -35,7 +32,6 @@ new class extends Component {
 
         if ($this->cart) {
             $this->items = $this->cart->items()->exists() ? $this->cart->items : null;
-
             $this->calculateTotal();
         }
     }
@@ -43,14 +39,11 @@ new class extends Component {
     private function calculateTotal()
     {
         $this->totalPrice = $this->cart ? $this->cart->calculateTotalPrice() : 0;
-
         $this->totalWeight = $this->cart ? $this->cart->calculateTotalWeight() : 0;
 
         if ($this->cart && $this->cart->discount_id) {
             $this->discountCode = $this->cart->discount->code;
-
             $discountModel = \App\Models\Discount::findByCode($this->discountCode)->first();
-
             $this->discountAmount = $discountModel ? $discountModel->calculateDiscount($this->totalPrice) : null;
         } else {
             $this->discountAmount = 0;
@@ -77,7 +70,6 @@ new class extends Component {
                 'Jumlah kuantitas produk melebihi stok yang tersedia. Stok tersedia:' .
                     $existingCartItem->productVariant->stock,
             );
-
             return;
         }
 
@@ -91,19 +83,16 @@ new class extends Component {
             });
 
             $this->calculateTotal();
-
             return;
         } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
             $errorMessage = $authException->getMessage();
 
             if ($authException->getCode() === 401) {
                 session()->flash('error', $errorMessage);
-
                 return $this->redirectRoute('login', navigate: true);
             }
 
             session()->flash('error', $errorMessage);
-
             return $this->redirect(request()->header('Referer'), true);
         } catch (\Illuminate\Database\QueryException $queryException) {
             \Illuminate\Support\Facades\Log::error('Database error during transaction', [
@@ -112,7 +101,6 @@ new class extends Component {
             ]);
 
             session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
-
             return $this->redirect(request()->header('Referer'), true);
         } catch (\Throwable $th) {
             \Illuminate\Support\Facades\Log::error('Unexpected error occurred', [
@@ -121,7 +109,6 @@ new class extends Component {
             ]);
 
             session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-
             return $this->redirect(request()->header('Referer'), true);
         }
     }
@@ -141,7 +128,6 @@ new class extends Component {
 
         if ($quantity < 1) {
             $this->addError('quantity-' . $cartItemId, 'Jumlah produk tidak bisa kurang dari 1.');
-
             return;
         }
 
@@ -151,7 +137,6 @@ new class extends Component {
                 'Jumlah kuantitas produk melebihi stok yang tersedia. Stok tersedia:' .
                     $existingCartItem->productVariant->stock,
             );
-
             return;
         }
 
@@ -167,19 +152,16 @@ new class extends Component {
             });
 
             $this->calculateTotal();
-
             return;
         } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
             $errorMessage = $authException->getMessage();
 
             if ($authException->getCode() === 401) {
                 session()->flash('error', $errorMessage);
-
                 return $this->redirectRoute('login', navigate: true);
             }
 
             session()->flash('error', $errorMessage);
-
             return $this->redirect(request()->header('Referer'), true);
         } catch (\Illuminate\Database\QueryException $queryException) {
             \Illuminate\Support\Facades\Log::error('Database error during transaction', [
@@ -188,7 +170,6 @@ new class extends Component {
             ]);
 
             session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
-
             return $this->redirect(request()->header('Referer'), true);
         } catch (\Throwable $th) {
             \Illuminate\Support\Facades\Log::error('Unexpected error occurred', [
@@ -197,7 +178,6 @@ new class extends Component {
             ]);
 
             session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-
             return $this->redirect(request()->header('Referer'), true);
         }
     }
@@ -209,12 +189,10 @@ new class extends Component {
         }
 
         $existingCartItem = $this->items->find($cartItemId);
-
         $newQuantity = $existingCartItem->quantity - 1;
 
         if ($newQuantity < 1) {
             $this->addError('quantity-' . $cartItemId, 'Jumlah produk tidak bisa kurang dari 1.');
-
             return;
         }
 
@@ -228,19 +206,16 @@ new class extends Component {
             });
 
             $this->calculateTotal();
-
             return;
         } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
             $errorMessage = $authException->getMessage();
 
             if ($authException->getCode() === 401) {
                 session()->flash('error', $errorMessage);
-
                 return $this->redirectRoute('login', navigate: true);
             }
 
             session()->flash('error', $errorMessage);
-
             return $this->redirect(request()->header('Referer'), true);
         } catch (\Illuminate\Database\QueryException $queryException) {
             \Illuminate\Support\Facades\Log::error('Database error during transaction', [
@@ -249,7 +224,6 @@ new class extends Component {
             ]);
 
             session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
-
             return $this->redirect(request()->header('Referer'), true);
         } catch (\Throwable $th) {
             \Illuminate\Support\Facades\Log::error('Unexpected error occurred', [
@@ -258,7 +232,6 @@ new class extends Component {
             ]);
 
             session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-
             return $this->redirect(request()->header('Referer'), true);
         }
     }
@@ -267,7 +240,6 @@ new class extends Component {
     {
         if (! $this->cart) {
             session()->flash('error', 'Keranjang belanja anda kosong.');
-
             return $this->redirect(request()->header('Referer'), true);
         }
 
@@ -275,7 +247,6 @@ new class extends Component {
 
         if (! $existingCartItem) {
             session()->flash('error', 'Produk tidak ditemukan pada keranjang belanja anda.');
-
             return $this->redirect(request()->header('Referer'), true);
         }
 
@@ -287,19 +258,16 @@ new class extends Component {
             });
 
             session()->flash('success', 'Produk berhasil dihapus dari keranjang belanja.');
-
             return $this->redirect(request()->header('Referer'), true);
         } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
             $errorMessage = $authException->getMessage();
 
             if ($authException->getCode() === 401) {
                 session()->flash('error', $errorMessage);
-
                 return $this->redirectRoute('login', navigate: true);
             }
 
             session()->flash('error', $errorMessage);
-
             return $this->redirect(request()->header('Referer'), true);
         } catch (\Illuminate\Database\QueryException $queryException) {
             \Illuminate\Support\Facades\Log::error('Database error during transaction', [
@@ -317,18 +285,15 @@ new class extends Component {
             ]);
 
             session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-
             return $this->redirect(request()->header('Referer'), true);
         }
     }
-
-    // Todo: Handle selected discount. Ask chatgpt how to handle it securely. Also don't forget the input component validation props :)
 
     #[Computed]
     public function discounts()
     {
         return \App\Models\Discount::active()
-            ->usable()
+            ->usable(auth()->id())
             ->get();
     }
 
@@ -350,7 +315,6 @@ new class extends Component {
 
         if (! $discount) {
             $this->addError('discountCode', 'Kode diskon tidak valid atau telah kedaluwarsa.');
-
             return;
         }
 
@@ -358,7 +322,6 @@ new class extends Component {
 
         if ($isDiscountValid !== true) {
             $this->addError('discountCode', $isDiscountValid);
-
             return;
         }
 
@@ -366,7 +329,6 @@ new class extends Component {
             $this->authorize('applyDiscount', $this->cart);
 
             $this->discountCode = $discount->code;
-
             $this->discountAmount = $discount->calculateDiscount($this->totalPrice);
 
             DB::transaction(function () use ($discount) {
@@ -381,12 +343,10 @@ new class extends Component {
 
             if ($authException->getCode() === 401) {
                 session()->flash('error', $errorMessage);
-
                 return $this->redirectRoute('login', navigate: true);
             }
 
             session()->flash('error', $errorMessage);
-
             return $this->redirect(request()->header('Referer'), true);
         } catch (\Illuminate\Database\QueryException $queryException) {
             \Illuminate\Support\Facades\Log::error('Database error during transaction', [
@@ -395,7 +355,6 @@ new class extends Component {
             ]);
 
             session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
-
             return $this->redirect(request()->header('Referer'), true);
         } catch (\Throwable $th) {
             \Illuminate\Support\Facades\Log::error('Unexpected error occurred', [
@@ -404,7 +363,6 @@ new class extends Component {
             ]);
 
             session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-
             return $this->redirect(request()->header('Referer'), true);
         }
     }
@@ -419,7 +377,6 @@ new class extends Component {
             $this->authorize('update', $this->cart);
 
             $this->discountCode = null;
-
             $this->discountAmount = null;
 
             DB::transaction(function () {
@@ -434,12 +391,10 @@ new class extends Component {
 
             if ($authException->getCode() === 401) {
                 session()->flash('error', $errorMessage);
-
                 return $this->redirectRoute('login', navigate: true);
             }
 
             session()->flash('error', $errorMessage);
-
             return $this->redirect(request()->header('Referer'), true);
         } catch (\Illuminate\Database\QueryException $queryException) {
             \Illuminate\Support\Facades\Log::error('Database error during transaction', [
@@ -448,7 +403,6 @@ new class extends Component {
             ]);
 
             session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
-
             return $this->redirect(request()->header('Referer'), true);
         } catch (\Throwable $th) {
             \Illuminate\Support\Facades\Log::error('Unexpected error occurred', [
@@ -457,7 +411,6 @@ new class extends Component {
             ]);
 
             session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-
             return $this->redirect(request()->header('Referer'), true);
         }
     }
@@ -475,7 +428,7 @@ new class extends Component {
                     />
                     <figcaption class="flex flex-col items-center">
                         <h2 class="mb-3 text-center !text-2xl text-black">Keranjang Belanja Anda Masih Kosong</h2>
-                        <p class="mb-8 text-center text-base font-normal tracking-tight text-neutral-600">
+                        <p class="mb-8 text-center text-base font-normal tracking-tight text-black/70">
                             Seluruh produk yang anda tambahkan ke dalam keranjang belanja akan ditampilkan disini.
                         </p>
                         <x-common.button :href="route('products')" variant="primary" wire:navigate>
@@ -506,7 +459,7 @@ new class extends Component {
                                 <h2 class="mb-3 text-center !text-2xl text-black">
                                     Keranjang Belanja Anda Masih Kosong
                                 </h2>
-                                <p class="mb-8 text-center text-base font-normal tracking-tight text-neutral-600">
+                                <p class="mb-8 text-center text-base font-normal tracking-tight text-black/70">
                                     Seluruh produk yang anda tambahkan ke dalam keranjang belanja akan ditampilkan
                                     disini.
                                 </p>
@@ -534,7 +487,7 @@ new class extends Component {
                                 >
                                     <a
                                         href="{{ route('products.detail', ['slug' => $item->productVariant->product->slug]) }}"
-                                        class="h-28 w-28 overflow-hidden rounded-lg bg-neutral-100"
+                                        class="size-28 overflow-hidden rounded-lg bg-neutral-100"
                                         wire:navigate
                                     >
                                         <img
@@ -550,23 +503,23 @@ new class extends Component {
                                             class="mb-0.5"
                                             wire:navigate
                                         >
-                                            <h3 class="!text-lg text-neutral-900 hover:text-primary">
+                                            <h3 class="!text-lg text-black hover:text-primary">
                                                 {{ $item->productVariant->product->name }}
                                             </h3>
                                         </a>
 
                                         @if ($item->productVariant->variant_sku)
-                                            <p class="mb-2 text-sm tracking-tight text-black">
+                                            <p class="mb-1 text-sm tracking-tight text-black">
                                                 {{ ucwords($item->productVariant->combinations->first()->variationVariant->variation->name) . ': ' . ucwords($item->productVariant->combinations->first()->variationVariant->name) }}
                                             </p>
                                         @endif
 
                                         <p
-                                            class="inline-flex items-center text-sm font-medium tracking-tighter text-neutral-600 sm:text-base"
+                                            class="inline-flex items-center text-sm font-medium tracking-tighter text-black/70"
                                         >
                                             <span class="me-2">{{ $item->quantity }}</span>
                                             x
-                                            <span class="ms-2 tracking-tight text-neutral-900">
+                                            <span class="ms-2 tracking-tight text-black">
                                                 Rp {{ formatPrice($item->price) }}
                                             </span>
                                         </p>
@@ -609,15 +562,62 @@ new class extends Component {
                                 </article>
                             @endforeach
                         </div>
-                        <div class="mt-auto border-t border-t-neutral-300 p-4">
-                            <div class="mb-4 inline-flex w-full items-center justify-between">
-                                <p class="text-base font-semibold tracking-tighter text-neutral-900">Subtotal:</p>
-                                <span class="text-lg font-bold tracking-tighter text-neutral-900">
+                        <div class="mt-auto space-y-2 border-t border-t-neutral-300 pt-4">
+                            <dl class="mb-2 grid grid-cols-2 gap-y-1">
+                                <dt class="text-start text-base tracking-tight text-black/70">Subtotal:</dt>
+                                <dd class="text-end text-base font-medium tracking-tight text-black">
                                     Rp {{ formatPrice($totalPrice) }}
-                                </span>
-                            </div>
-                            <x-common.button :href="route('cart')" class="w-full" variant="primary" wire:navigate>
+                                </dd>
+                                <dt class="text-start text-base tracking-tight text-black/70">Potongan Diskon:</dt>
+                                <dd
+                                    @class([
+                                        'mb-1 text-end text-base font-medium tracking-tight',
+                                        'text-black' => ! $discountAmount,
+                                        'text-teal-500' => $discountAmount,
+                                    ])
+                                >
+                                    - Rp {{ $discountAmount ? formatPrice($discountAmount) : '0' }}
+                                </dd>
+                                <dt class="text-start text-base tracking-tight text-black/70">Total:</dt>
+                                <dd class="text-end text-base font-semibold tracking-tight text-black">
+                                    Rp
+                                    {{ $discountAmount ? formatPrice($totalPrice - $discountAmount) : formatPrice($totalPrice) }}
+                                </dd>
+                            </dl>
+                            <x-common.button :href="route('cart')" class="w-full" variant="secondary" wire:navigate>
+                                <svg
+                                    class="size-5 shrink-0"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <circle cx="8" cy="21" r="1" />
+                                    <circle cx="19" cy="21" r="1" />
+                                    <path
+                                        d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"
+                                    />
+                                </svg>
                                 Keranjang Belanja
+                            </x-common.button>
+                            <x-common.button :href="route('checkout')" class="w-full" variant="primary" wire:navigate>
+                                Checkout
+                                <svg
+                                    class="size-5 shrink-0"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path d="M18 8L22 12L18 16" />
+                                    <path d="M2 12H22" />
+                                </svg>
                             </x-common.button>
                         </div>
                     @endif
@@ -634,8 +634,8 @@ new class extends Component {
                         alt="Gambar ilustrasi keranjang kosong"
                     />
                     <figcaption class="flex flex-col items-center">
-                        <h3 class="mb-3 text-center !text-2xl text-black">Keranjang Belanja Anda Masih Kosong</h3>
-                        <p class="mb-8 text-center text-base font-normal tracking-tight text-neutral-600">
+                        <h2 class="mb-3 text-center !text-2xl text-black">Keranjang Belanja Anda Masih Kosong</h2>
+                        <p class="mb-8 text-center text-base font-normal tracking-tight text-black/70">
                             Seluruh produk yang anda tambahkan ke dalam keranjang belanja akan ditampilkan disini.
                         </p>
                         <x-common.button :href="route('products')" variant="primary" wire:navigate>
@@ -663,10 +663,10 @@ new class extends Component {
                                 alt="Gambar ilustrasi keranjang kosong"
                             />
                             <figcaption class="flex flex-col items-center">
-                                <h3 class="mb-3 text-center !text-2xl text-black">
+                                <h2 class="mb-3 text-center !text-2xl text-black">
                                     Keranjang Belanja Anda Masih Kosong
-                                </h3>
-                                <p class="mb-8 text-center text-base font-normal tracking-tight text-neutral-600">
+                                </h2>
+                                <p class="mb-8 text-center text-base font-normal tracking-tight text-black/70">
                                     Seluruh produk yang anda tambahkan ke dalam keranjang belanja akan ditampilkan
                                     disini.
                                 </p>
@@ -701,7 +701,7 @@ new class extends Component {
                                     >
                                         <a
                                             href="{{ route('products.detail', ['slug' => $item->productVariant->product->slug]) }}"
-                                            class="size-40 shrink-0 overflow-hidden rounded-lg bg-neutral-100"
+                                            class="size-36 shrink-0 overflow-hidden rounded-lg bg-neutral-100"
                                             wire:navigate
                                         >
                                             <img
@@ -711,29 +711,29 @@ new class extends Component {
                                                 loading="lazy"
                                             />
                                         </a>
-                                        <div class="flex h-40 w-full flex-col items-start">
+                                        <div class="flex h-36 w-full flex-col items-start">
                                             <a
                                                 href="{{ route('products.detail', ['slug' => $item->productVariant->product->slug]) }}"
                                                 class="mb-0.5"
                                                 wire:navigate
                                             >
-                                                <h3 class="!text-lg text-neutral-900 hover:text-primary">
+                                                <h3 class="!text-lg text-black hover:text-primary">
                                                     {{ $item->productVariant->product->name }}
                                                 </h3>
                                             </a>
 
                                             @if ($item->productVariant->variant_sku)
-                                                <p class="mb-2 text-sm tracking-tight text-black">
+                                                <p class="mb-1 text-sm tracking-tight text-black">
                                                     {{ ucwords($item->productVariant->combinations->first()->variationVariant->variation->name) . ': ' . ucwords($item->productVariant->combinations->first()->variationVariant->name) }}
                                                 </p>
                                             @endif
 
                                             <p
-                                                class="inline-flex items-center text-sm font-medium tracking-tighter text-neutral-600 sm:text-base"
+                                                class="inline-flex items-center text-sm font-medium tracking-tighter text-black/70"
                                             >
                                                 <span class="me-2">{{ $item->quantity }}</span>
                                                 x
-                                                <span class="ms-2 tracking-tight text-neutral-900">
+                                                <span class="ms-2 tracking-tight text-black">
                                                     Rp {{ formatPrice($item->price) }}
                                                 </span>
                                             </p>
@@ -875,50 +875,48 @@ new class extends Component {
                         >
                             <h2 id="cart-summary-title" class="!text-2xl text-black">Ringkasan Belanja</h2>
                             <hr class="my-4 border-neutral-300" />
-                            @if ($this->discounts->count() > 0)
-                                @can('apply discounts')
-                                    <x-common.button
-                                        variant="secondary"
-                                        class="w-full !px-4"
-                                        x-on:click.prevent.stop="$dispatch('open-modal', 'discount-selection')"
+                            @can('apply discounts')
+                                <x-common.button
+                                    variant="secondary"
+                                    class="w-full !px-4"
+                                    x-on:click.prevent.stop="$dispatch('open-modal', 'discount-selection')"
+                                >
+                                    <svg
+                                        class="size-5 shrink-0"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        aria-hidden="true"
                                     >
-                                        <svg
-                                            class="size-5 shrink-0"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            aria-hidden="true"
-                                        >
-                                            <path
-                                                d="M2 9a3 3 0 1 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 1 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"
-                                            />
-                                            <path d="M9 9h.01" />
-                                            <path d="m15 9-6 6" />
-                                            <path d="M15 15h.01" />
-                                        </svg>
-                                        <span class="truncate">
-                                            {{ $discountCode ? 'Kode diskon: ' . strtoupper($discountCode) : 'Gunakan Diskon' }}
-                                        </span>
-                                        <svg
-                                            class="ml-auto size-5 shrink-0"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            aria-hidden="true"
-                                        >
-                                            <path d="m9 18 6-6-6-6" />
-                                        </svg>
-                                    </x-common.button>
-                                @endcan
-                            @endif
+                                        <path
+                                            d="M2 9a3 3 0 1 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 1 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"
+                                        />
+                                        <path d="M9 9h.01" />
+                                        <path d="m15 9-6 6" />
+                                        <path d="M15 15h.01" />
+                                    </svg>
+                                    <span class="truncate">
+                                        {{ $discountCode ? 'Kode diskon: ' . strtoupper($discountCode) : 'Gunakan Diskon' }}
+                                    </span>
+                                    <svg
+                                        class="ml-auto size-5 shrink-0"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        aria-hidden="true"
+                                    >
+                                        <path d="m9 18 6-6-6-6" />
+                                    </svg>
+                                </x-common.button>
+                            @endcan
 
                             <hr class="my-4 border-neutral-300" />
                             <dl class="grid grid-cols-2">
@@ -941,13 +939,8 @@ new class extends Component {
                                         'text-teal-500' => $discountAmount,
                                     ])
                                 >
-                                    @if ($discountAmount)
-                                        - Rp {{ formatPrice($discountAmount) }}
-                                    @else
-                                        &mdash;
-                                    @endif
+                                    - Rp {{ $discountAmount ? formatPrice($discountAmount) : '0' }}
                                 </dd>
-
                                 <dt class="inline-flex gap-x-2 text-start tracking-tight text-black/70">
                                     Biaya Pengiriman
                                     <x-common.tooltip
@@ -956,19 +949,11 @@ new class extends Component {
                                     />
                                 </dt>
                                 <dd class="text-end font-medium tracking-tight text-black">&mdash;</dd>
-                                <dt class="inline-flex gap-x-2 text-start tracking-tight text-black/70">
-                                    Biaya Layanan
-                                    <x-common.tooltip
-                                        id="service-cost"
-                                        text="Biaya layanan akan dihitung pada halaman checkout."
-                                    />
-                                </dt>
-                                <dd class="text-end font-medium tracking-tight text-black">&mdash;</dd>
                             </dl>
                             <hr class="my-4 border-neutral-300" />
                             <dl class="grid grid-cols-2">
                                 <dt class="text-start tracking-tight text-black/70">Estimasi Total</dt>
-                                <dd class="text-end font-medium tracking-tight text-black">
+                                <dd class="text-end font-semibold tracking-tight text-black">
                                     Rp
                                     {{ $discountAmount ? formatPrice($totalPrice - $discountAmount) : formatPrice($totalPrice) }}
                                 </dd>
@@ -976,6 +961,19 @@ new class extends Component {
                             <hr class="mb-8 mt-4 border-neutral-300" />
                             <x-common.button :href="route('checkout')" class="w-full" variant="primary" wire:navigate>
                                 Checkout
+                                <svg
+                                    class="size-5 shrink-0"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                >
+                                    <path d="M18 8L22 12L18 16" />
+                                    <path d="M2 12H22" />
+                                </svg>
                             </x-common.button>
                         </aside>
                     @endif
@@ -983,11 +981,11 @@ new class extends Component {
             @endif
         </div>
     @endif
-    @if ($this->discounts->count() > 0)
-        @can('apply discounts')
-            <x-common.modal name="discount-selection" :show="$errors->isNotEmpty()" focusable>
-                <div class="p-4">
-                    <h2 class="mb-2 !text-2xl leading-none text-black">Diskon</h2>
+    @can('apply discounts')
+        <x-common.modal name="discount-selection" :show="$errors->isNotEmpty()" focusable>
+            <div class="p-4">
+                <h2 class="mb-2 !text-2xl leading-none text-black">Diskon</h2>
+                @if ($this->discounts->count() > 0)
                     <p class="tracking-tight text-black">
                         Silakan pilih salah satu dari diskon yang tersedia di bawah ini.
                     </p>
@@ -1096,8 +1094,22 @@ new class extends Component {
                     >
                         Batalkan Penggunaan Diskon
                     </x-common.button>
-                </div>
-            </x-common.modal>
-        @endcan
-    @endif
+                @else
+                    <figure class="flex h-full flex-col items-center justify-center">
+                        <img
+                            src="https://placehold.co/400"
+                            class="mb-6 size-72 object-cover"
+                            alt="Gambar ilustrasi diskon tidak ditemukan"
+                        />
+                        <figcaption class="flex flex-col items-center">
+                            <h2 class="mb-3 text-center !text-2xl text-black">Diskon Tidak Ditemukan</h2>
+                            <p class="mb-8 text-center text-base font-normal tracking-tight text-black/70">
+                                Saat ini, Anda tidak memiliki diskon yang dapat digunakan.
+                            </p>
+                        </figcaption>
+                    </figure>
+                @endif
+            </div>
+        </x-common.modal>
+    @endcan
 </div>
