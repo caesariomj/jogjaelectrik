@@ -128,4 +128,20 @@ class PaymentService
             throw new ApiRequestException('Terjadi kesalahan yang tidak terduga, silakan coba beberapa saat lagi atau hubungi customer support kami.', 500);
         }
     }
+
+    public function checkTransactionStatus(string $orderId)
+    {
+        try {
+            return \Midtrans\Transaction::status($orderId);
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Unexpected error checking Midtrans transaction status', [
+                'message' => $e->getMessage(),
+                'status_code' => $e->getCode(),
+                'order_id' => $orderId,
+                'exception_trace' => $e->getTraceAsString(),
+            ]);
+
+            throw new \Exception('Terjadi kesalahan pada sistem pembayaran, silakan coba beberapa saat lagi.');
+        }
+    }
 }

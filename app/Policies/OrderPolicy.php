@@ -36,6 +36,17 @@ class OrderPolicy
             return $this->deny('Silakan masuk terlebih dahulu untuk melihat seluruh pesanan Anda.', 401);
         }
 
+        if ($order->id === null) {
+            if ($user->can('view all orders')) {
+                return true;
+            }
+            if (! $user->can('view own orders')) {
+                return $this->deny('Anda tidak memiliki izin untuk melihat seluruh pesanan Anda.', 403);
+            }
+
+            return true;
+        }
+
         if ($user->can('view all orders')) {
             return true;
         }
@@ -98,8 +109,16 @@ class OrderPolicy
             return $this->deny('Silakan masuk terlebih dahulu untuk memproses pesanan pengguna.', 401);
         }
 
-        if (! $user->can('update orders')) {
+        if ($user->can('update all orders')) {
+            return true;
+        }
+
+        if (! $user->can('update own orders')) {
             return $this->deny('Anda tidak memiliki izin untuk memproses pesanan pengguna.', 403);
+        }
+
+        if ($user->id !== $order->user_id) {
+            return $this->deny('Anda hanya dapat memproses pesanan Anda sendiri.', 403);
         }
 
         return true;
