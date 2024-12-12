@@ -53,18 +53,18 @@ new #[Layout('layouts.app')] class extends Component {
             return $this->redirectRoute('home', navigate: true);
         }
 
-        // if (
-        //     in_array($this->order->status, [
-        //         'payment_received',
-        //         'processing',
-        //         'shipping',
-        //         'completed',
-        //         'failed',
-        //         'canceled',
-        //     ])
-        // ) {
-        //     return $this->redirectRoute('orders.index', navigate: true);
-        // }
+        if (
+            in_array($this->order->status, [
+                'payment_received',
+                'processing',
+                'shipping',
+                'completed',
+                'failed',
+                'canceled',
+            ])
+        ) {
+            return $this->redirectRoute('orders.index', navigate: true);
+        }
 
         $this->payment = $this->order->payment;
         $this->paymentToken = $this->payment->token;
