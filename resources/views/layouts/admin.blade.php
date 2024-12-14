@@ -20,15 +20,11 @@
         }"
     >
         <x-common.alert />
-
         <x-admin.sidebar />
-
         <div class="h-full w-full lg:pl-64">
             <livewire:layout.admin.navigation />
-
-            <x-common.breadcrumb class="px-4 pt-4 md:px-6" />
-
-            <main class="flex-1 px-4 pt-6 md:px-6">
+            <x-common.breadcrumb class="px-4 pt-4 md:px-6 md:pt-6" />
+            <main class="flex-1 p-4 md:p-6">
                 @yield('content', $slot ?? '')
             </main>
         </div>
