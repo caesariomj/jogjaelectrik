@@ -1,3 +1,9 @@
+@php
+    $ordersCount = \Illuminate\Support\Facades\DB::table('orders')
+        ->whereIn('status', ['payment_received', 'processing'])
+        ->count();
+@endphp
+
 <aside
     :class="{'-translate-x-full': !isOpen, 'translate-x-0': isOpen}"
     class="fixed inset-y-0 start-0 z-50 h-screen w-64 transform border-e border-neutral-300 bg-white text-black transition-transform duration-300 ease-in-out lg:translate-x-0"
@@ -37,6 +43,46 @@
                             <path d="M13.4 10.6 19 5" />
                         </svg>
                         Dashboard
+                    </x-admin.side-link>
+                </li>
+                <li class="border-t py-2">
+                    <span class="text-xs font-semibold uppercase tracking-tight text-black/50">Pesanan</span>
+                </li>
+                <li>
+                    <x-admin.side-link
+                        :href="route('admin.orders.index')"
+                        :active="request()->routeIs('admin.orders.*')"
+                        wire:navigate
+                    >
+                        <svg
+                            class="size-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <path
+                                d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"
+                            />
+                            <path d="M12 22V12" />
+                            <path d="m3.3 7 7.703 4.734a2 2 0 0 0 1.994 0L20.7 7" />
+                            <path d="m7.5 4.27 9 5.15" />
+                        </svg>
+                        Pesanan
+                        @if ($ordersCount > 0)
+                            <span
+                                @class([
+                                    'ml-auto inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
+                                    'bg-white text-red-500' => request()->routeIs('admin.orders.*'),
+                                    'bg-red-500 text-white' => ! request()->routeIs('admin.orders.*'),
+                                ])
+                            >
+                                {{ $ordersCount }}
+                            </span>
+                        @endif
                     </x-admin.side-link>
                 </li>
                 <li class="border-t py-2">
