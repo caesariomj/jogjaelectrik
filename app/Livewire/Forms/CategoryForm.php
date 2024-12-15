@@ -13,7 +13,6 @@ class CategoryForm extends Form
     #[Validate]
     public string $name = '';
 
-    #[Validate]
     public bool $isPrimary = false;
 
     public function rules()

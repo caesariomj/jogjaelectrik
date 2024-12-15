@@ -1,9 +1,13 @@
 <?php
 
-use App\Http\Controllers\Admin\SubcategoryController;
 use App\Livewire\Forms\SubcategoryForm;
+use App\Models\Category;
+use App\Models\Subcategory;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
-use Livewire\Attributes\On;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -12,18 +16,42 @@ new class extends Component {
     #[Computed]
     public function categories()
     {
-        return \App\Models\Category::select('id as value', 'name as label')->get();
+        return Category::select('id as value', 'name as label')->get();
     }
 
-    public function save(SubcategoryController $controller)
+    public function save()
     {
         $validated = $this->form->validate();
 
-        $controller->store($validated);
+        try {
+            $this->authorize('create', new Subcategory());
 
-        session()->flash('success', 'Data subkategori ' . $validated['name'] . ' berhasil ditambahkan.');
+            DB::transaction(function () use ($validated) {
+                Subcategory::create([
+                    'category_id' => $validated['categoryId'],
+                    'name' => strtolower($validated['name']),
+                ]);
+            });
 
-        $this->redirectRoute('admin.subcategories.index', navigate: true);
+            session()->flash('success', 'Subkategori ' . $validated['name'] . ' berhasil ditambahkan.');
+            $this->redirectRoute('admin.subcategories.index', navigate: true);
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('admin.subcategories.index'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during subcategory creation: ' . $e->getMessage());
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam menambahkan subkategori baru, silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(route('admin.subcategories.index'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected subcategory creation error: ' . $e->getMessage());
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('admin.subcategories.index'), navigate: true);
+        }
     }
 
     public function handleComboboxChange($value, $comboboxInstanceName)
@@ -34,10 +62,10 @@ new class extends Component {
     }
 }; ?>
 
-<form wire:submit.prevent="save" class="rounded-xl border border-neutral-300 bg-white shadow-sm">
+<form wire:submit.prevent="save" class="rounded-xl border border-neutral-300 bg-white shadow">
     <fieldset>
         <legend class="flex w-full border-b border-neutral-300 p-4">
-            <h2 class="text-lg text-black">Informasi Dasar Kategori</h2>
+            <h2 class="text-lg text-black">Informasi Dasar Subkategori</h2>
         </legend>
         <div class="p-4">
             <x-form.input-label for="select-category" value="Pilih Kategori" class="mb-1" />
@@ -52,7 +80,12 @@ new class extends Component {
                 class="mt-1 block w-full"
                 type="text"
                 name="name"
+                placeholder="Isikan nama subkategori disini..."
+                minlength="3"
+                maxlength="100"
+                autocomplete="off"
                 required
+                :hasError="$errors->has('form.name')"
             />
             <x-form.input-error :messages="$errors->get('form.name')" class="mt-2" />
         </div>
@@ -60,23 +93,24 @@ new class extends Component {
     <div class="flex flex-col justify-end gap-4 p-4 md:flex-row">
         <x-common.button
             :href="route('admin.subcategories.index')"
-            wire:loading.class="opacity-50 pointer-events-none"
-            wire:target="save"
             variant="secondary"
+            wire:loading.class="!pointers-event-none !cursor-not-allowed opacity-50"
+            wire:target="save"
             wire:navigate
         >
             Batal
         </x-common.button>
-        <x-common.button wire:loading.attr="disabled" wire:target="save" type="submit" variant="primary">
+        <x-common.button type="submit" variant="primary" wire:loading.attr="disabled" wire:target="save">
             <span wire:loading.remove wire:target="save">Simpan</span>
-            <span
-                wire:loading
-                wire:target="save"
-                class="inline-block size-5 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle text-white"
-                role="status"
-                aria-label="loading"
-            >
-                <span class="sr-only">Sedang diproses...</span>
+            <span wire:loading.flex wire:target="save" class="items-center gap-x-2">
+                <div
+                    class="inline-block size-4 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
+                    role="status"
+                    aria-label="loading"
+                >
+                    <span class="sr-only">Sedang diproses...</span>
+                </div>
+                Sedang diproses...
             </span>
         </x-common.button>
     </div>

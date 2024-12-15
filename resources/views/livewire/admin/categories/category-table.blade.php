@@ -1,5 +1,10 @@
 <?php
 
+use App\Models\Category;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
@@ -17,7 +22,7 @@ new class extends Component {
     #[Computed]
     public function categories()
     {
-        return \App\Models\Category::withCount('products')
+        return Category::withCount('products')
             ->when($this->search !== '', function ($query) {
                 return $query->where('name', 'like', '%' . $this->search . '%');
             })
@@ -40,6 +45,39 @@ new class extends Component {
 
         $this->sortField = $field;
     }
+
+    public function delete(string $id)
+    {
+        $category = Category::find($id);
+        $categoryName = $category->name;
+
+        try {
+            $this->authorize('delete', $category);
+
+            DB::transaction(function () use ($category) {
+                $category->delete();
+            });
+
+            session()->flash('success', 'Kategori ' . $categoryName . ' berhasil dihapus.');
+            return $this->redirectIntended(route('admin.categories.index'), navigate: true);
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('admin.categories.index'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during category deletion: ' . $e->getMessage());
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam menghapus kategori ' . $categoryName . ', silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(route('admin.categories.index'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected category deletion error: ' . $e->getMessage());
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('admin.categories.index'), navigate: true);
+        }
+    }
 }; ?>
 
 <div>
@@ -47,7 +85,7 @@ new class extends Component {
         <div class="relative">
             <div class="pointer-events-none absolute inset-y-0 start-0 z-20 flex items-center ps-3.5">
                 <svg
-                    class="size-4 shrink-0 text-neutral-600"
+                    class="size-4 shrink-0 text-black/70"
                     xmlns="http://www.w3.org/2000/svg"
                     width="24"
                     height="24"
@@ -57,18 +95,18 @@ new class extends Component {
                     stroke-width="2"
                     stroke-linecap="round"
                     stroke-linejoin="round"
+                    aria-hidden="true"
                 >
                     <circle cx="11" cy="11" r="8" />
                     <path d="m21 21-4.3-4.3" />
                 </svg>
             </div>
             <div class="relative">
-                <input
-                    wire:model.debounce.live="search"
-                    class="block w-full rounded-lg border border-neutral-300 py-2 pe-4 ps-10 text-sm placeholder:text-neutral-600 focus:border-primary focus:ring-primary disabled:pointer-events-none disabled:opacity-50"
+                <x-form.input
+                    wire:model.live.debounce.250ms="search"
+                    class="block w-full ps-10"
                     type="text"
                     role="combobox"
-                    aria-expanded="false"
                     placeholder="Cari data kategori produk berdasarkan nama..."
                 />
                 <div
@@ -77,7 +115,7 @@ new class extends Component {
                     class="pointer-events-none absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                 >
                     <svg
-                        class="size-5 animate-spin text-neutral-900"
+                        class="size-5 animate-spin text-black"
                         width="16"
                         height="16"
                         fill="currentColor"
@@ -98,7 +136,7 @@ new class extends Component {
                         class="absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                     >
                         <svg
-                            class="size-5 text-neutral-900"
+                            class="size-5 text-black"
                             width="16"
                             height="16"
                             fill="currentColor"
@@ -114,7 +152,7 @@ new class extends Component {
             </div>
         </div>
     </div>
-    <div class="w-full overflow-hidden overflow-x-auto">
+    <div class="relative w-full overflow-hidden overflow-x-auto">
         <table class="w-full text-left text-sm">
             <thead class="border-b border-neutral-300">
                 <tr>
@@ -130,7 +168,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'name' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -142,7 +180,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'name' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -166,7 +204,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'products_count' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -178,7 +216,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'products_count' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -202,7 +240,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'is_primary' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -214,7 +252,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'is_primary' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -238,7 +276,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'created_at' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -250,7 +288,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'created_at' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -268,14 +306,18 @@ new class extends Component {
             </thead>
             <tbody class="divide-y divide-neutral-300">
                 @forelse ($this->categories as $category)
-                    <tr wire:key="{{ $category->id }}" wire:loading.class="opacity-50">
-                        <td class="p-4 font-normal tracking-tight text-black/80" align="left">
+                    <tr
+                        wire:key="{{ $category->id }}"
+                        wire:loading.class="opacity-50"
+                        wire:target="search,sortBy,resetSearch"
+                    >
+                        <td class="p-4 font-normal tracking-tight text-black/70" align="left">
                             {{ $loop->index + 1 . '.' }}
                         </td>
                         <td class="min-w-56 p-4 font-medium tracking-tight text-black" align="left">
                             {{ ucwords($category->name) }}
                         </td>
-                        <td class="min-w-36 p-4 font-normal tracking-tight text-black/80" align="center">
+                        <td class="min-w-36 p-4 font-normal tracking-tight text-black/70" align="center">
                             {{ $category->products_count }}
                         </td>
                         <td class="min-w-40 p-4" align="center">
@@ -288,14 +330,14 @@ new class extends Component {
                                 </span>
                             @else
                                 <span
-                                    class="inline-flex items-center gap-x-1.5 rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium tracking-tight text-neutral-800"
+                                    class="inline-flex items-center gap-x-1.5 rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium tracking-tight text-black"
                                 >
-                                    <span class="inline-block size-1.5 rounded-full bg-neutral-800"></span>
+                                    <span class="inline-block size-1.5 rounded-full bg-black"></span>
                                     Tidak
                                 </span>
                             @endif
                         </td>
-                        <td class="min-w-56 p-4 font-normal tracking-tight text-black/80" align="center">
+                        <td class="min-w-56 p-4 font-normal tracking-tight text-black/70" align="center">
                             {{ formatTimestamp($category->created_at) }}
                         </td>
                         <td class="relative px-4 py-2" align="right">
@@ -391,19 +433,13 @@ new class extends Component {
                                             </svg>
                                             Hapus
                                         </x-common.dropdown-link>
-                                        @push('overlays')
+                                        <template x-teleport="body">
                                             <x-common.modal
                                                 name="confirm-category-deletion-{{ $category->id }}"
                                                 :show="$errors->isNotEmpty()"
                                                 focusable
                                             >
-                                                <form
-                                                    action="{{ route('admin.categories.destroy', ['category' => $category]) }}"
-                                                    method="POST"
-                                                    class="flex flex-col items-center p-6"
-                                                >
-                                                    @csrf
-                                                    @method('DELETE')
+                                                <div class="flex flex-col items-center p-6">
                                                     <div class="mb-4 rounded-full bg-red-100 p-4" aria-hidden="true">
                                                         <svg
                                                             xmlns="http://www.w3.org/2000/svg"
@@ -433,16 +469,42 @@ new class extends Component {
                                                         <x-common.button
                                                             variant="secondary"
                                                             x-on:click="$dispatch('close')"
+                                                            wire:loading.attr="disabled"
+                                                            wire:target="delete('{{ $category->id }}')"
                                                         >
                                                             Batal
                                                         </x-common.button>
-                                                        <x-common.button type="submit" variant="danger">
-                                                            Hapus Kategori
+                                                        <x-common.button
+                                                            variant="danger"
+                                                            wire:click="delete('{{ $category->id }}')"
+                                                            wire:loading.attr="disabled"
+                                                            wire:target="delete('{{ $category->id }}')"
+                                                        >
+                                                            <span
+                                                                wire:loading.remove
+                                                                wire:target="delete('{{ $category->id }}')"
+                                                            >
+                                                                Hapus Kategori
+                                                            </span>
+                                                            <span
+                                                                wire:loading.flex
+                                                                wire:target="delete('{{ $category->id }}')"
+                                                                class="items-center gap-x-2"
+                                                            >
+                                                                <div
+                                                                    class="inline-block size-4 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
+                                                                    role="status"
+                                                                    aria-label="loading"
+                                                                >
+                                                                    <span class="sr-only">Sedang diproses...</span>
+                                                                </div>
+                                                                Sedang diproses...
+                                                            </span>
                                                         </x-common.button>
                                                     </div>
-                                                </form>
+                                                </div>
                                             </x-common.modal>
-                                        @endpush
+                                        </template>
                                     @endcan
                                 </x-slot>
                             </x-common.dropdown>
@@ -455,6 +517,19 @@ new class extends Component {
                 @endforelse
             </tbody>
         </table>
+        <div
+            class="absolute left-1/2 top-32 h-full -translate-x-1/2"
+            wire:loading
+            wire:target="search,sortBy,resetSearch"
+        >
+            <div
+                class="inline-block size-10 animate-spin rounded-full border-4 border-current border-t-transparent text-primary"
+                role="status"
+                aria-label="loading"
+            >
+                <span class="sr-only">Sedang diproses...</span>
+            </div>
+        </div>
     </div>
     {{ $this->categories->links() }}
 </div>

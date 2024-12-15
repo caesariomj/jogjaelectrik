@@ -13,7 +13,6 @@ class SubcategoryForm extends Form
     #[Validate]
     public string $categoryId = '';
 
-    #[Validate]
     public string $name = '';
 
     public function rules()

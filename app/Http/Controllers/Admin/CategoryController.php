@@ -30,26 +30,7 @@ class CategoryController extends Controller
 
             return view('pages.admin.categories.create');
         } catch (AuthorizationException $e) {
-            session()->flash('error', 'Anda tidak memiliki izin untuk menambahkan kategori baru.');
-
-            return redirect()->route('admin.categories.index');
-        }
-    }
-
-    /**
-     * Store a newly created category in storage.
-     */
-    public function store(array $validated)
-    {
-        try {
-            $this->authorize('create', Category::class);
-
-            Category::create([
-                'name' => strtolower($validated['name']),
-                'is_primary' => $validated['isPrimary'],
-            ]);
-        } catch (AuthorizationException $e) {
-            session()->flash('error', 'Anda tidak memiliki izin untuk menambahkan kategori baru.');
+            session()->flash('error', $e->getMessage());
 
             return redirect()->route('admin.categories.index');
         }
@@ -73,7 +54,7 @@ class CategoryController extends Controller
 
             return view('pages.admin.categories.show', compact('category'));
         } catch (AuthorizationException $e) {
-            session()->flash('error', 'Anda tidak memiliki izin untuk melihat detail kategori ini.');
+            session()->flash('error', $e->getMessage());
 
             return redirect()->route('admin.categories.index');
         }
@@ -97,46 +78,7 @@ class CategoryController extends Controller
 
             return view('pages.admin.categories.edit', compact('category'));
         } catch (AuthorizationException $e) {
-            session()->flash('error', 'Anda tidak memiliki izin untuk mengubah kategori ini.');
-
-            return redirect()->route('admin.categories.index');
-        }
-    }
-
-    /**
-     * Update the specified category in storage.
-     */
-    public function update(array $validated, Category $category)
-    {
-        try {
-            $this->authorize('update', $category);
-
-            $category->update([
-                'name' => strtolower($validated['name']),
-                'is_primary' => $validated['isPrimary'],
-            ]);
-        } catch (AuthorizationException $e) {
-            session()->flash('error', 'Anda tidak memiliki izin untuk mengubah kategori ini.');
-
-            return redirect()->route('admin.categories.index');
-        }
-    }
-
-    /**
-     * Remove the specified category from storage.
-     */
-    public function destroy(Category $category): RedirectResponse
-    {
-        try {
-            $this->authorize('delete', $category);
-
-            $category->delete();
-
-            session()->flash('success', 'Kategori '.$category->name.' berhasil dihapus.');
-
-            return redirect()->route('admin.categories.index');
-        } catch (AuthorizationException $e) {
-            session()->flash('error', 'Anda tidak memiliki izin untuk menghapus kategori ini.');
+            session()->flash('error', $e->getMessage());
 
             return redirect()->route('admin.categories.index');
         }
