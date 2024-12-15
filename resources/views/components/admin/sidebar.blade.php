@@ -6,7 +6,8 @@
 
 <aside
     :class="{'-translate-x-full': !isOpen, 'translate-x-0': isOpen}"
-    class="fixed inset-y-0 start-0 z-50 h-screen w-64 transform border-e border-neutral-300 bg-white text-black transition-transform duration-300 ease-in-out lg:translate-x-0"
+    class="fixed inset-y-0 start-0 z-[2] h-screen w-64 transform border-e border-neutral-300 bg-white text-black transition-transform duration-300 ease-in-out lg:translate-x-0"
+    x-cloak
 >
     <div class="flex items-center justify-between p-4">
         <a href="{{ route('home') }}" class="flex w-fit items-center gap-x-4">
@@ -226,7 +227,7 @@
     x-transition:leave="transition-opacity duration-200 ease-in"
     x-transition:leave-start="opacity-100"
     x-transition:leave-end="opacity-0"
-    class="fixed inset-0 z-30 bg-black/75 lg:hidden"
+    class="fixed inset-0 z-[1] bg-black/75 lg:hidden"
     @click="isOpen = false"
     x-cloak
 ></div>

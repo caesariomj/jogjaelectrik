@@ -65,6 +65,7 @@
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
         aria-hidden="true"
+        aria-modal="true"
     >
         <div class="absolute inset-0 bg-black opacity-75"></div>
     </div>
