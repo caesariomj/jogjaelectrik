@@ -66,7 +66,7 @@ class ProductController extends Controller
                 'description' => $validated['description'],
                 'main_sku' => $validated['mainSku'],
                 'base_price' => str_replace('.', '', $price),
-                'base_price_discount' => $priceDiscount !== '' ? str_replace('.', '', $priceDiscount) : null,
+                'base_price_discount' => $priceDiscount ? str_replace('.', '', $priceDiscount) : null,
                 'is_active' => (bool) $validated['isActive'],
                 'warranty' => $validated['warranty'],
                 'material' => $validated['material'],
@@ -100,7 +100,7 @@ class ProductController extends Controller
             if ($validated['variation']['name'] === '') {
                 $product->variants()->create([
                     'price' => str_replace('.', '', $price),
-                    'price_discount' => $priceDiscount !== '' ? str_replace('.', '', $priceDiscount) : null,
+                    'price_discount' => $priceDiscount ? str_replace('.', '', $priceDiscount) : null,
                     'stock' => (int) str_replace('.', '', $validated['stock']),
                     'is_active' => (bool) $validated['isActive'],
                 ]);
