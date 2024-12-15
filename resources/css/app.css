@@ -4,8 +4,10 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Browser scrollbar */
 ::-webkit-scrollbar {
     width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
@@ -19,37 +21,37 @@
 }
 
 h1 {
-    font-size: 2.5rem;
+    font-size: 2rem;
     font-weight: 700;
     letter-spacing: -0.025em;
 }
 
 h2 {
-    font-size: 2rem;
-    font-weight: 600;
-    letter-spacing: -0.025em;
-}
-
-h3 {
     font-size: 1.75rem;
     font-weight: 600;
     letter-spacing: -0.025em;
 }
 
-h4 {
+h3 {
     font-size: 1.5rem;
     font-weight: 600;
     letter-spacing: -0.025em;
 }
 
-h5 {
+h4 {
     font-size: 1.25rem;
     font-weight: 600;
     letter-spacing: -0.025em;
 }
 
-h6 {
+h5 {
     font-size: 1.125rem;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+}
+
+h6 {
+    font-size: 1rem;
     font-weight: 600;
     letter-spacing: -0.025em;
 }
@@ -161,28 +163,29 @@ small {
     cursor: not-allowed;
 }
 
+/* Breakpoint larger than 640px */
 @media (min-width: 640px) {
     h1 {
-        font-size: 3rem;
-    }
-
-    h2 {
         font-size: 2.5rem;
     }
 
-    h3 {
+    h2 {
         font-size: 2rem;
     }
 
-    h4 {
+    h3 {
         font-size: 1.75rem;
     }
 
-    h5 {
+    h4 {
         font-size: 1.5rem;
     }
 
-    h6 {
+    h5 {
         font-size: 1.25rem;
+    }
+
+    h6 {
+        font-size: 1.125rem;
     }
 }
