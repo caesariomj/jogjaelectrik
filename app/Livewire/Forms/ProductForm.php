@@ -3,6 +3,8 @@
 namespace App\Livewire\Forms;
 
 use App\Models\Product;
+use App\Rules\MaxProductImages;
+use App\Rules\Voltage;
 use Livewire\Attributes\Validate;
 use Livewire\Form;
 
@@ -13,67 +15,46 @@ class ProductForm extends Form
     #[Validate]
     public mixed $thumbnail = null;
 
-    #[Validate]
     public mixed $newThumbnail = null;
 
-    #[Validate]
     public string $name = '';
 
-    #[Validate]
     public string $subcategoryId = '';
 
-    #[Validate]
     public string $mainSku = '';
 
-    #[Validate]
     public string $description = '';
 
-    #[Validate]
     public bool $isActive = true;
 
-    #[Validate]
     public mixed $images = null;
 
-    #[Validate]
     public mixed $newImages = null;
 
-    #[Validate]
     public string $warranty = '';
 
-    #[Validate]
     public string $material = '';
 
-    #[Validate]
     public string $length = '';
 
-    #[Validate]
     public string $width = '';
 
-    #[Validate]
     public string $height = '';
 
-    #[Validate]
     public string $weight = '';
 
-    #[Validate]
     public string $package = '';
 
-    #[Validate]
     public ?string $power = null;
 
-    #[Validate]
     public ?string $voltage = null;
 
-    #[Validate]
     public ?string $price = null;
 
-    #[Validate]
     public ?string $priceDiscount = null;
 
-    #[Validate]
     public ?string $stock = null;
 
-    #[Validate]
     public array $variation = [
         'name' => '',
         'variants' => [
@@ -88,7 +69,38 @@ class ProductForm extends Form
         ],
     ];
 
-    public function rules()
+    protected function prepareForValidation($attributes)
+    {
+        $attributes['length'] = (int) str_replace('.', '', $attributes['length']);
+        $attributes['width'] = (int) str_replace('.', '', $attributes['width']);
+        $attributes['height'] = (int) str_replace('.', '', $attributes['height']);
+        $attributes['weight'] = (int) str_replace('.', '', $attributes['weight']);
+        $attributes['power'] = (int) str_replace('.', '', $attributes['power']);
+
+        if ($this->variation['name'] !== '') {
+            foreach ($attributes['variation']['variants'] as $key => $variant) {
+                if ($variant['price'] !== '') {
+                    $attributes['variation']['variants'][$key]['price'] = (int) str_replace('.', '', $variant['price']);
+                }
+
+                if ($variant['priceDiscount'] !== '') {
+                    $attributes['variation']['variants'][$key]['priceDiscount'] = (int) str_replace('.', '', $variant['priceDiscount']);
+                }
+
+                if ($variant['stock'] !== '') {
+                    $attributes['variation']['variants'][$key]['stock'] = (int) str_replace('.', '', $variant['stock']);
+                }
+            }
+        } else {
+            $attributes['price'] = (int) str_replace('.', '', $attributes['price']);
+            $attributes['priceDiscount'] = (int) str_replace('.', '', $attributes['priceDiscount']);
+            $attributes['stock'] = (int) str_replace('.', '', $attributes['stock']);
+        }
+
+        return $attributes;
+    }
+
+    protected function rules()
     {
         $rules = [
             'name' => [
@@ -96,7 +108,7 @@ class ProductForm extends Form
                 'string',
                 'min:5',
                 'max:255',
-                is_null($this->product) ? 'unique:categories,name' : 'unique:categories,name,'.$this->product->id,
+                is_null($this->product) ? 'unique:products,name' : 'unique:products,name,'.$this->product->id,
             ],
             'subcategoryId' => [
                 'required',
@@ -169,22 +181,22 @@ class ProductForm extends Form
             'voltage' => [
                 'nullable',
                 'string',
-                'min:1',
-                'max:50',
+                'min:3',
+                new Voltage,
             ],
             'price' => [
                 'required_if:variation.name,""',
                 'nullable',
                 'numeric',
                 'gt:0',
-                'max:99999999.99',
+                'lt:99999999',
             ],
             'priceDiscount' => [
                 'nullable',
                 'numeric',
                 'gt:0',
                 'lt:price',
-                'max:99999999.99',
+                'lt:99999999',
             ],
             'stock' => [
                 'required_if:variation.name,""',
@@ -227,14 +239,14 @@ class ProductForm extends Form
                 'required_with_all:variation.variants.*.price,variation.variants.*.stock,variation.variants.*.variantSku,variation.variants.*.isVariantActive',
                 'numeric',
                 'gt:0',
-                'max:99999999.99',
+                'lt:99999999',
             ],
             'variation.variants.*.priceDiscount' => [
                 'nullable',
                 'numeric',
                 'gt:0',
                 'lt:variation.variants.*.price',
-                'max:99999999.99',
+                'max:99999999',
             ],
             'variation.variants.*.stock' => [
                 'required_with_all:variation.variants.*.price,variation.variants.*.stock,variation.variants.*.variantSku,variation.variants.*.isVariantActive',
@@ -263,10 +275,9 @@ class ProductForm extends Form
             ];
 
             $rules['images'] = [
-                'required',
+                'nullable',
                 'array',
-                'min:1',
-                'max:9',
+                new MaxProductImages($this->product),
             ];
 
             $rules['images.*'] = [
@@ -284,11 +295,9 @@ class ProductForm extends Form
             ];
 
             $rules['newImages'] = [
-                'required_if:images,null',
                 'nullable',
                 'array',
-                'min:1',
-                'max:'. 9 - count($this->images),
+                new MaxProductImages($this->product),
             ];
 
             $rules['newImages.*'] = [
@@ -301,7 +310,7 @@ class ProductForm extends Form
         return $rules;
     }
 
-    public function validationAttributes()
+    protected function validationAttributes()
     {
         return [
             'thumbnail' => 'Gambar utama produk',
@@ -343,7 +352,7 @@ class ProductForm extends Form
     {
         $this->product = $product;
         $this->name = $product->name;
-        $this->subcategoryId = $product->subcategory_id;
+        $this->subcategoryId = $product->subcategory ? $product->subcategory_id : '';
         $this->mainSku = $product->main_sku;
         $this->description = $product->description;
         $this->isActive = $product->is_active;

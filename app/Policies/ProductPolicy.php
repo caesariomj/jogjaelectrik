@@ -5,6 +5,7 @@ namespace App\Policies;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Illuminate\Auth\Access\Response;
 
 class ProductPolicy
 {
@@ -29,40 +30,60 @@ class ProductPolicy
     /**
      * Determine whether the user can create models.
      */
-    public function create(User $user): bool
+    public function create(User $user): bool|Response
     {
-        return $user->can('create products');
+        if (! $user->can('create products')) {
+            return $this->deny('Anda tidak memiliki izin untuk membuat produk baru.', 403);
+        }
+
+        return true;
     }
 
     /**
      * Determine whether the user can update the model.
      */
-    public function update(User $user, Product $product): bool
+    public function update(User $user, Product $product): bool|Response
     {
-        return $user->can('edit products');
+        if (! $user->can('edit products')) {
+            return $this->deny('Anda tidak memiliki izin untuk mengubah produk '.$product->name.'.', 403);
+        }
+
+        return true;
     }
 
     /**
      * Determine whether the user can delete the model.
      */
-    public function delete(User $user, Product $product): bool
+    public function delete(User $user, Product $product): bool|Response
     {
-        return $user->can('archive products');
+        if (! $user->can('archive products')) {
+            return $this->deny('Anda tidak memiliki izin untuk mengarsip produk '.$product->name.'.', 403);
+        }
+
+        return true;
     }
 
     /**
      * Determine whether the user can restore the model.
      */
-    public function restore(User $user, Product $product): bool
+    public function restore(User $user, Product $product): bool|Response
     {
-        return $user->can('restore products');
+        if (! $user->can('restore products')) {
+            return $this->deny('Anda tidak memiliki izin untuk memulihkan produk '.$product->name.'.', 403);
+        }
+
+        return true;
     }
 
     /**
      * Determine whether the user can permanently delete the model.
      */
-    public function forceDelete(User $user, Product $product): bool
+    public function forceDelete(User $user, Product $product): bool|Response
     {
-        return $user->can('force delete products');
+        if (! $user->can('force delete products')) {
+            return $this->deny('Anda tidak memiliki izin untuk menghapus produk '.$product->name.'.', 403);
+        }
+
+        return true;
     }
 }

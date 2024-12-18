@@ -1,8 +1,16 @@
 <?php
 
-use App\Http\Controllers\Admin\ProductController;
 use App\Livewire\Forms\ProductForm;
 use App\Models\Product;
+use App\Models\Subcategory;
+use App\Models\VariantCombination;
+use App\Models\Variation;
+use App\Models\VariationVariant;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Volt\Component;
@@ -24,13 +32,69 @@ new class extends Component {
     #[Computed]
     public function subcategories()
     {
-        return \App\Models\Subcategory::select('id as value', 'name as label')->get();
+        return Subcategory::select('id as value', 'name as label')->get();
     }
 
     public function handleComboboxChange($value, $comboboxInstanceName)
     {
         if ($comboboxInstanceName == 'subkategori') {
             $this->form->subcategoryId = $value;
+        }
+    }
+
+    public function deleteImage(string $id)
+    {
+        $image = $this->form->product->images()->find($id);
+
+        if (! $image) {
+            return;
+        }
+
+        try {
+            $this->authorize('update', $this->form->product);
+
+            DB::transaction(function () use ($image) {
+                $filePath = 'product-images/' . $image->file_name;
+
+                if (Storage::disk('public_uploads')->exists($filePath)) {
+                    Storage::disk('public_uploads')->delete($filePath);
+                }
+
+                $image->delete();
+            });
+
+            session()->flash('success', 'Gambar produk berhasil dihapus.');
+            return $this->redirectIntended(
+                route('admin.products.edit', ['slug' => $this->form->product->slug]),
+                navigate: true,
+            );
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(
+                route('admin.products.edit', ['slug' => $this->form->product->slug]),
+                navigate: true,
+            );
+        } catch (QueryException $e) {
+            Log::error('Database error during product image deletion: ' . $e->getMessage());
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam menghapus gambar produk ' .
+                    $image->product->name .
+                    ', silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(
+                route('admin.products.edit', ['slug' => $this->form->product->slug]),
+                navigate: true,
+            );
+        } catch (\Exception $e) {
+            Log::error('Unexpected product image deletion error: ' . $e->getMessage());
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(
+                route('admin.products.edit', ['slug' => $this->form->product->slug]),
+                navigate: true,
+            );
         }
     }
 
@@ -55,38 +119,187 @@ new class extends Component {
     public function removeVariationVariant($index)
     {
         unset($this->form->variation['variants'][$index]);
-
         $this->form->variation['variants'] = array_values($this->form->variation['variants']);
     }
 
-    public function save(ProductController $controller)
+    public function save()
     {
         $validated = $this->form->validate();
 
-        $controller->update($validated, $this->form->product);
+        $product = $this->form->product;
 
-        session()->flash('success', 'Data produk ' . $validated['name'] . ' berhasil diubah.');
+        try {
+            $this->authorize('update', $product);
 
-        $this->redirectRoute('admin.products.index', navigate: true);
+            DB::transaction(function () use ($validated, $product) {
+                $price = $validated['price'];
+                $priceDiscount = $validated['priceDiscount'] ?? null;
+
+                if ($validated['variation']['name'] !== '') {
+                    $variants = collect($validated['variation']['variants']);
+
+                    $minPriceDiscountVariant = $variants
+                        ->filter(function ($variant) {
+                            return isset($variant['priceDiscount'], $variant['price']) &&
+                                is_numeric($variant['priceDiscount']) &&
+                                $variant['priceDiscount'] > 0;
+                        })
+                        ->sortBy('priceDiscount')
+                        ->first();
+
+                    $minPriceVariant =
+                        $minPriceDiscountVariant ?:
+                        $variants
+                            ->filter(function ($variant) {
+                                return isset($variant['price']) && is_numeric($variant['price']);
+                            })
+                            ->sortBy('price')
+                            ->first();
+
+                    $price = $minPriceVariant['price'];
+                    $priceDiscount = $minPriceVariant['priceDiscount'] ?? null;
+                }
+
+                $product->update([
+                    'subcategory_id' => $validated['subcategoryId'],
+                    'name' => $validated['name'],
+                    'description' => $validated['description'],
+                    'main_sku' => $validated['mainSku'],
+                    'base_price' => str_replace('.', '', $price),
+                    'base_price_discount' => $priceDiscount ? str_replace('.', '', $priceDiscount) : null,
+                    'is_active' => (bool) $validated['isActive'],
+                    'warranty' => $validated['warranty'],
+                    'material' => $validated['material'],
+                    'dimension' => $validated['length'] . 'x' . $validated['width'] . 'x' . $validated['height'],
+                    'package' => $validated['package'],
+                    'weight' => (int) str_replace('.', '', $validated['weight']),
+                    'power' => is_numeric($validated['power']) ? (int) str_replace('.', '', $validated['power']) : null,
+                    'voltage' => $validated['voltage'] !== '' ? $validated['voltage'] : null,
+                ]);
+
+                if ($validated['newThumbnail']) {
+                    $oldThumbnail = $product
+                        ->images()
+                        ->thumbnail()
+                        ->first();
+
+                    if ($oldThumbnail) {
+                        $filePath = 'product-images/' . $oldThumbnail->file_name;
+
+                        if (Storage::disk('public_uploads')->exists($filePath)) {
+                            Storage::disk('public_uploads')->delete($filePath);
+                        }
+
+                        $oldThumbnail->delete();
+                    }
+
+                    $thumbnailName = uniqid() . '_' . microtime(true) . '.' . $validated['newThumbnail']->extension();
+
+                    $validated['newThumbnail']->storeAs('product-images', $thumbnailName, 'public_uploads');
+
+                    $product->images()->create([
+                        'file_name' => $thumbnailName,
+                        'is_thumbnail' => true,
+                    ]);
+                }
+
+                if ($validated['newImages']) {
+                    foreach ($validated['newImages'] as $image) {
+                        $fileName = uniqid() . '_' . microtime(true) . '.' . $image->extension();
+
+                        $image->storeAs('product-images', $fileName, 'public_uploads');
+
+                        $product->images()->create([
+                            'file_name' => $fileName,
+                            'is_thumbnail' => (bool) false,
+                        ]);
+                    }
+                }
+
+                $product->variants()->delete();
+
+                if ($validated['variation']['name'] === '') {
+                    $product->variants()->create([
+                        'price' => str_replace('.', '', $price),
+                        'price_discount' => $priceDiscount ? str_replace('.', '', $priceDiscount) : null,
+                        'stock' => (int) str_replace('.', '', $validated['stock']),
+                        'is_active' => (bool) $validated['isActive'],
+                    ]);
+                } else {
+                    $variation = Variation::firstOrCreate([
+                        'name' => strtolower($validated['variation']['name']),
+                    ]);
+
+                    foreach ($validated['variation']['variants'] as $variant) {
+                        $variationVariant = $variation->variants()->firstOrCreate([
+                            'name' => strtolower($variant['name']),
+                        ]);
+
+                        $productVariant = $product->variants()->create([
+                            'variant_sku' => strtolower($variant['variantSku']),
+                            'price' => str_replace('.', '', $variant['price']),
+                            'price_discount' => $variant['priceDiscount']
+                                ? str_replace('.', '', $variant['priceDiscount'])
+                                : null,
+                            'stock' => (int) str_replace('.', '', $variant['stock']),
+                            'is_active' => (bool) $variant['isVariantActive'],
+                        ]);
+
+                        VariantCombination::create([
+                            'product_variant_id' => $productVariant->id,
+                            'variation_variant_id' => $variationVariant->id,
+                        ]);
+                    }
+                }
+
+                VariationVariant::whereDoesntHave('variantCombinations')->delete();
+                Variation::whereDoesntHave('variants')->delete();
+            });
+
+            session()->flash('success', 'Data produk ' . $validated['name'] . ' berhasil diubah.');
+            $this->redirectRoute('admin.products.index', navigate: true);
+        } catch (AuthorizationException $e) {
+            throw $e;
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('admin.products.index'), navigate: true);
+        } catch (QueryException $e) {
+            throw $e;
+            Log::error('Database error during product alteration: ' . $e->getMessage());
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam mengubah produk ' .
+                    $this->form->product->name .
+                    ', silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(route('admin.products.index'), navigate: true);
+        } catch (\Exception $e) {
+            throw $e;
+            Log::error('Unexpected product alteration error: ' . $e->getMessage());
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('admin.products.index'), navigate: true);
+        }
     }
 }; ?>
 
 <form
     x-data="{ hasVariation: $wire.entangle('hasVariation') }"
     wire:submit.prevent="save"
-    class="rounded-xl border border-neutral-300 bg-white shadow-sm"
+    class="rounded-xl border border-neutral-300 bg-white shadow"
 >
     <fieldset>
         <legend class="flex w-full border-b border-neutral-300 p-4">
             <h2 class="text-lg text-black">Informasi Dasar Produk</h2>
         </legend>
-        <div class="p-4">
-            <x-form.input-label class="mb-1" for="thumbnail" value="Gambar Utama Produk" />
-            <div x-data="thumbnailImageUpload" class="flex flex-wrap items-center gap-5">
+        <div x-data="thumbnailImageUpload" class="p-4">
+            <span class="mb-1 block cursor-default text-sm font-medium tracking-tight text-black">
+                Gambar Utama Produk
+                <span class="text-red-500">*</span>
+            </span>
+            <div class="mb-4 flex items-center gap-5">
                 @if ($form->newThumbnail)
-                    <div
-                        class="relative h-28 w-28 overflow-hidden rounded-md border-2 border-dashed border-neutral-300"
-                    >
+                    <div class="relative size-28 overflow-hidden rounded-md border-2 border-dashed border-neutral-300">
                         <img
                             src="{{ $form->newThumbnail->temporaryUrl() }}"
                             alt="Gambar thumbnail produk"
@@ -94,38 +307,36 @@ new class extends Component {
                         />
                         <div
                             x-show="isUploading"
-                            class="absolute inset-0 flex flex-col items-center justify-center rounded-md bg-neutral-100 bg-opacity-75"
+                            class="absolute inset-0 flex flex-col items-center justify-center rounded-md bg-neutral-100"
                             x-cloak
                         >
-                            <p class="text-center text-sm" x-text="progress + '%'" aria-hidden="true"></p>
-                            <div class="h-2 w-3/4 rounded-full bg-neutral-300">
-                                <div
-                                    x-bind:style="{ width: progress + '%' }"
-                                    class="h-full rounded-full bg-primary"
-                                ></div>
+                            <div
+                                class="inline-block size-6 animate-spin rounded-full border-[3px] border-current border-t-transparent text-primary"
+                                role="status"
+                                aria-label="loading"
+                            >
+                                <span class="sr-only">Sedang diproses...</span>
                             </div>
                         </div>
                     </div>
                 @elseif ($form->thumbnail)
-                    <div
-                        class="relative h-28 w-28 overflow-hidden rounded-md border-2 border-dashed border-neutral-300"
-                    >
+                    <div class="relative size-28 overflow-hidden rounded-md border-2 border-dashed border-neutral-300">
                         <img
-                            src="{{ asset('uploads/product-images/' . $form->thumbnail->file_name) }}"
+                            src="{{ asset('storage/uploads/product-images/' . $form->thumbnail->file_name) }}"
                             alt="Gambar thumbnail produk"
                             class="h-full w-full rounded-md object-cover"
                         />
                         <div
                             x-show="isUploading"
-                            class="absolute inset-0 flex flex-col items-center justify-center rounded-md bg-neutral-100 bg-opacity-75"
+                            class="absolute inset-0 flex flex-col items-center justify-center rounded-md bg-neutral-100"
                             x-cloak
                         >
-                            <p class="text-center text-sm" x-text="progress + '%'" aria-hidden="true"></p>
-                            <div class="h-2 w-3/4 rounded-full bg-neutral-300">
-                                <div
-                                    x-bind:style="{ width: progress + '%' }"
-                                    class="h-full rounded-full bg-primary"
-                                ></div>
+                            <div
+                                class="inline-block size-6 animate-spin rounded-full border-[3px] border-current border-t-transparent text-primary"
+                                role="status"
+                                aria-label="loading"
+                            >
+                                <span class="sr-only">Sedang diproses...</span>
                             </div>
                         </div>
                     </div>
@@ -144,11 +355,11 @@ new class extends Component {
                         x-on:drop.prevent="handleFileDrop($event)"
                         x-on:dragover.prevent="isDropping = true"
                         x-on:dragleave.prevent="isDropping = false"
-                        class="relative flex size-28 items-center justify-center rounded-md border-2 border-dashed border-neutral-300 bg-neutral-50 text-neutral-600"
+                        class="relative flex size-28 shrink-0 items-center justify-center rounded-md border-2 border-dashed border-neutral-300 bg-neutral-50 text-black/70"
                     >
                         <svg
                             x-show="!isUploading"
-                            class="size-8 opacity-75"
+                            class="size-8 text-black/70"
                             xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 24 24"
                             fill="none"
@@ -156,6 +367,8 @@ new class extends Component {
                             stroke-width="2"
                             stroke-linecap="round"
                             stroke-linejoin="round"
+                            aria-hidden="true"
+                            x-cloak
                         >
                             <path
                                 d="M10.3 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2v10l-3.1-3.1a2 2 0 0 0-2.814.014L6 21"
@@ -166,15 +379,15 @@ new class extends Component {
                         </svg>
                         <div
                             x-show="isUploading"
-                            class="absolute inset-0 flex flex-col items-center justify-center rounded-full bg-neutral-100 bg-opacity-75"
+                            class="absolute inset-0 flex flex-col items-center justify-center rounded-md bg-neutral-100"
                             x-cloak
                         >
-                            <p class="text-center text-sm" x-text="progress + '%'" aria-hidden="true"></p>
-                            <div class="h-2 w-3/4 rounded-full bg-neutral-300">
-                                <div
-                                    x-bind:style="{ width: progress + '%' }"
-                                    class="h-full rounded-full bg-primary"
-                                ></div>
+                            <div
+                                class="inline-block size-6 animate-spin rounded-full border-[3px] border-current border-t-transparent text-primary"
+                                role="status"
+                                aria-label="loading"
+                            >
+                                <span class="sr-only">Sedang diproses...</span>
                             </div>
                         </div>
                     </span>
@@ -183,7 +396,7 @@ new class extends Component {
                     <div class="flex items-center space-x-4">
                         <label
                             for="thumbnail"
-                            class="inline-flex cursor-pointer items-center justify-center gap-x-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-600"
+                            class="inline-flex cursor-pointer items-center justify-center gap-x-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold tracking-tight text-white transition-all hover:bg-primary-600"
                         >
                             <svg
                                 class="size-4"
@@ -210,9 +423,61 @@ new class extends Component {
                             />
                         </label>
                     </div>
-                    <small class="text-center font-medium opacity-75">
+                    <small class="text-center font-medium tracking-tight text-black/70">
                         Format file yang didukung: JPEG, JPG, PNG. Ukuran maksimal 1 MB
                     </small>
+                </div>
+            </div>
+            <div
+                x-show="isUploading"
+                x-transition:enter="transition duration-300 ease-out"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="transition duration-300 ease-in"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                x-cloak
+            >
+                <div class="mb-2 flex items-center gap-x-3">
+                    <span
+                        class="flex size-8 items-center justify-center rounded-lg border border-neutral-300 text-black"
+                    >
+                        <svg
+                            class="size-5 shrink-0"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                        >
+                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                            <circle cx="9" cy="9" r="2" />
+                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                        </svg>
+                    </span>
+                    <div>
+                        <p x-text="file?.name" class="text-sm font-medium tracking-tight text-black"></p>
+                        <p x-text="formatFileSize(file?.size)" class="text-xs tracking-tight text-black/70"></p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-x-3 whitespace-nowrap">
+                    <div
+                        class="flex h-2 w-full overflow-hidden rounded-full bg-neutral-200"
+                        role="progressbar"
+                        x-bind:aria-valuenow="progress"
+                        aria-valuemin="0"
+                        aria-valuemax="100"
+                    >
+                        <div
+                            class="flex flex-col justify-center overflow-hidden whitespace-nowrap rounded-full bg-primary text-center text-xs text-white transition duration-500"
+                            x-bind:style="{ width: progress + '%' }"
+                        ></div>
+                    </div>
+                    <div class="w-8 text-end">
+                        <span class="text-sm tracking-tight text-black" x-text="progress + '%'"></span>
+                    </div>
                 </div>
             </div>
             <x-form.input-error :messages="$errors->get('form.thumbnail')" class="mt-2" />
@@ -228,13 +493,18 @@ new class extends Component {
                 placeholder="Isikan nama produk di sini..."
                 minlength="5"
                 maxlength="255"
+                autocomplete="off"
                 required
                 autofocus
+                :hasError="$errors->has('form.name')"
             />
             <x-form.input-error :messages="$errors->get('form.name')" class="mt-2" />
         </div>
         <div class="p-4">
-            <x-form.input-label class="mb-1" for="select-subcategory" value="Pilih Subkategori" class="mb-1" />
+            <span class="mb-1 block cursor-default text-sm font-medium tracking-tight text-black">
+                Pilih Subkategori
+                <span class="text-red-500">*</span>
+            </span>
             <x-form.combobox
                 :options="$this->subcategories"
                 :selectedOption="$form->subcategoryId"
@@ -254,7 +524,9 @@ new class extends Component {
                 placeholder="Isikan sku utama produk di sini..."
                 minlength="5"
                 maxlength="255"
+                autocomplete="off"
                 required
+                :hasError="$errors->has('form.mainSku')"
             />
             <x-form.input-error :messages="$errors->get('form.mainSku')" class="mt-2" />
         </div>
@@ -263,11 +535,12 @@ new class extends Component {
             <x-form.textarea
                 wire:model.lazy="form.description"
                 id="description"
-                class=""
                 rows="10"
                 placeholder="Isikan deskripsi produk di sini..."
                 minlength="10"
                 maxlength="5000"
+                required
+                :hasError="$errors->has('form.description')"
             ></x-form.textarea>
             <x-form.input-error :messages="$errors->get('form.description')" class="mt-2" />
         </div>
@@ -283,7 +556,6 @@ new class extends Component {
                     id="is-primary"
                     class="relative h-7 w-[3.25rem] cursor-pointer rounded-full border-transparent bg-neutral-200 p-px text-transparent transition-colors duration-200 ease-in-out before:inline-block before:size-6 before:translate-x-0 before:transform before:rounded-full before:bg-white before:shadow before:ring-0 before:transition before:duration-200 before:ease-in-out checked:border-primary checked:bg-none checked:text-primary checked:before:translate-x-full checked:before:bg-white focus:ring-primary focus:checked:border-primary disabled:pointer-events-none disabled:opacity-50"
                     aria-describedby="is-primary-error"
-                    required
                 />
                 <span class="ms-3 text-sm font-medium text-black">Aktif</span>
             </label>
@@ -319,7 +591,7 @@ new class extends Component {
                 >
                     <div x-show="!isUploading" class="flex h-full flex-col items-center justify-center" x-cloak>
                         <svg
-                            class="mb-4 size-12 opacity-50"
+                            class="mb-4 size-12 text-black/70"
                             xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 24 24"
                             fill="none"
@@ -357,7 +629,7 @@ new class extends Component {
                             <input
                                 @change="handleFileSelect"
                                 id="product-images"
-                                accept="image/*"
+                                accept="image/png, image/jpg, image/jpeg"
                                 type="file"
                                 class="sr-only"
                                 aria-describedby="valid-file-formats"
@@ -365,10 +637,13 @@ new class extends Component {
                             />
                             Klik untuk mengupload
                         </label>
-                        <p class="mb-2 text-pretty text-center font-medium">
+                        <p class="mb-2 text-pretty text-center font-medium tracking-tight text-black">
                             atau letakkan gambar produk anda di dalam kotak ini.
                         </p>
-                        <small id="valid-file-formats" class="text-pretty text-center font-medium opacity-75">
+                        <small
+                            id="valid-file-formats"
+                            class="text-pretty text-center font-medium tracking-tight text-black/70"
+                        >
                             Format file yang didukung: JPEG, JPG, atau PNG (Maks. 9 gambar dengan ukuran file 1 MB /
                             gambar)
                         </small>
@@ -380,26 +655,86 @@ new class extends Component {
                         aria-live="polite"
                         x-cloak
                     >
-                        <p class="mb-4 text-center">Sedang mengupload file...</p>
                         <div
-                            class="h-2.5 w-full rounded-full bg-neutral-200"
-                            role="progressbar"
-                            aria-valuemin="0"
-                            aria-valuemax="100"
-                            aria-label="Upload progress"
+                            class="mb-4 inline-block size-12 animate-spin rounded-full border-[4px] border-current border-t-transparent text-primary"
+                            role="status"
+                            aria-label="loading"
                         >
-                            <div
-                                class="h-2.5 rounded-full bg-primary"
-                                x-bind:style="'width: ' + progress + '%'"
-                                style="transition: width 1s"
-                            ></div>
+                            <span class="sr-only">Sedang diproses...</span>
                         </div>
-                        <p class="mt-2 text-center text-sm" x-text="progress + '%'" aria-hidden="true"></p>
-                        <span class="sr-only" x-text="'Upload progress: ' + progress + ' percent'"></span>
+                        <p class="text-center tracking-tight text-black">Sedang mengunggah file...</p>
                     </div>
                 </div>
-                @if ($form->images)
-                    <span class="mb-1 mt-4 block cursor-default text-sm font-medium text-black">
+                <div
+                    x-show="isUploading"
+                    x-transition:enter="transition duration-300 ease-out"
+                    x-transition:enter-start="opacity-0"
+                    x-transition:enter-end="opacity-100"
+                    x-transition:leave="transition duration-300 ease-in"
+                    x-transition:leave-start="opacity-100"
+                    x-transition:leave-end="opacity-0"
+                    class="mt-4 flex flex-col"
+                    x-cloak
+                >
+                    <div class="space-y-6">
+                        <template x-for="(file, index) in files" :key="index">
+                            <div>
+                                <div class="mb-2 flex items-center gap-x-3">
+                                    <span
+                                        class="flex size-8 items-center justify-center rounded-lg border border-neutral-300 text-black"
+                                    >
+                                        <svg
+                                            class="size-5 shrink-0"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                        >
+                                            <rect width="18" height="18" x="3" y="3" rx="2" ry="2" />
+                                            <circle cx="9" cy="9" r="2" />
+                                            <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21" />
+                                        </svg>
+                                    </span>
+                                    <div>
+                                        <p
+                                            x-text="file?.name"
+                                            class="text-sm font-medium tracking-tight text-black"
+                                        ></p>
+                                        <p
+                                            x-text="formatFileSize(file?.size)"
+                                            class="text-xs tracking-tight text-black/70"
+                                        ></p>
+                                    </div>
+                                </div>
+                                <div class="flex items-center gap-x-3 whitespace-nowrap">
+                                    <div
+                                        class="flex h-2 w-full overflow-hidden rounded-full bg-neutral-200"
+                                        role="progressbar"
+                                        x-bind:aria-valuenow="progress"
+                                        aria-valuemin="0"
+                                        aria-valuemax="100"
+                                    >
+                                        <div
+                                            class="flex flex-col justify-center overflow-hidden whitespace-nowrap rounded-full bg-primary text-center text-xs text-white transition duration-500"
+                                            x-bind:style="{ width: progress + '%' }"
+                                        ></div>
+                                    </div>
+                                    <div class="w-8 text-end">
+                                        <span
+                                            class="text-sm tracking-tight text-black"
+                                            x-text="progress + '%'"
+                                        ></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+                @if ($form->images->count() > 0 || (! is_null($form->newImages) && count($form->newImages) > 0))
+                    <span class="mb-1 mt-4 block cursor-default text-sm font-medium tracking-tight text-black">
                         Preview Gambar Produk
                     </span>
                     <ul class="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-6">
@@ -413,7 +748,7 @@ new class extends Component {
                                         class="relative aspect-square w-full overflow-hidden rounded-lg border border-neutral-300 shadow"
                                     >
                                         <img
-                                            src="{{ asset('uploads/product-images/' . $image->file_name) }}"
+                                            src="{{ asset('storage/uploads/product-images/' . $image->file_name) }}"
                                             alt="Preview Gambar Produk"
                                             class="absolute inset-0 h-full w-full object-cover"
                                         />
@@ -442,12 +777,15 @@ new class extends Component {
                                             <span class="sr-only">Sedang diproses...</span>
                                         </div>
                                     </div>
-                                    <figcaption class="mt-2 text-center text-sm font-medium text-neutral-600">
+                                    <figcaption
+                                        class="mt-2 text-center text-sm font-medium tracking-tight text-black/70"
+                                    >
                                         Gambar produk {{ $form->name . ' - ' . $loop->index + 1 }}
                                     </figcaption>
                                     <button
                                         type="button"
                                         x-on:click.prevent="$dispatch('open-modal', 'confirm-product-image-deletion-{{ $image->id }}')"
+                                        wire:loading.class="opacity-50"
                                         class="absolute right-2 top-2 rounded-full bg-red-500 p-1 text-white transition-opacity duration-150"
                                     >
                                         <svg
@@ -467,53 +805,71 @@ new class extends Component {
                                     </button>
                                 </figure>
                             </li>
-                            @push('overlays')
-                                <x-common.modal
-                                    name="confirm-product-image-deletion-{{ $image->id }}"
-                                    :show="$errors->isNotEmpty()"
-                                    focusable
-                                >
-                                    <form
-                                        action="{{ route('admin.product-images.destroy', ['image' => $image]) }}"
-                                        method="POST"
-                                        class="flex flex-col items-center p-6"
-                                    >
-                                        @csrf
-                                        @method('DELETE')
-                                        <div class="mb-4 rounded-full bg-red-100 p-4" aria-hidden="true">
-                                            <svg
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                viewBox="0 0 24 24"
-                                                fill="currentColor"
-                                                class="size-16 text-red-500"
-                                            >
-                                                <path
-                                                    fill-rule="evenodd"
-                                                    d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
-                                                    clip-rule="evenodd"
-                                                />
-                                            </svg>
-                                        </div>
-                                        <h2 class="mb-2 text-center !text-2xl text-black">
-                                            Hapus Gambar Produk {{ ucwords($form->product->name) }}
-                                        </h2>
-                                        <p class="mb-8 text-center text-base font-medium tracking-tight text-black/70">
-                                            Apakah anda yakin ingin menghapus gambar produk
-                                            <strong>"{{ $form->product->name }}"</strong>
-                                            ini ? Proses ini tidak dapat dibatalkan, seluruh data yang terkait dengan
-                                            gambar produk ini akan dihapus dari sistem.
-                                        </p>
-                                        <div class="flex justify-end gap-4">
-                                            <x-common.button variant="secondary" x-on:click="$dispatch('close')">
-                                                Batal
-                                            </x-common.button>
-                                            <x-common.button type="submit" variant="danger">
+                            <x-common.modal
+                                name="confirm-product-image-deletion-{{ $image->id }}"
+                                :show="$errors->isNotEmpty()"
+                                focusable
+                            >
+                                <div class="flex flex-col items-center p-6">
+                                    <div class="mb-4 rounded-full bg-red-100 p-4" aria-hidden="true">
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 24 24"
+                                            fill="currentColor"
+                                            class="size-16 text-red-500"
+                                        >
+                                            <path
+                                                fill-rule="evenodd"
+                                                d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+                                                clip-rule="evenodd"
+                                            />
+                                        </svg>
+                                    </div>
+                                    <h2 class="mb-2 text-center !text-2xl text-black">
+                                        Hapus Gambar Produk {{ ucwords($form->product->name) }}
+                                    </h2>
+                                    <p class="mb-8 text-center text-base font-medium tracking-tight text-black/70">
+                                        Apakah anda yakin ingin menghapus gambar produk
+                                        <strong>"{{ $form->product->name }}"</strong>
+                                        ini ? Proses ini tidak dapat dibatalkan, seluruh data yang terkait dengan gambar
+                                        produk ini akan dihapus dari sistem.
+                                    </p>
+                                    <div class="flex justify-end gap-4">
+                                        <x-common.button
+                                            variant="secondary"
+                                            x-on:click="$dispatch('close')"
+                                            wire:loading.class="!pointers-event-none !cursor-wait opacity-50"
+                                            wire:target="deleteImage('{{ $image->id }}')"
+                                        >
+                                            Batal
+                                        </x-common.button>
+                                        <x-common.button
+                                            wire:click="deleteImage('{{ $image->id }}')"
+                                            variant="danger"
+                                            wire:loading.attr="disabled"
+                                            wire:target="deleteImage('{{ $image->id }}')"
+                                        >
+                                            <span wire:loading.remove wire:target="deleteImage('{{ $image->id }}')">
                                                 Hapus Gambar Produk
-                                            </x-common.button>
-                                        </div>
-                                    </form>
-                                </x-common.modal>
-                            @endpush
+                                            </span>
+                                            <span
+                                                wire:loading.flex
+                                                wire:target="deleteImage('{{ $image->id }}')"
+                                                class="items-center gap-x-2"
+                                            >
+                                                <div
+                                                    class="inline-block size-4 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
+                                                    role="status"
+                                                    aria-label="loading"
+                                                >
+                                                    <span class="sr-only">Sedang diproses...</span>
+                                                </div>
+                                                Sedang diproses...
+                                            </span>
+                                        </x-common.button>
+                                    </div>
+                                </div>
+                            </x-common.modal>
                         @endforeach
 
                         @if ($form->newImages)
@@ -556,7 +912,9 @@ new class extends Component {
                                                 <span class="sr-only">Sedang diproses...</span>
                                             </div>
                                         </div>
-                                        <figcaption class="mt-2 text-center text-sm font-medium text-neutral-600">
+                                        <figcaption
+                                            class="mt-2 text-center text-sm font-medium tracking-tight text-black/70"
+                                        >
                                             Gambar produk
                                             {{ $form->name . ' - ' . ($loop->index + $form->images->count()) + 1 }}
                                         </figcaption>
@@ -612,7 +970,9 @@ new class extends Component {
                     placeholder="Isikan informasi garansi produk di sini..."
                     minlength="5"
                     maxlength="100"
+                    autocomplete="off"
                     required
+                    :hasError="$errors->has('form.warranty')"
                 />
                 <x-form.input-error :messages="$errors->get('form.warranty')" class="mt-2" />
             </div>
@@ -627,7 +987,9 @@ new class extends Component {
                     placeholder="Isikan bahan material produk di sini..."
                     minlength="3"
                     maxlength="100"
+                    autocomplete="off"
                     required
+                    :hasError="$errors->has('form.material')"
                 />
                 <x-form.input-error :messages="$errors->get('form.material')" class="mt-2" />
             </div>
@@ -650,10 +1012,13 @@ new class extends Component {
                             min="1"
                             max="999"
                             inputmode="numeric"
+                            autocomplete="off"
                             required
+                            :hasError="$errors->has('form.length')"
+                            x-mask="999"
                         />
                         <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-4">
-                            <span class="text-sm text-black/80">cm</span>
+                            <span class="text-sm tracking-tight text-black/70">cm</span>
                         </div>
                     </div>
                     <div class="relative">
@@ -667,10 +1032,13 @@ new class extends Component {
                             min="1"
                             max="999"
                             inputmode="numeric"
+                            autocomplete="off"
                             required
+                            :hasError="$errors->has('form.width')"
+                            x-mask="999"
                         />
                         <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-4">
-                            <span class="text-sm text-black/80">cm</span>
+                            <span class="text-sm tracking-tight text-black/70">cm</span>
                         </div>
                     </div>
                     <div class="relative">
@@ -684,16 +1052,21 @@ new class extends Component {
                             min="1"
                             max="999"
                             inputmode="numeric"
+                            autocomplete="off"
                             required
+                            :hasError="$errors->has('form.height')"
+                            x-mask="999"
                         />
                         <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-4">
-                            <span class="text-sm text-black/80">cm</span>
+                            <span class="text-sm tracking-tight text-black/70">cm</span>
                         </div>
                     </div>
                 </div>
-                <x-form.input-error :messages="$errors->get('form.length')" class="mt-2" />
-                <x-form.input-error :messages="$errors->get('form.width')" class="mt-2" />
-                <x-form.input-error :messages="$errors->get('form.height')" class="mt-2" />
+                <div class="mt-2 space-y-1">
+                    <x-form.input-error :messages="$errors->get('form.length')" />
+                    <x-form.input-error :messages="$errors->get('form.width')" />
+                    <x-form.input-error :messages="$errors->get('form.height')" />
+                </div>
             </div>
             <div class="w-full lg:w-1/2">
                 <x-form.input-label class="mb-1" for="material" value="Berat Produk" />
@@ -701,17 +1074,18 @@ new class extends Component {
                     <x-form.input
                         wire:model.lazy="form.weight"
                         id="weight"
-                        class="block w-full pe-14 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        type="number"
+                        class="block w-full pe-14"
+                        type="text"
                         name="weight"
                         placeholder="Isikan berat produk di sini..."
-                        min="1"
-                        max="29999"
                         inputmode="numeric"
+                        autocomplete="off"
                         required
+                        :hasError="$errors->has('form.weight')"
+                        x-mask:dynamic="$money($input, ',')"
                     />
                     <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-4">
-                        <span class="text-sm text-black/80">gram</span>
+                        <span class="text-sm tracking-tight text-black/70">gram</span>
                     </div>
                 </div>
                 <x-form.input-error :messages="$errors->get('form.weight')" class="mt-2" />
@@ -729,29 +1103,32 @@ new class extends Component {
                     placeholder="Isikan apa yang ada di dalam paket produk di sini..."
                     minlength="5"
                     maxlength="100"
+                    autocomplete="off"
                     required
+                    :hasError="$errors->has('form.package')"
                 />
                 <x-form.input-error :messages="$errors->get('form.package')" class="mt-2" />
             </div>
             <div class="w-full lg:w-1/2">
                 <div class="mb-1 flex items-center justify-between">
-                    <x-form.input-label :required="false" for="power" value="Daya Produk" />
-                    <span class="text-xs tracking-tight text-black/80">(opsional)</span>
+                    <x-form.input-label :required="false" for="power" value="Daya Listrik Produk" />
+                    <span class="text-xs tracking-tight text-black/70">(opsional)</span>
                 </div>
                 <div class="relative">
                     <x-form.input
                         wire:model.lazy="form.power"
                         id="power"
-                        class="block w-full pe-8 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        class="block w-full pe-8"
                         type="text"
                         name="power"
                         placeholder="Isikan daya produk di sini..."
-                        min="1"
-                        max="9999"
                         inputmode="numeric"
+                        autocomplete="off"
+                        :hasError="$errors->has('form.power')"
+                        x-mask:dynamic="$money($input, ',')"
                     />
                     <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-4">
-                        <span class="text-sm text-black/80">W</span>
+                        <span class="text-sm tracking-tight text-black/70">W</span>
                     </div>
                 </div>
                 <x-form.input-error :messages="$errors->get('form.power')" class="mt-2" />
@@ -760,23 +1137,24 @@ new class extends Component {
         <div class="flex flex-col gap-4 p-4 lg:flex-row">
             <div class="w-full lg:w-1/2">
                 <div class="mb-1 flex items-center justify-between">
-                    <x-form.input-label :required="false" for="voltage" value="Tegangan Produk" />
-                    <span class="text-xs tracking-tight text-black/80">(opsional)</span>
+                    <x-form.input-label :required="false" for="voltage" value="Tegangan Listrik Produk" />
+                    <span class="text-xs tracking-tight text-black/70">(opsional)</span>
                 </div>
                 <div class="relative">
                     <x-form.input
                         wire:model.lazy="form.voltage"
                         id="voltage"
-                        class="block w-full pe-8 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                        class="block w-full pe-8"
                         type="text"
                         name="voltage"
                         placeholder="Isikan tegangan produk di sini..."
-                        min="1"
-                        max="10"
                         inputmode="numeric"
+                        autocomplete="off"
+                        :hasError="$errors->has('form.voltage')"
+                        x-mask:dynamic="$input.length > 3 ? '999-999' : '999'"
                     />
                     <div class="pointer-events-none absolute inset-y-0 end-0 flex items-center pe-4">
-                        <span class="text-sm text-black/80">V</span>
+                        <span class="text-sm tracking-tight text-black/70">V</span>
                     </div>
                 </div>
                 <x-form.input-error :messages="$errors->get('form.voltage')" class="mt-2" />
@@ -794,7 +1172,7 @@ new class extends Component {
                 x-cloak
             >
                 Aktifkan Variasi
-                <span class="sr-only">Activate product variation</span>
+                <span class="sr-only">Aktifkan Variasi Produk</span>
                 <div class="absolute end-0 top-0">
                     <span class="relative flex h-3 w-3">
                         <span
@@ -810,20 +1188,21 @@ new class extends Component {
                 <x-form.input-label class="mb-1" for="price" value="Harga Produk" />
                 <div class="relative">
                     <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-4">
-                        <span class="text-sm text-black/80">Rp</span>
+                        <span class="text-sm tracking-tight text-black/70">Rp</span>
                     </div>
                     <x-form.input
                         wire:model.lazy="form.price"
                         id="price"
-                        class="block w-full ps-11 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        type="number"
+                        class="block w-full ps-11"
+                        type="text"
                         name="price"
                         placeholder="Isikan harga produk di sini..."
-                        min="1"
-                        max="99999999.99"
                         inputmode="numeric"
+                        autocomplete="off"
+                        :hasError="$errors->has('form.price')"
                         x-bind:required="!hasVariation"
                         x-bind:disabled="hasVariation"
+                        x-mask:dynamic="$money($input, ',')"
                     />
                 </div>
                 <x-form.input-error :messages="$errors->get('form.price')" class="mt-2" />
@@ -831,23 +1210,24 @@ new class extends Component {
             <div class="w-full lg:w-1/2">
                 <div class="mb-1 flex items-center justify-between">
                     <x-form.input-label :required="false" for="price-discount" value="Harga Diskon Produk" />
-                    <span class="text-xs tracking-tight text-black/80">(opsional)</span>
+                    <span class="text-xs tracking-tight text-black/70">(opsional)</span>
                 </div>
                 <div class="relative">
                     <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-4">
-                        <span class="text-sm text-black/80">Rp</span>
+                        <span class="text-sm tracking-tight text-black/70">Rp</span>
                     </div>
                     <x-form.input
                         wire:model.lazy="form.priceDiscount"
                         id="price-discount"
-                        class="block w-full ps-11 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                        type="number"
+                        class="block w-full ps-11"
+                        type="text"
                         name="price-discount"
                         placeholder="Isikan harga diskon produk di sini..."
-                        min="1"
-                        max="99999999.99"
                         inputmode="numeric"
+                        autocomplete="off"
+                        :hasError="$errors->has('form.priceDiscount')"
                         x-bind:disabled="hasVariation"
+                        x-mask:dynamic="$money($input, ',')"
                     />
                 </div>
                 <x-form.input-error :messages="$errors->get('form.priceDiscount')" class="mt-2" />
@@ -865,8 +1245,11 @@ new class extends Component {
                 max="999"
                 inputmode="numeric"
                 placeholder="Isikan stok produk di sini..."
+                autocomplete="off"
+                :hasError="$errors->has('form.stock')"
                 x-bind:required="!hasVariation"
                 x-bind:disabled="hasVariation"
+                x-mask:dynamic="$money($input, ',')"
             />
             <x-form.input-error :messages="$errors->get('form.stock')" class="mt-2" />
         </div>
@@ -883,6 +1266,8 @@ new class extends Component {
                         placeholder="Isikan nama variasi produk di sini... (contoh: warna)"
                         minlength="3"
                         maxlength="50"
+                        autocomplete="off"
+                        :hasError="$errors->has('form.variation.name')"
                         x-bind:required="hasVariation"
                     />
                 </div>
@@ -930,6 +1315,8 @@ new class extends Component {
                                 placeholder="Isikan nama varian produk di sini... (contoh: hitam)"
                                 minlength="3"
                                 maxlength="50"
+                                autocomplete="off"
+                                :hasError="$errors->has('form.variation.variants.' . $index . '.name')"
                                 x-bind:required="hasVariation"
                             />
                         </div>
@@ -937,7 +1324,9 @@ new class extends Component {
                             <button
                                 type="button"
                                 wire:click="removeVariationVariant({{ $index }})"
-                                class="rounded-full p-3 text-red-500 hover:bg-red-50"
+                                class="rounded-full p-3 text-red-500 hover:bg-red-50 disabled:cursor-wait disabled:opacity-50"
+                                wire:loading.attr="disabled"
+                                wire:target="removeVariationVariant({{ $index }})"
                             >
                                 <svg
                                     class="size-5"
@@ -948,6 +1337,8 @@ new class extends Component {
                                     stroke-width="2"
                                     stroke-linecap="round"
                                     stroke-linejoin="round"
+                                    wire:loading.remove
+                                    wire:target="removeVariationVariant({{ $index }})"
                                 >
                                     <path d="M3 6h18" />
                                     <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
@@ -955,6 +1346,15 @@ new class extends Component {
                                     <line x1="10" x2="10" y1="11" y2="17" />
                                     <line x1="14" x2="14" y1="11" y2="17" />
                                 </svg>
+                                <div
+                                    class="inline-block size-5 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
+                                    role="status"
+                                    aria-label="loading"
+                                    wire:loading
+                                    wire:target="removeVariationVariant({{ $index }})"
+                                >
+                                    <span class="sr-only">Sedang diproses...</span>
+                                </div>
                                 <span class="sr-only">Hapus varian produk</span>
                             </button>
                         @endif
@@ -967,8 +1367,16 @@ new class extends Component {
             @endforeach
 
             @if (count($form->variation['variants']) < 9)
-                <div class="flex items-center gap-2 justify-self-center md:self-end md:justify-self-start">
-                    <x-common.button wire:click="addVariationVariant" variant="outline" class="h-fit w-fit !px-6">
+                <div
+                    class="flex flex-col items-center gap-2 justify-self-center md:flex-row md:self-end md:justify-self-start"
+                >
+                    <x-common.button
+                        wire:click="addVariationVariant"
+                        variant="outline"
+                        class="h-fit w-fit !px-6"
+                        wire:loading.attr="disabled"
+                        wire:target="addVariationVariant"
+                    >
                         <svg
                             wire:loading.remove
                             wire:target="addVariationVariant"
@@ -1000,64 +1408,64 @@ new class extends Component {
                             Sedang Diproses
                         </span>
                     </x-common.button>
-                    <small class="text-black/70">(maks. 9 varian / produk)</small>
+                    <small class="tracking-tight text-black/70">(maks. 9 varian / produk)</small>
                 </div>
             @endif
         </div>
     </fieldset>
-    <div x-show="hasVariation" class="flex w-full border-y border-neutral-300 p-4">
+    <div x-show="hasVariation" class="flex w-full border-y border-neutral-300 p-4" x-cloak>
         <h2 class="text-lg text-black">Tabel Variasi Produk</h2>
     </div>
-    <div x-show="hasVariation" class="flex flex-col">
-        <div class="overflow-x-auto">
+    <div x-show="hasVariation" class="flex flex-col" x-cloak>
+        <div class="overflow-x-auto md:-mx-1.5">
             <div class="inline-block min-w-full p-2 align-middle md:p-4">
                 <div class="overflow-hidden rounded-lg border border-neutral-300">
-                    <table class="w-full table-fixed divide-y divide-neutral-200 bg-white">
+                    <table class="w-full table-fixed divide-y divide-neutral-300 bg-white">
                         <thead>
                             <tr>
                                 <th
                                     scope="col"
-                                    class="w-36 border-r border-neutral-300 px-6 py-3 text-center text-sm font-medium text-neutral-600"
+                                    class="w-36 border-r border-neutral-300 px-6 py-3 text-center text-sm font-medium tracking-tight text-black/70"
                                 >
                                     Nama Variasi
                                 </th>
                                 <th
                                     scope="col"
-                                    class="w-40 border-r border-neutral-300 px-6 py-3 text-center text-sm font-medium text-neutral-600"
+                                    class="w-40 border-r border-neutral-300 px-6 py-3 text-center text-sm font-medium tracking-tight text-black/70"
                                 >
                                     Varian
                                 </th>
                                 <th
                                     scope="col"
-                                    class="w-56 border-r border-neutral-300 px-6 py-3 text-start text-sm font-medium text-neutral-600"
+                                    class="w-56 border-r border-neutral-300 px-6 py-3 text-start text-sm font-medium tracking-tight text-black/70"
                                 >
                                     Harga
                                     <span class="text-sm text-red-500">*</span>
                                 </th>
                                 <th
                                     scope="col"
-                                    class="w-56 border-r border-neutral-300 px-6 py-3 text-start text-sm font-medium text-neutral-600"
+                                    class="w-56 border-r border-neutral-300 px-6 py-3 text-start text-sm font-medium tracking-tight text-black/70"
                                 >
                                     Harga Diskon
-                                    <span class="text-sm text-neutral-600">(opsional)</span>
+                                    <span class="text-sm text-black/70">(opsional)</span>
                                 </th>
                                 <th
                                     scope="col"
-                                    class="w-28 border-r border-neutral-300 px-6 py-3 text-start text-sm font-medium text-neutral-600"
+                                    class="w-28 border-r border-neutral-300 px-6 py-3 text-start text-sm font-medium tracking-tight text-black/70"
                                 >
                                     Stok
                                     <span class="text-sm text-red-500">*</span>
                                 </th>
                                 <th
                                     scope="col"
-                                    class="w-56 border-r px-6 py-3 text-start text-sm font-medium text-neutral-600"
+                                    class="w-56 border-r px-6 py-3 text-start text-sm font-medium tracking-tight text-black/70"
                                 >
                                     Kode Varian
                                     <span class="text-sm text-red-500">*</span>
                                 </th>
                                 <th
                                     scope="col"
-                                    class="w-28 border-neutral-300 px-6 py-3 text-start text-sm font-medium text-neutral-600"
+                                    class="w-28 border-neutral-300 px-6 py-3 text-start text-sm font-medium tracking-tight text-black/70"
                                 >
                                     Aktif
                                     <span class="text-sm text-red-500">*</span>
@@ -1067,9 +1475,9 @@ new class extends Component {
                         <tbody class="divide-y divide-neutral-300">
                             @foreach ($form->variation['variants'] as $index => $variant)
                                 <tr>
-                                    @if ($index === 0)
+                                    @if ($loop->first)
                                         <td
-                                            class="w-36 whitespace-nowrap border-r border-neutral-300 px-6 py-3 text-center text-sm text-neutral-900"
+                                            class="w-36 whitespace-nowrap border-r border-neutral-300 px-6 py-3 text-center text-sm tracking-tight text-black"
                                             rowspan="{{ count($form->variation['variants']) }}"
                                         >
                                             {{ $form->variation['name'] ?? '-' }}
@@ -1077,7 +1485,7 @@ new class extends Component {
                                     @endif
 
                                     <td
-                                        class="w-40 whitespace-nowrap border-r border-neutral-300 px-6 py-3 text-center text-sm text-neutral-900"
+                                        class="w-40 whitespace-nowrap border-r border-neutral-300 px-6 py-3 text-center text-sm tracking-tight text-black"
                                     >
                                         {{ $variant['name'] ?? '-' }}
                                     </td>
@@ -1085,27 +1493,29 @@ new class extends Component {
                                         <x-form.input
                                             wire:model.lazy="form.variation.variants.{{ $index }}.price"
                                             id="variant-{{ $index }}-price"
-                                            class="block w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                            type="number"
+                                            class="block w-full"
+                                            type="text"
                                             name="variant-{{ $index }}-price"
                                             placeholder="Harga..."
-                                            min="1"
-                                            max="99999999.99"
                                             inputmode="numeric"
+                                            autocomplete="off"
+                                            :hasError="$errors->has('form.variation.variants.' . $index . '.price')"
                                             x-bind:required="hasVariation"
+                                            x-mask:dynamic="$money($input, ',')"
                                         />
                                     </td>
                                     <td class="w-56 whitespace-nowrap border-r border-neutral-300 px-6 py-3">
                                         <x-form.input
                                             wire:model.lazy="form.variation.variants.{{ $index }}.priceDiscount"
                                             id="variant-{{ $index }}-price-discount"
-                                            class="block w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                                            type="number"
+                                            class="block w-full"
+                                            type="text"
                                             name="variant-{{ $index }}-price-discount"
                                             placeholder="Harga diskon..."
-                                            min="1"
-                                            max="99999999.99"
                                             inputmode="numeric"
+                                            autocomplete="off"
+                                            :hasError="$errors->has('form.variation.variants.' . $index . '.priceDiscount')"
+                                            x-mask:dynamic="$money($input, ',')"
                                         />
                                     </td>
                                     <td class="w-28 whitespace-nowrap border-r border-neutral-300 px-6 py-3">
@@ -1119,7 +1529,10 @@ new class extends Component {
                                             min="1"
                                             max="999"
                                             inputmode="numeric"
+                                            autocomplete="off"
+                                            :hasError="$errors->has('form.variation.variants.' . $index . '.stock')"
                                             x-bind:required="hasVariation"
+                                            x-mask:dynamic="$money($input, ',')"
                                         />
                                     </td>
                                     <td class="w-56 whitespace-nowrap border-r border-neutral-300 px-6 py-3">
@@ -1132,6 +1545,8 @@ new class extends Component {
                                             placeholder="Kode varian..."
                                             minlength="1"
                                             maxlength="255"
+                                            autocomplete="off"
+                                            :hasError="$errors->has('form.variation.variants.' . $index . '.variantSku')"
                                             x-bind:required="hasVariation"
                                         />
                                     </td>
@@ -1151,28 +1566,39 @@ new class extends Component {
                 </div>
             </div>
         </div>
+        <div class="space-y-1 p-2">
+            @foreach ($form->variation['variants'] as $index => $variant)
+                <x-form.input-error :messages="$errors->get('form.variation.variants.' . $index . '.price')" />
+                <x-form.input-error :messages="$errors->get('form.variation.variants.' . $index . '.priceDiscount')" />
+                <x-form.input-error :messages="$errors->get('form.variation.variants.' . $index . '.stock')" />
+                <x-form.input-error :messages="$errors->get('form.variation.variants.' . $index . '.variantSku')" />
+                <x-form.input-error
+                    :messages="$errors->get('form.variation.variants.' . $index . '.isVariantActive')"
+                />
+            @endforeach
+        </div>
     </div>
-
     <div class="flex flex-col justify-end gap-4 p-4 md:flex-row">
         <x-common.button
             :href="route('admin.products.index')"
-            wire:loading.class="opacity-50 pointer-events-none"
-            wire:target="save"
             variant="secondary"
+            wire:loading.class="!pointers-event-none !cursor-wait opacity-50"
+            wire:target="save"
             wire:navigate
         >
             Batal
         </x-common.button>
-        <x-common.button wire:loading.attr="disabled" wire:target="save" type="submit" variant="primary">
+        <x-common.button type="submit" variant="primary" wire:loading.attr="disabled" wire:target="save">
             <span wire:loading.remove wire:target="save">Simpan</span>
-            <span
-                wire:loading
-                wire:target="save"
-                class="inline-block size-5 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle text-white"
-                role="status"
-                aria-label="loading"
-            >
-                <span class="sr-only">Sedang diproses...</span>
+            <span wire:loading.flex wire:target="save" class="items-center gap-x-2">
+                <div
+                    class="inline-block size-4 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
+                    role="status"
+                    aria-label="loading"
+                >
+                    <span class="sr-only">Sedang diproses...</span>
+                </div>
+                Sedang diproses...
             </span>
         </x-common.button>
     </div>
@@ -1183,16 +1609,19 @@ new class extends Component {
         <script>
             Alpine.data('thumbnailImageUpload', () => {
                 return {
+                    file: null,
                     isDropping: false,
                     isUploading: false,
                     progress: 0,
                     handleFileSelect(event) {
                         if (event.target.files.length > 0) {
+                            this.file = event.target.files[0];
                             this.uploadFile(event.target.files[0]);
                         }
                     },
                     handleFileDrop(event) {
                         if (event.dataTransfer.files.length > 0) {
+                            this.file = event.dataTransfer.files[0];
                             this.uploadFile(event.dataTransfer.files[0]);
                         }
                     },
@@ -1216,26 +1645,39 @@ new class extends Component {
                     },
                     removeUpload(filename) {
                         this.isDeleting = true;
-                        $wire.$removeUpload('form.thumbnail', filename, () => {
+                        $wire.$removeUpload('form.newThumbnail', filename, () => {
                             this.isDeleting = false;
                         });
+                    },
+                    formatFileSize(bytes) {
+                        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                        if (bytes === 0) return '0 Bytes';
+                        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+                        return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
                     },
                 };
             });
 
             Alpine.data('fileUpload', () => {
                 return {
+                    files: [],
                     isDropping: false,
                     isUploading: false,
                     isDeleting: false,
                     progress: 0,
                     handleFileSelect(event) {
                         if (event.target.files.length) {
+                            Array.from(event.target.files).forEach((file) => {
+                                this.files.push(file);
+                            });
                             this.uploadFiles(event.target.files);
                         }
                     },
                     handleFileDrop(event) {
                         if (event.dataTransfer.files.length > 0) {
+                            Array.from(event.dataTransfer.files).forEach((file) => {
+                                this.files.push(file);
+                            });
                             this.uploadFiles(event.dataTransfer.files);
                         }
                     },
@@ -1246,10 +1688,12 @@ new class extends Component {
                             'form.newImages',
                             files,
                             function (success) {
+                                $this.files = [];
                                 $this.isUploading = false;
                                 $this.progress = 0;
                             },
                             function (error) {
+                                $this.files = [];
                                 $this.isUploading = false;
                                 $this.progress = 0;
                                 console.log('error', error);
@@ -1265,6 +1709,12 @@ new class extends Component {
                         $wire.$removeUpload('form.newImages', filename, function (success) {
                             $this.isDeleting = false;
                         });
+                    },
+                    formatFileSize(bytes) {
+                        const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+                        if (bytes === 0) return '0 Bytes';
+                        const i = Math.floor(Math.log(bytes) / Math.log(1024));
+                        return `${(bytes / Math.pow(1024, i)).toFixed(2)} ${sizes[i]}`;
                     },
                 };
             });

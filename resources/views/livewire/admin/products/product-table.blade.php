@@ -1,5 +1,11 @@
 <?php
 
+use App\Models\Product;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
@@ -23,9 +29,19 @@ new class extends Component {
     #[Computed]
     public function products()
     {
-        $products = \App\Models\Product::query()
+        $products = Product::query()
             ->with(['images', 'subcategory'])
             ->withSum('variants', 'stock')
+            ->withSum(
+                [
+                    'orderDetails as total_sold' => function ($query) {
+                        $query->whereHas('order', function ($q) {
+                            $q->where('status', 'completed');
+                        });
+                    },
+                ],
+                'quantity',
+            )
             ->when($this->search !== '', function ($query) {
                 return $query->where('name', 'like', '%' . $this->search . '%');
             });
@@ -63,6 +79,202 @@ new class extends Component {
 
         $this->sortField = $field;
     }
+
+    public function changeStatus(string $id)
+    {
+        if ($this->archived) {
+            return;
+        }
+
+        $product = Product::find($id);
+
+        if (! $product) {
+            session()->flash('error', 'Produk tidak ditemukan.');
+            return $this->redirectIntended(route('admin.products.index'), navigate: true);
+        }
+
+        try {
+            $this->authorize('update', $product);
+
+            DB::transaction(function () use ($product) {
+                $product->update([
+                    'is_active' => $product->is_active ? 0 : 1,
+                ]);
+            });
+
+            $status = $product->is_active ? 'diaktifkan' : 'dinonaktifkan';
+
+            session()->flash('success', 'Produk ' . $product->name . ' berhasil ' . $status . '.');
+            return $this->redirectIntended(route('admin.products.index'), navigate: true);
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('admin.products.index'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during product status alteration: ' . $e->getMessage());
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam mengubah status produk ' .
+                    $product->name .
+                    ', silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(route('admin.products.index'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected product status alteration error: ' . $e->getMessage());
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('admin.products.index'), navigate: true);
+        }
+    }
+
+    public function archive(string $id)
+    {
+        if ($this->archived) {
+            return;
+        }
+
+        $product = Product::find($id);
+
+        if (! $product) {
+            session()->flash('error', 'Produk tidak ditemukan.');
+            return $this->redirectIntended(route('admin.products.index'), navigate: true);
+        }
+
+        try {
+            $this->authorize('delete', $product);
+
+            DB::transaction(function () use ($product) {
+                $product->delete();
+            });
+
+            session()->flash('success', 'Produk ' . $product->name . ' berhasil diarsip.');
+            return $this->redirectIntended(route('admin.products.index'), navigate: true);
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('admin.products.index'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during product archivation: ' . $e->getMessage());
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam mengarsip produk ' . $product->name . ', silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(route('admin.products.index'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected product archivation error: ' . $e->getMessage());
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('admin.products.index'), navigate: true);
+        }
+    }
+
+    public function restore(string $id)
+    {
+        if (! $this->archived) {
+            return;
+        }
+
+        $product = Product::onlyTrashed()->find($id);
+
+        if (! $product) {
+            session()->flash('error', 'Produk tidak ditemukan.');
+            return $this->redirectIntended(route('admin.archived-products.index'), navigate: true);
+        }
+
+        try {
+            $this->authorize('restore', $product);
+
+            DB::transaction(function () use ($product) {
+                $product->restore();
+            });
+
+            session()->flash('success', 'Produk ' . $product->name . ' berhasil dipulihkan.');
+            return $this->redirectIntended(route('admin.archived-products.index'), navigate: true);
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('admin.archived-products.index'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during product restoration: ' . $e->getMessage());
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam memulihkan produk ' . $product->name . ', silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(route('admin.archived-products.index'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected product restoration error: ' . $e->getMessage());
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('admin.archived-products.index'), navigate: true);
+        }
+    }
+
+    public function delete(string $id)
+    {
+        if (! $this->archived) {
+            return;
+        }
+
+        $product = Product::onlyTrashed()
+            ->withSum(
+                [
+                    'orderDetails as total_sold' => function ($query) {
+                        $query->whereHas('order', function ($q) {
+                            $q->where('status', 'completed');
+                        });
+                    },
+                ],
+                'quantity',
+            )
+            ->find($id);
+
+        if (! $product) {
+            session()->flash('error', 'Produk tidak ditemukan.');
+            return $this->redirectIntended(route('admin.archived-products.index'), navigate: true);
+        }
+
+        if ((int) $product->total_sold > 0) {
+            session()->flash('error', 'Anda tidak dapat menghapus produk ini karena produk telah terjual.');
+            return $this->redirectIntended(route('admin.archived-products.index'), navigate: true);
+        }
+
+        $productName = $product->name;
+
+        try {
+            $this->authorize('forceDelete', $product);
+
+            DB::transaction(function () use ($product) {
+                foreach ($product->images as $image) {
+                    $filePath = 'product-images/' . $image->file_name;
+
+                    if (Storage::disk('public_uploads')->exists($filePath)) {
+                        Storage::disk('public_uploads')->delete($filePath);
+                    }
+                }
+
+                $product->forceDelete();
+            });
+
+            session()->flash('success', 'Produk ' . $productName . ' berhasil dihapus.');
+            return $this->redirectIntended(route('admin.archived-products.index'), navigate: true);
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('admin.archived-products.index'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during product deletion: ' . $e->getMessage());
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam menghapus produk ' . $productName . ', silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(route('admin.archived-products.index'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected product deletion error: ' . $e->getMessage());
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('admin.archived-products.index'), navigate: true);
+        }
+    }
 }; ?>
 
 <div>
@@ -70,28 +282,28 @@ new class extends Component {
         <div class="relative">
             <div class="pointer-events-none absolute inset-y-0 start-0 z-20 flex items-center ps-3.5">
                 <svg
-                    class="size-4 shrink-0 text-neutral-600"
+                    class="size-4 shrink-0 text-black/70"
                     xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
                     stroke-width="2"
                     stroke-linecap="round"
                     stroke-linejoin="round"
+                    aria-hidden="true"
                 >
                     <circle cx="11" cy="11" r="8" />
                     <path d="m21 21-4.3-4.3" />
                 </svg>
             </div>
             <div class="relative">
-                <input
-                    wire:model.debounce.live="search"
-                    class="block w-full rounded-lg border border-neutral-300 py-2 pe-4 ps-10 text-sm placeholder:text-neutral-600 focus:border-primary focus:ring-primary disabled:pointer-events-none disabled:opacity-50"
+                <x-form.input
+                    id="product-search"
+                    name="product-search"
+                    wire:model.live.debounce.250ms="search"
+                    class="block w-full ps-10"
                     type="text"
                     role="combobox"
-                    aria-expanded="false"
                     placeholder="Cari data produk berdasarkan nama..."
                 />
                 <div
@@ -100,9 +312,7 @@ new class extends Component {
                     class="pointer-events-none absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                 >
                     <svg
-                        class="size-5 animate-spin text-neutral-900"
-                        width="16"
-                        height="16"
+                        class="size-5 shrink-0 animate-spin text-black"
                         fill="currentColor"
                         viewBox="0 0 256 256"
                         aria-hidden="true"
@@ -121,9 +331,7 @@ new class extends Component {
                         class="absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                     >
                         <svg
-                            class="size-5 text-neutral-900"
-                            width="16"
-                            height="16"
+                            class="size-5 shrink-0 text-black"
                             fill="currentColor"
                             viewBox="0 0 256 256"
                             aria-hidden="true"
@@ -137,7 +345,7 @@ new class extends Component {
             </div>
         </div>
     </div>
-    <div class="w-full overflow-hidden overflow-x-auto">
+    <div class="relative w-full overflow-hidden overflow-x-auto">
         <table class="w-full text-left text-sm">
             <thead class="border-b border-neutral-300">
                 <tr>
@@ -218,7 +426,7 @@ new class extends Component {
                         <button
                             type="button"
                             class="flex items-center gap-x-2 p-4 text-sm font-semibold tracking-tight text-black"
-                            wire:click="sortBy('solds_count')"
+                            wire:click="sortBy('total_sold')"
                         >
                             Total Terjual
                             <svg class="w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
@@ -226,7 +434,7 @@ new class extends Component {
                                 <polyline
                                     @class([
                                         'text-neutral-500',
-                                        'text-primary' => $sortField === 'solds_count' && $sortDirection === 'desc',
+                                        'text-primary' => $sortField === 'total_sold' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
                                     fill="none"
@@ -238,7 +446,7 @@ new class extends Component {
                                 <polyline
                                     @class([
                                         'text-neutral-500',
-                                        'text-primary' => $sortField === 'solds_count' && $sortDirection === 'asc',
+                                        'text-primary' => $sortField === 'total_sold' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
                                     fill="none"
@@ -363,7 +571,11 @@ new class extends Component {
             </thead>
             <tbody class="divide-y divide-neutral-300">
                 @forelse ($this->products as $product)
-                    <tr wire:key="{{ $product->id }}" wire:loading.class="opacity-50">
+                    <tr
+                        wire:key="{{ $product->id }}"
+                        wire:loading.class="opacity-50"
+                        wire:target="search,sortBy,resetSearch"
+                    >
                         <td class="p-4 font-normal tracking-tight text-black/80" align="left">
                             {{ $loop->index + 1 . '.' }}
                         </td>
@@ -384,7 +596,7 @@ new class extends Component {
                                         >
                                             <img
                                                 class="h-full w-full object-cover"
-                                                src="{{ asset('uploads/product-images/' . $thumbnailImageFileName) }}"
+                                                src="{{ asset('storage/uploads/product-images/' . $thumbnailImageFileName) }}"
                                                 alt="Gambar utama produk {{ $product->name }}"
                                             />
                                         </div>
@@ -411,9 +623,11 @@ new class extends Component {
                                     Produk belum terkait pada subkategori
                             @endif
                         </td>
-                        <td class="p-4 font-normal tracking-tight text-black/80" align="center">Total Terjual</td>
                         <td class="p-4 font-normal tracking-tight text-black/80" align="center">
-                            {{ $product->totalStock() }}
+                            {{ $product->total_sold ? formatPrice($product->total_sold) : 0 }}
+                        </td>
+                        <td class="p-4 font-normal tracking-tight text-black/80" align="center">
+                            {{ formatPrice($product->totalStock()) }}
                         </td>
                         <td class="h-full p-4 align-middle font-normal tracking-tight text-black/80" align="center">
                             <div class="flex h-full min-w-24 flex-col items-stretch gap-y-1">
@@ -456,7 +670,12 @@ new class extends Component {
                         <td class="relative px-4 py-2" align="right">
                             <x-common.dropdown width="48">
                                 <x-slot name="trigger">
-                                    <button type="button" class="rounded-full p-2 text-black hover:bg-neutral-200">
+                                    <button
+                                        type="button"
+                                        class="rounded-full p-2 text-black hover:bg-neutral-200 disabled:hover:bg-white"
+                                        wire:loading.attr="disabled"
+                                        wire:target="search,sortBy,resetSearch"
+                                    >
                                         <svg
                                             class="size-4"
                                             xmlns="http://www.w3.org/2000/svg"
@@ -476,41 +695,9 @@ new class extends Component {
                                 <x-slot name="content">
                                     @if ($this->archived)
                                         @can('restore products')
-                                            <form
-                                                action="{{ route('admin.archived-products.restore', ['id' => $product->id]) }}"
-                                                method="POST"
-                                            >
-                                                @csrf
-                                                @method('PATCH')
-                                                <button
-                                                    type="submit"
-                                                    class="inline-flex w-full items-center gap-x-3 px-4 py-2 text-start text-sm font-medium leading-5 text-black transition duration-150 ease-in-out hover:bg-neutral-100 focus:bg-neutral-100 focus:outline-none"
-                                                >
-                                                    <svg
-                                                        class="size-4"
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        viewBox="0 0 24 24"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        stroke-width="2"
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                    >
-                                                        <rect width="20" height="5" x="2" y="3" rx="1" />
-                                                        <path d="M4 8v11a2 2 0 0 0 2 2h2" />
-                                                        <path d="M20 8v11a2 2 0 0 1-2 2h-2" />
-                                                        <path d="m9 15 3-3 3 3" />
-                                                        <path d="M12 12v9" />
-                                                    </svg>
-                                                    Pulihkan
-                                                </button>
-                                            </form>
-                                        @endcan
-
-                                        @can('force delete products')
                                             <x-common.dropdown-link
-                                                x-on:click.prevent.stop="$dispatch('open-modal', 'confirm-product-deletion-{{ $product->id }}')"
-                                                class="text-red-500 hover:bg-red-50"
+                                                type="button"
+                                                wire:click="restore('{{ $product->id }}')"
                                             >
                                                 <svg
                                                     class="size-4"
@@ -522,70 +709,119 @@ new class extends Component {
                                                     stroke-linecap="round"
                                                     stroke-linejoin="round"
                                                 >
-                                                    <path d="M3 6h18" />
-                                                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                                                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                                                    <line x1="10" x2="10" y1="11" y2="17" />
-                                                    <line x1="14" x2="14" y1="11" y2="17" />
+                                                    <rect width="20" height="5" x="2" y="3" rx="1" />
+                                                    <path d="M4 8v11a2 2 0 0 0 2 2h2" />
+                                                    <path d="M20 8v11a2 2 0 0 1-2 2h-2" />
+                                                    <path d="m9 15 3-3 3 3" />
+                                                    <path d="M12 12v9" />
                                                 </svg>
-                                                Hapus
+                                                Pulihkan
                                             </x-common.dropdown-link>
-                                            @push('overlays')
-                                                <x-common.modal
-                                                    name="confirm-product-deletion-{{ $product->id }}"
-                                                    :show="$errors->isNotEmpty()"
-                                                    focusable
-                                                >
-                                                    <form
-                                                        action="{{ route('admin.archived-products.forceDelete', ['id' => $product->id]) }}"
-                                                        method="POST"
-                                                        class="flex flex-col items-center p-6"
-                                                    >
-                                                        @csrf
-                                                        @method('DELETE')
-                                                        <div
-                                                            class="mb-4 rounded-full bg-red-100 p-4"
-                                                            aria-hidden="true"
-                                                        >
-                                                            <svg
-                                                                xmlns="http://www.w3.org/2000/svg"
-                                                                viewBox="0 0 24 24"
-                                                                fill="currentColor"
-                                                                class="size-16 text-red-500"
-                                                            >
-                                                                <path
-                                                                    fill-rule="evenodd"
-                                                                    d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
-                                                                    clip-rule="evenodd"
-                                                                />
-                                                            </svg>
-                                                        </div>
-                                                        <h2 class="mb-2 text-center text-black">
-                                                            Hapus Produk {{ ucwords($product->name) }}
-                                                        </h2>
-                                                        <p
-                                                            class="mb-8 text-center text-base font-medium tracking-tight text-black/70"
-                                                        >
-                                                            Apakah anda yakin ingin menghapus produk
-                                                            <strong>"{{ strtolower($product->name) }}"</strong>
-                                                            ini ? Proses ini tidak dapat dibatalkan, seluruh data yang
-                                                            terkait dengan produk ini akan dihapus dari sistem.
-                                                        </p>
-                                                        <div class="flex justify-end gap-4">
-                                                            <x-common.button
-                                                                variant="secondary"
-                                                                x-on:click="$dispatch('close')"
-                                                            >
-                                                                Batal
-                                                            </x-common.button>
-                                                            <x-common.button type="submit" variant="danger">
-                                                                Hapus Produk
-                                                            </x-common.button>
-                                                        </div>
-                                                    </form>
-                                                </x-common.modal>
-                                            @endpush
                                         @endcan
+
+                                        @if ($product->total_sold < 0)
+                                            @can('force delete products')
+                                                <x-common.dropdown-link
+                                                    x-on:click.prevent.stop="$dispatch('open-modal', 'confirm-product-deletion-{{ $product->id }}')"
+                                                    class="text-red-500 hover:bg-red-50"
+                                                >
+                                                    <svg
+                                                        class="size-4"
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="2"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                    >
+                                                        <path d="M3 6h18" />
+                                                        <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                                                        <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                                                        <line x1="10" x2="10" y1="11" y2="17" />
+                                                        <line x1="14" x2="14" y1="11" y2="17" />
+                                                    </svg>
+                                                    Hapus
+                                                </x-common.dropdown-link>
+                                                <template x-teleport="body">
+                                                    <x-common.modal
+                                                        name="confirm-product-deletion-{{ $product->id }}"
+                                                        :show="$errors->isNotEmpty()"
+                                                        focusable
+                                                    >
+                                                        <div class="flex flex-col items-center p-6">
+                                                            <div
+                                                                class="mb-4 rounded-full bg-red-100 p-4"
+                                                                aria-hidden="true"
+                                                            >
+                                                                <svg
+                                                                    xmlns="http://www.w3.org/2000/svg"
+                                                                    viewBox="0 0 24 24"
+                                                                    fill="currentColor"
+                                                                    class="size-16 text-red-500"
+                                                                >
+                                                                    <path
+                                                                        fill-rule="evenodd"
+                                                                        d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+                                                                        clip-rule="evenodd"
+                                                                    />
+                                                                </svg>
+                                                            </div>
+                                                            <h2 class="mb-2 text-center text-black">
+                                                                Hapus Produk {{ ucwords($product->name) }}
+                                                            </h2>
+                                                            <p
+                                                                class="mb-8 text-center text-base font-medium tracking-tight text-black/70"
+                                                            >
+                                                                Apakah anda yakin ingin menghapus produk
+                                                                <strong>"{{ strtolower($product->name) }}"</strong>
+                                                                ini ? Proses ini tidak dapat dibatalkan, seluruh data
+                                                                yang terkait dengan produk ini akan dihapus dari sistem.
+                                                            </p>
+                                                            <div class="flex justify-end gap-4">
+                                                                <x-common.button
+                                                                    variant="secondary"
+                                                                    x-on:click="$dispatch('close')"
+                                                                    wire:loading.class="!pointers-event-nonte !cursor-not-allowed opacity-50"
+                                                                    wire:target="delete('{{ $product->id }}')"
+                                                                >
+                                                                    Batal
+                                                                </x-common.button>
+                                                                <x-common.button
+                                                                    wire:click="delete('{{ $product->id }}')"
+                                                                    variant="danger"
+                                                                    wire:loading.attr="disabled"
+                                                                    wire:target="delete('{{ $product->id }}')"
+                                                                >
+                                                                    <span
+                                                                        wire:loading.remove
+                                                                        wire:target="delete('{{ $product->id }}')"
+                                                                    >
+                                                                        Hapus Produk
+                                                                    </span>
+                                                                    <span
+                                                                        wire:loading.flex
+                                                                        wire:target="delete('{{ $product->id }}')"
+                                                                        class="items-center gap-x-2"
+                                                                    >
+                                                                        <div
+                                                                            class="inline-block size-4 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
+                                                                            role="status"
+                                                                            aria-label="loading"
+                                                                        >
+                                                                            <span class="sr-only">
+                                                                                Sedang diproses...
+                                                                            </span>
+                                                                        </div>
+                                                                        Sedang diproses...
+                                                                    </span>
+                                                                </x-common.button>
+                                                            </div>
+                                                        </div>
+                                                    </x-common.modal>
+                                                </template>
+                                            @endcan
+                                        @endif
                                     @else
                                         <x-common.dropdown-link
                                             :href="route('admin.products.show', ['slug' => $product->slug])"
@@ -612,6 +848,32 @@ new class extends Component {
                                         </x-common.dropdown-link>
 
                                         @can('edit products')
+                                            <x-common.dropdown-link
+                                                wire:click="changeStatus('{{ $product->id }}')"
+                                                x-on:click="event.stopPropagation()"
+                                                wire:loading.class="!cursor-wait opacity-50"
+                                                wire:target="changeStatus('{{ $product->id }}')"
+                                            >
+                                                <svg
+                                                    class="size-4"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
+                                                >
+                                                    <rect width="20" height="12" x="2" y="6" rx="6" ry="6" />
+                                                    <circle cx="8" cy="12" r="2" />
+                                                </svg>
+                                                <span wire:loading.remove>
+                                                    {{ $product->is_active ? 'Non Aktifkan Produk' : 'Aktifkan Produk' }}
+                                                </span>
+                                                <span wire:loading wire:target="changeStatus('{{ $product->id }}')">
+                                                    Sedang diproses
+                                                </span>
+                                            </x-common.dropdown-link>
                                             <x-common.dropdown-link
                                                 :href="route('admin.products.edit', ['slug' => $product->slug])"
                                                 x-on:click="event.stopPropagation()"
@@ -657,19 +919,13 @@ new class extends Component {
                                                 </svg>
                                                 Arsip
                                             </x-common.dropdown-link>
-                                            @push('overlays')
+                                            <template x-teleport="body">
                                                 <x-common.modal
                                                     name="confirm-product-archiving-{{ $product->id }}"
                                                     :show="$errors->isNotEmpty()"
                                                     focusable
                                                 >
-                                                    <form
-                                                        action="{{ route('admin.products.destroy', ['product' => $product]) }}"
-                                                        method="POST"
-                                                        class="flex flex-col items-center p-6"
-                                                    >
-                                                        @csrf
-                                                        @method('DELETE')
+                                                    <div class="flex flex-col items-center p-6">
                                                         <div
                                                             class="mb-4 rounded-full bg-red-100 p-4"
                                                             aria-hidden="true"
@@ -698,8 +954,8 @@ new class extends Component {
                                                                 "{{ strtolower($product->name) }}"
                                                             </strong>
                                                             ini ? Produk yang diarsip tidak akan dapat dilihat maupun
-                                                            dibeli oleh pembeli. Anda dapat melihat produk yang di arsip
-                                                            pada menu
+                                                            dibeli oleh pelanggan. Anda dapat melihat produk yang di
+                                                            arsip pada menu
                                                             <a
                                                                 href="{{ route('admin.archived-products.index') }}"
                                                                 class="underline"
@@ -713,16 +969,42 @@ new class extends Component {
                                                             <x-common.button
                                                                 variant="secondary"
                                                                 x-on:click="$dispatch('close')"
+                                                                wire:loading.class="!pointers-event-nonte !cursor-not-allowed opacity-50"
+                                                                wire:target="archive('{{ $product->id }}')"
                                                             >
                                                                 Batal
                                                             </x-common.button>
-                                                            <x-common.button type="submit" variant="danger">
-                                                                Arsip Produk
+                                                            <x-common.button
+                                                                wire:click="archive('{{ $product->id }}')"
+                                                                variant="danger"
+                                                                wire:loading.attr="disabled"
+                                                                wire:target="archive('{{ $product->id }}')"
+                                                            >
+                                                                <span
+                                                                    wire:loading.remove
+                                                                    wire:target="archive('{{ $product->id }}')"
+                                                                >
+                                                                    Arsip Produk
+                                                                </span>
+                                                                <span
+                                                                    wire:loading.flex
+                                                                    wire:target="archive('{{ $product->id }}')"
+                                                                    class="items-center gap-x-2"
+                                                                >
+                                                                    <div
+                                                                        class="inline-block size-4 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
+                                                                        role="status"
+                                                                        aria-label="loading"
+                                                                    >
+                                                                        <span class="sr-only">Sedang diproses...</span>
+                                                                    </div>
+                                                                    Sedang diproses...
+                                                                </span>
                                                             </x-common.button>
                                                         </div>
-                                                    </form>
+                                                    </div>
                                                 </x-common.modal>
-                                            @endpush
+                                            </template>
                                         @endcan
                                     @endif
                                 </x-slot>
@@ -730,12 +1012,51 @@ new class extends Component {
                         </td>
                     </tr>
                 @empty
-                    <tr>
-                        <td class="p-4" colspan="6">Data produk tidak ditemukan</td>
+                    <tr wire:loading.class="opacity-50" wire:target="search,sortBy,resetSearch">
+                        <td class="p-4" colspan="8">
+                            <figure class="my-4 flex h-full flex-col items-center justify-center">
+                                <img
+                                    src="https://placehold.co/400"
+                                    class="mb-6 size-72 object-cover"
+                                    alt="Gambar ilustrasi diskon tidak ditemukan"
+                                />
+                                <figcaption class="flex flex-col items-center">
+                                    <h2 class="mb-3 text-center !text-2xl text-black">Produk Tidak Ditemukan</h2>
+                                    <p class="mb-8 text-center text-base font-normal tracking-tight text-black/70">
+                                        @if ($search)
+                                            Produk yang Anda cari tidak ditemukan, silakan coba untuk mengubah kata kunci
+                                        pencarian Anda.
+                                        @else
+                                            @if ($archived)
+                                                Seluruh produk Anda yang diarsipkan akan ditampilkan di halaman ini.
+                                            @else
+                                                Seluruh produk Anda akan ditampilkan di halaman ini. Anda dapat
+                                                menambahkan produk baru dengan menekan tombol
+                                                <strong>Tambah</strong>
+                                                diatas.
+                                            @endif
+                                        @endif
+                                    </p>
+                                </figcaption>
+                            </figure>
+                        </td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
+        <div
+            class="absolute left-1/2 top-32 h-full -translate-x-1/2"
+            wire:loading
+            wire:target="search,sortBy,resetSearch"
+        >
+            <div
+                class="inline-block size-10 animate-spin rounded-full border-4 border-current border-t-transparent text-primary"
+                role="status"
+                aria-label="loading"
+            >
+                <span class="sr-only">Sedang diproses...</span>
+            </div>
+        </div>
     </div>
     {{ $this->products->links() }}
 </div>
