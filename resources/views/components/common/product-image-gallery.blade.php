@@ -11,13 +11,13 @@
         return ! $image->is_thumbnail;
     });
 
-    $productName = $images->first()->product->name;
+    $productName = $thumbnail->first()->product->name;
 @endphp
 
 <section
     class="relative flex w-full flex-col-reverse gap-2 overflow-y-hidden lg:sticky lg:top-[4.5rem] lg:h-[38rem] lg:w-1/2 lg:flex-row lg:gap-4"
     x-data="productGallery(
-                '{{ asset('uploads/product-images/' . $thumbnail->first()->file_name) }}',
+                '{{ asset('storage/uploads/product-images/' . $thumbnail->first()->file_name) }}',
             )"
     x-init="init()"
 >
@@ -32,39 +32,45 @@
                 <button
                     aria-label="Tampilkan gambar utama produk {{ $productName }} - 1"
                     class="group size-20 overflow-hidden rounded-xl border border-neutral-300 transition-colors hover:border-primary"
-                    :class="{'border-primary': selectedImage === '{{ asset('uploads/product-images/' . $thumbnail->first()->file_name) }}'}"
+                    :class="{'border-primary': selectedImage === '{{ asset('storage/uploads/product-images/' . $thumbnail->first()->file_name) }}'}"
                     x-on:click="
                         selectImage(
-                            '{{ asset('uploads/product-images/' . $thumbnail->first()->file_name) }}',
+                            '{{ asset('storage/uploads/product-images/' . $thumbnail->first()->file_name) }}',
                         )
                     "
                 >
                     <img
-                        src="{{ asset('uploads/product-images/' . $thumbnail->first()->file_name) }}"
+                        src="{{ asset('storage/uploads/product-images/' . $thumbnail->first()->file_name) }}"
                         alt="Gambar produk {{ $productName }} - 1"
                         class="h-auto w-full object-cover brightness-100 group-hover:brightness-95"
-                        :class="{'brightness-95': selectedImage === '{{ asset('uploads/product-images/' . $thumbnail->first()->file_name) }}'}"
+                        :class="{'brightness-95': selectedImage === '{{ asset('storage/uploads/product-images/' . $thumbnail->first()->file_name) }}'}"
                     />
                 </button>
             </li>
-            @foreach ($images as $image)
-                <li>
-                    <button
-                        aria-label="Tampilkan gambar utama produk {{ $productName . ' - ' . $loop->index + 2 }}"
-                        class="group size-20 overflow-hidden rounded-xl border border-neutral-300 transition-colors hover:border-primary"
-                        :class="{'border-primary': selectedImage === '{{ asset('uploads/product-images/' . $image->file_name) }}'}"
-                        x-on:click="selectImage('{{ asset('uploads/product-images/' . $image->file_name) }}')"
-                    >
-                        <img
-                            src="{{ asset('uploads/product-images/' . $image->file_name) }}"
-                            alt="Gambar produk {{ $productName . ' - ' . $loop->index + 2 }}"
-                            class="h-auto w-full object-cover brightness-100 group-hover:brightness-95"
-                            :class="{'brightness-95': selectedImage === '{{ asset('uploads/product-images/' . $image->file_name) }}'}"
-                            loading="lazy"
-                        />
-                    </button>
-                </li>
-            @endforeach
+            @if ($images->count() > 0)
+                @foreach ($images as $image)
+                    <li>
+                        <button
+                            aria-label="Tampilkan gambar utama produk {{ $productName . ' - ' . $loop->index + 2 }}"
+                            class="group size-20 overflow-hidden rounded-xl border border-neutral-300 transition-colors hover:border-primary"
+                            :class="{'border-primary': selectedImage === '{{ asset('storage/uploads/product-images/' . $image->file_name) }}'}"
+                            x-on:click="
+                                selectImage(
+                                    '{{ asset('storage/uploads/product-images/' . $image->file_name) }}',
+                                )
+                            "
+                        >
+                            <img
+                                src="{{ asset('storage/uploads/product-images/' . $image->file_name) }}"
+                                alt="Gambar produk {{ $productName . ' - ' . $loop->index + 2 }}"
+                                class="h-auto w-full object-cover brightness-100 group-hover:brightness-95"
+                                :class="{'brightness-95': selectedImage === '{{ asset('storage/uploads/product-images/' . $image->file_name) }}'}"
+                                loading="lazy"
+                            />
+                        </button>
+                    </li>
+                @endforeach
+            @endif
         </ul>
         @if ($images->count() > 6)
             <button

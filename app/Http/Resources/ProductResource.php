@@ -22,7 +22,7 @@ class ProductResource extends JsonResource
             'link' => route('products.detail', ['slug' => $this->slug]),
             'price' => $this->base_price,
             'price_discount' => $this->base_price_discount,
-            'thumbnail' => $thumbnail ? asset('uploads/product-images/'.$thumbnail->file_name) : null,
+            'thumbnail' => $thumbnail ? asset('storage/uploads/product-images/'.$thumbnail->file_name) : null,
         ];
     }
 }

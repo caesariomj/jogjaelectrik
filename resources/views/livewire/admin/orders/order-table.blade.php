@@ -645,7 +645,7 @@ new class extends Component {
                                 wire:navigate
                             >
                                 <img
-                                    src="{{ asset('uploads/product-images/' .$item->productVariant->product->images()->thumbnail()->first()->file_name,) }}"
+                                    src="{{ asset('storage/uploads/product-images/' .$item->productVariant->product->images()->thumbnail()->first()->file_name,) }}"
                                     alt="Gambar produk {{ strtolower($item->productVariant->product->name) }}"
                                     class="aspect-square h-full w-20 scale-100 object-cover brightness-100 transition-all ease-in-out hover:scale-105 hover:brightness-95"
                                     loading="lazy"

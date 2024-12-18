@@ -1,13 +1,17 @@
 <?php
 
+use App\Exceptions\ApiRequestException;
 use App\Livewire\Forms\CheckoutForm;
 use App\Models\Cart;
 use App\Models\Order;
 use App\Services\PaymentService;
 use App\Services\ShippingService;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Locked;
 use Livewire\Volt\Component;
 
@@ -35,64 +39,52 @@ new class extends Component {
         ],
     ];
     public array $selectedCourierServices = [];
-    public array $supportedPaymentMethods = [
-        [
-            'name' => 'QRIS',
-            'code' => 'qris',
-            'image' => 'qris',
-        ],
-        [
-            'name' => 'Gopay',
-            'code' => 'gopay',
-            'image' => 'gopay',
-        ],
-        [
-            'name' => 'ShopeePay',
-            'code' => 'shopeepay',
-            'image' => 'shopeepay',
-        ],
-        [
-            'name' => 'DANA',
-            'code' => 'dana',
-        ],
-        [
-            'name' => 'QRIS Lainnya',
-            'code' => 'other_qris',
-        ],
-        [
-            'name' => 'BCA VA',
-            'code' => 'bca_va',
-            'image' => 'bca',
-        ],
-        [
-            'name' => 'BNI VA',
-            'code' => 'bni_va',
-            'image' => 'bni',
-        ],
-        [
-            'name' => 'BRI VA',
-            'code' => 'bri_va',
-            'image' => 'bri',
-        ],
-        [
-            'name' => 'Mandiri Bill Payment',
-            'code' => 'echannel',
-            'image' => 'mandiri',
-        ],
-        [
-            'name' => 'Permata VA',
-            'code' => 'permata_va',
-            'image' => 'permata',
-        ],
-        [
-            'name' => 'CIMB VA',
-            'code' => 'cimb_va',
-        ],
-        [
-            'name' => 'VA Bank Lainnya',
-            'code' => 'other_va',
-        ],
-    ];
+    // public array $supportedPaymentMethods = [
+    //     [
+    //         'name' => 'QRIS',
+    //         'code' => 'qris',
+    //         'image' => 'qris',
+    //     ],
+    //     [
+    //         'name' => 'Gopay',
+    //         'code' => 'gopay',
+    //         'image' => 'gopay',
+    //     ],
+    //     [
+    //         'name' => 'ShopeePay',
+    //         'code' => 'shopeepay',
+    //         'image' => 'shopeepay',
+    //     ],
+    //     [
+    //         'name' => 'BCA VA',
+    //         'code' => 'bca_va',
+    //         'image' => 'bca',
+    //     ],
+    //     [
+    //         'name' => 'BNI VA',
+    //         'code' => 'bni_va',
+    //         'image' => 'bni',
+    //     ],
+    //     [
+    //         'name' => 'BRI VA',
+    //         'code' => 'bri_va',
+    //         'image' => 'bri',
+    //     ],
+    //     [
+    //         'name' => 'Mandiri Bill Payment',
+    //         'code' => 'echannel',
+    //         'image' => 'mandiri',
+    //     ],
+    //     [
+    //         'name' => 'Permata VA',
+    //         'code' => 'permata_va',
+    //         'image' => 'permata',
+    //     ],
+    //     [
+    //         'name' => 'VA Bank Lainnya',
+    //         'code' => 'other_va',
+    //     ],
+    // ];
 
     public function boot(ShippingService $shippingService, PaymentService $paymentService)
     {
@@ -162,7 +154,7 @@ new class extends Component {
         } catch (\Exception $e) {
             $this->selectedCourierServices = [];
             session()->flash('error', $e->getMessage());
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('checkout'), navigate: true);
         }
     }
 
@@ -246,6 +238,15 @@ new class extends Component {
                     'postal_code' => $encryptedPostalCode,
                 ]);
 
+                $shippingAddress =
+                    $validated['address'] .
+                    ', ' .
+                    $validated['postalCode'] .
+                    ' - ' .
+                    $this->form->user->city->name .
+                    ', ' .
+                    $this->form->user->city->province->name;
+
                 $estimatedShippingDays = $selectedCourierServiceData['etd'];
 
                 if (strpos($estimatedShippingDays, '-') !== false) {
@@ -255,7 +256,7 @@ new class extends Component {
                 }
 
                 $order = $this->form->user->orders()->create([
-                    'shipping_address' => $encryptedAddress,
+                    'shipping_address' => Crypt::encryptString($shippingAddress),
                     'shipping_courier' => strtolower(
                         $this->form->shippingCourier . '-' . $this->form->shippingCourierService,
                     ),
@@ -274,12 +275,16 @@ new class extends Component {
                 $orderNumber = $order->order_number;
 
                 foreach ($this->form->items as $item) {
-                    $order->details()->create([
+                    $orderDetail = $order->details()->create([
                         'product_variant_id' => $item->productVariant->id,
-                        'price' =>
-                            (float) $item->productVariant->price_discount ??
-                            (float) $item->productVariant->price_discount,
+                        'price' => $item->productVariant->price_discount
+                            ? (float) $item->productVariant->price_discount
+                            : (float) $item->productVariant->price,
                         'quantity' => (int) $item->quantity,
+                    ]);
+
+                    $item->productVariant->update([
+                        'stock' => (int) $item->productVariant->stock - $orderDetail->quantity,
                     ]);
                 }
 
@@ -293,11 +298,11 @@ new class extends Component {
                     $this->form->cart->discount()->increment('used_count');
                 }
 
-                $snapToken = $this->paymentService->createSnapToken($order, $this->form->paymentMethod);
+                $snapToken = $this->paymentService->createSnapToken($order);
 
                 $order->payment()->create([
                     'token' => $snapToken,
-                    'method' => $this->form->paymentMethod,
+                    'method' => 'test',
                 ]);
 
                 $this->form->cart->delete();
@@ -305,41 +310,41 @@ new class extends Component {
 
             session()->flash('success', 'Pesanan anda berhasil dibuat.');
             return $this->redirectRoute('orders.success', ['orderNumber' => $orderNumber], navigate: true);
-        } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
-            $errorMessage = $authException->getMessage();
+        } catch (AuthorizationException $e) {
+            $errorMessage = $e->getMessage();
 
-            if ($authException->getCode() === 401) {
+            if ($e->getCode() === 401) {
                 session()->flash('error', $errorMessage);
                 return $this->redirectRoute('login', navigate: true);
             }
 
             session()->flash('error', $errorMessage);
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Illuminate\Database\QueryException $queryException) {
-            \Illuminate\Support\Facades\Log::error('Database error during transaction', [
-                'error' => $queryException->getMessage(),
-                'exception_trace' => $queryException->getTraceAsString(),
+            return $this->redirectIntended(route('checkout'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during transaction', [
+                'error' => $e->getMessage(),
+                'exception_trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\App\Exceptions\ApiRequestException $apiException) {
-            \Illuminate\Support\Facades\Log::error('Payment processing failed in controller', [
-                'message' => $apiException->getMessage(),
-                'status_code' => $apiException->getStatusCode(),
-                'exception_trace' => $apiException->getTraceAsString(),
+            return $this->redirectIntended(route('checkout'), navigate: true);
+        } catch (ApiRequestException $e) {
+            Log::error('Payment processing failed in controller', [
+                'message' => $e->getMessage(),
+                'status_code' => $e->getStatusCode(),
+                'exception_trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan tak terduga pada sistem. Silakan coba beberapa saat lagi');
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\Log::error('Unexpected error occurred', [
-                'error' => $th->getMessage(),
-                'exception_trace' => $th->getTraceAsString(),
+            return $this->redirectIntended(route('checkout'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected error occurred', [
+                'error' => $e->getMessage(),
+                'exception_trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('checkout'), navigate: true);
         }
     }
 }; ?>
@@ -726,85 +731,87 @@ new class extends Component {
                 </div>
             </div>
         </fieldset>
-        <fieldset>
+        {{--
+            <fieldset>
             <legend class="flex w-full flex-col border-t border-neutral-300 py-4">
-                <h2 class="mb-2 text-xl text-black">Metode Pembayaran</h2>
-                <p class="text-base tracking-tight text-black/70">
-                    Pilih salah satu metode pembayaran yang tersedia di bawah ini.
-                </p>
+            <h2 class="mb-2 text-xl text-black">Metode Pembayaran</h2>
+            <p class="text-base tracking-tight text-black/70">
+            Pilih salah satu metode pembayaran yang tersedia di bawah ini.
+            </p>
             </legend>
             <div class="pb-8 pt-4">
-                <ul x-data="{ selected: '' }" class="grid grid-cols-2 gap-4 md:grid-cols-3">
-                    @foreach ($this->supportedPaymentMethods as $method)
-                        <li class="relative w-full">
-                            <x-form.radio
-                                :inputAttributes="
-                                    [
-                                        'wire:model.lazy' => 'form.paymentMethod',
-                                        'id' => 'payment-method-' . strtolower($method['name']),
-                                        'name' => 'select-payment-method',
-                                        'value' => $method['code'],
-                                        'x-on:input' => 'selected = \'' . $method['code'] . '\'',
-                                    ]
-                                "
-                                :labelAttributes="
-                                    [
-                                        'for' => 'payment-method-' . strtolower($method['name']),
-                                    ]
-                                "
-                                :hasError="$errors->has('form.paymentMethod')"
-                            >
-                                @if (array_key_exists('image', $method))
-                                    <img
-                                        src="{{ asset('images/logos/payments/' . $method['image'] . '.webp') }}"
-                                        alt="Logo {{ strtoupper($method['name']) }}"
-                                        class="h-auto w-12"
-                                        loading="lazy"
-                                    />
-                                @else
-                                    <svg
-                                        class="size-6 text-black"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke-width="1.5"
-                                        stroke="currentColor"
-                                        aria-hidden="true"
-                                    >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z"
-                                        />
-                                    </svg>
-                                @endif
-                                <p class="text-sm font-semibold tracking-tight text-black">
-                                    {{ ucwords($method['name']) }}
-                                </p>
-                            </x-form.radio>
-                            <svg
-                                class="absolute end-4 top-3 size-5 shrink-0 fill-primary stroke-primary-50"
-                                xmlns="http://www.w3.org/2000/svg"
-                                width="24"
-                                height="24"
-                                viewBox="0 0 24 24"
-                                fill="currentColor"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
-                                x-show="selected === '{{ $method['code'] }}'"
-                            >
-                                <circle cx="12" cy="12" r="10" />
-                                <path d="m9 12 2 2 4-4" />
-                            </svg>
-                        </li>
-                    @endforeach
-                </ul>
-                <x-form.input-error :messages="$errors->get('form.paymentMethod')" class="mt-2" />
+            <ul x-data="{ selected: '' }" class="grid grid-cols-2 gap-4 md:grid-cols-3">
+            @foreach ($this->supportedPaymentMethods as $method)
+            <li class="relative w-full">
+            <x-form.radio
+            :inputAttributes="
+            [
+            'wire:model.lazy' => 'form.paymentMethod',
+            'id' => 'payment-method-' . strtolower($method['name']),
+            'name' => 'select-payment-method',
+            'value' => $method['code'],
+            'x-on:input' => 'selected = \'' . $method['code'] . '\'',
+            ]
+            "
+            :labelAttributes="
+            [
+            'for' => 'payment-method-' . strtolower($method['name']),
+            ]
+            "
+            :hasError="$errors->has('form.paymentMethod')"
+            >
+            @if (array_key_exists('image', $method))
+            <img
+            src="{{ asset('images/logos/payments/' . $method['image'] . '.webp') }}"
+            alt="Logo {{ strtoupper($method['name']) }}"
+            class="h-auto w-12"
+            loading="lazy"
+            />
+            @else
+            <svg
+            class="size-6 text-black"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke-width="1.5"
+            stroke="currentColor"
+            aria-hidden="true"
+            >
+            <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z"
+            />
+            </svg>
+            @endif
+            <p class="text-sm font-semibold tracking-tight text-black">
+            {{ ucwords($method['name']) }}
+            </p>
+            </x-form.radio>
+            <svg
+            class="absolute end-4 top-3 size-5 shrink-0 fill-primary stroke-primary-50"
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            aria-hidden="true"
+            x-show="selected === '{{ $method['code'] }}'"
+            >
+            <circle cx="12" cy="12" r="10" />
+            <path d="m9 12 2 2 4-4" />
+            </svg>
+            </li>
+            @endforeach
+            </ul>
+            <x-form.input-error :messages="$errors->get('form.paymentMethod')" class="mt-2" />
             </div>
-        </fieldset>
+            </fieldset>
+        --}}
     </div>
     <aside class="relative h-full w-full md:w-1/3">
         <div>
@@ -813,7 +820,7 @@ new class extends Component {
                 @foreach ($form->items as $item)
                     <article wire:key="{{ $item->id }}" class="flex items-start gap-x-2">
                         <img
-                            src="{{ asset('uploads/product-images/' .$item->productVariant->product->images()->thumbnail()->first()->file_name,) }}"
+                            src="{{ asset('storage/uploads/product-images/' .$item->productVariant->product->images()->thumbnail()->first()->file_name,) }}"
                             alt="Gambar produk {{ strtolower($item->productVariant->product->name) }}"
                             class="aspect-square h-full w-20 object-cover"
                             loading="lazy"
@@ -829,7 +836,7 @@ new class extends Component {
                                 </p>
                             @endif
 
-                            <p class="text-sm tracking-tight text-black">Kuantitas: {{ $item->quantity }}</p>
+                            <p class="text-sm tracking-tight text-black">Jumlah: {{ $item->quantity }}</p>
                         </div>
                         <div class="ml-auto">
                             <p class="text-end font-medium tracking-tight text-black">

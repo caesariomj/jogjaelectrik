@@ -6,7 +6,7 @@
     <div class="relative mb-4 h-auto w-full overflow-hidden rounded-lg">
         <a href="{{ route('products.detail', ['slug' => $product->slug]) }}" wire:navigate>
             <img
-                src="{{ asset('uploads/product-images/' .$product->images()->thumbnail()->first()->file_name,) }}"
+                src="{{ asset('storage/uploads/product-images/' .$product->images()->thumbnail()->first()->file_name,) }}"
                 alt="Gambar produk {{ $product->name }}"
                 class="aspect-square h-full w-full scale-100 object-cover transition-transform group-hover:scale-105"
                 loading="lazy"

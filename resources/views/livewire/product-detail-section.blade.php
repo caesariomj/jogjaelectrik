@@ -32,7 +32,7 @@ new class extends Component {
     public function validationAttributes()
     {
         return [
-            'quantity' => 'Kuantitas produk',
+            'quantity' => 'Jumlah produk',
         ];
     }
 
@@ -121,10 +121,7 @@ new class extends Component {
         }
 
         if ($quantity > $this->stock) {
-            $this->addError(
-                'quantity',
-                'Jumlah kuantitas produk melebihi stok yang tersedia. Stok tersedia:' . $this->stock,
-            );
+            $this->addError('quantity', 'Jumlah produk melebihi stok yang tersedia. Stok tersedia:' . $this->stock);
 
             return;
         }
@@ -259,7 +256,7 @@ new class extends Component {
     <section class="flex flex-col gap-6 lg:flex-row">
         <x-common.product-image-gallery :images="$product->images" />
         <section class="w-full lg:w-1/2">
-            @if ($product->subcategory_id)
+            @if ($product->subcategory)
                 <nav class="mb-2">
                     <ol class="flex items-center">
                         <li class="text-sm font-medium tracking-tight text-black/70 transition-colors hover:text-black">
@@ -375,8 +372,8 @@ new class extends Component {
                                 <label
                                     wire:target="selectedVariantSku"
                                     for="variant-{{ strtolower($variant->combinations->first()->variationVariant->name) }}"
-                                    class="inline-flex min-w-28 cursor-pointer items-center justify-center gap-x-2 rounded-full border border-neutral-900 bg-white px-4 py-3 text-sm font-semibold tracking-tight text-neutral-900 transition-colors hover:bg-neutral-200 focus:bg-neutral-200 focus:outline-none disabled:pointer-events-none disabled:opacity-50 peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:text-white peer-disabled:cursor-not-allowed peer-disabled:border-neutral-900 peer-disabled:bg-white peer-disabled:text-neutral-900 peer-disabled:opacity-50"
-                                    wire:loading.class="opacity-50 cursor-not-allowed"
+                                    class="inline-flex min-w-28 cursor-pointer items-center justify-center gap-x-2 rounded-full border border-neutral-900 bg-white px-4 py-3 text-sm font-semibold tracking-tight text-neutral-900 transition-colors hover:bg-neutral-200 focus:bg-neutral-200 focus:outline-none disabled:pointer-events-none disabled:opacity-50 peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:text-white peer-disabled:cursor-wait peer-disabled:border-neutral-900 peer-disabled:bg-white peer-disabled:text-neutral-900 peer-disabled:opacity-50"
+                                    wire:loading.class="opacity-50 cursor-wait"
                                 >
                                     {{ ucwords($variant->combinations->first()->variationVariant->name) }}
                                 </label>
@@ -469,12 +466,12 @@ new class extends Component {
                 >
                     <div class="flex flex-col">
                         <div class="flex flex-row items-center justify-between">
-                            <x-form.input-label for="quantity" value="Kuantitas Produk:" :required="false" />
+                            <x-form.input-label for="quantity" value="Jumlah:" :required="false" />
                             <div class="flex items-center gap-2">
                                 <button
                                     type="button"
-                                    class="flex size-10 items-center justify-center rounded-md border border-neutral-300 p-2 text-black transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                    aria-label="Kurangi kuantitas produk"
+                                    class="flex size-11 items-center justify-center rounded-md border border-neutral-300 p-2 text-black transition-colors hover:bg-neutral-100 disabled:cursor-wait disabled:opacity-50"
+                                    aria-label="Kurangi jumlah produk"
                                     wire:click="decrement"
                                     wire:loading.attr="disabled"
                                     wire:target="selectedVariantSku, increment, decrement,addToCart"
@@ -507,7 +504,7 @@ new class extends Component {
                                 </button>
                                 <x-form.input
                                     wire:model.lazy="quantity"
-                                    class="w-14 text-center text-black [appearance:textfield] disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    class="w-14 text-center text-black [appearance:textfield] disabled:cursor-wait disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                     type="number"
                                     name="quantity"
                                     id="quantity"
@@ -522,8 +519,8 @@ new class extends Component {
                                 />
                                 <button
                                     type="button"
-                                    class="flex size-10 items-center justify-center rounded-md border border-neutral-300 p-2 text-black transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
-                                    aria-label="Tambah kuantitas produk"
+                                    class="flex size-11 items-center justify-center rounded-md border border-neutral-300 p-2 text-black transition-colors hover:bg-neutral-100 disabled:cursor-wait disabled:opacity-50"
+                                    aria-label="Tambah jumlah produk"
                                     wire:click="increment"
                                     wire:loading.attr="disabled"
                                     wire:target="selectedVariantSku, increment, decrement,addToCart"

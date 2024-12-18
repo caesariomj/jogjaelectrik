@@ -16,17 +16,17 @@ new #[Layout('layouts.app')] class extends Component {
     public ?Order $order = null;
     public ?Payment $payment = null;
 
+    // public array $eWalletPaymentMethods = ['qris', 'gopay', 'shopeepay', 'dana', 'other_qris'];
+    // public array $bankTransferPaymentMethods = [
+    //     'bca_va',
+    //     'bni_va',
+    //     'bri_va',
+    //     'echannel',
+    //     'permata_va',
+    //     'cimb_va',
+    //     'other_va',
+    // ];
     #[Locked]
-    public array $eWalletPaymentMethods = ['qris', 'gopay', 'shopeepay', 'dana', 'other_qris'];
-    public array $bankTransferPaymentMethods = [
-        'bca_va',
-        'bni_va',
-        'bri_va',
-        'echannel',
-        'permata_va',
-        'cimb_va',
-        'other_va',
-    ];
     public $timeRemaining;
     public $endTime;
     public string $paymentToken;
@@ -69,8 +69,8 @@ new #[Layout('layouts.app')] class extends Component {
         $this->payment = $this->order->payment;
         $this->paymentToken = $this->payment->token;
 
-        $this->setEndTime();
-        $this->calculateTimeRemaining();
+        // $this->setEndTime();
+        // $this->calculateTimeRemaining();
 
         if ($this->order->status === 'waiting_payment' && $this->timeRemaining === 0) {
             $this->order->update([
@@ -86,25 +86,25 @@ new #[Layout('layouts.app')] class extends Component {
         }
     }
 
-    private function setEndTime()
-    {
-        if (in_array($this->payment->method, $this->eWalletPaymentMethods)) {
-            $this->endTime = Carbon::parse($this->payment->created_at)->addMinutes(15);
-        } elseif (in_array($this->payment->method, $this->bankTransferPaymentMethods)) {
-            $this->endTime = Carbon::parse($this->payment->created_at)->addDay();
-        }
-    }
+    // private function setEndTime()
+    // {
+    //     if (in_array($this->payment->method, $this->eWalletPaymentMethods)) {
+    //         $this->endTime = Carbon::parse($this->payment->created_at)->addMinutes(15);
+    //     } elseif (in_array($this->payment->method, $this->bankTransferPaymentMethods)) {
+    //         $this->endTime = Carbon::parse($this->payment->created_at)->addDay();
+    //     }
+    // }
 
-    private function calculateTimeRemaining()
-    {
-        $this->timeRemaining = Carbon::now()->diffInSeconds($this->endTime, false);
+    // private function calculateTimeRemaining()
+    // {
+    //     $this->timeRemaining = Carbon::now()->diffInSeconds($this->endTime, false);
 
-        if ($this->timeRemaining <= 0) {
-            $this->timeRemaining = 0;
-        }
+    //     if ($this->timeRemaining <= 0) {
+    //         $this->timeRemaining = 0;
+    //     }
 
-        $this->timeRemaining = (int) $this->timeRemaining;
-    }
+    //     $this->timeRemaining = (int) $this->timeRemaining;
+    // }
 
     #[On('check-transaction-status')]
     public function checkAndUpdateTransactionStatus()
@@ -217,62 +217,8 @@ new #[Layout('layouts.app')] class extends Component {
 
 @section('title', 'Pesanan Berhasil')
 <section
-    x-data="{
-        timeRemaining: @js($timeRemaining),
-        timer: null,
-        paymentToken: @js($paymentToken),
-        startTimer() {
-            if (this.timeRemaining > 0) {
-                this.timer = setInterval(() => {
-                    this.timeRemaining--
-                    $wire.timeRemaining = this.timeRemaining
-                }, 1000)
-            }
-        },
-        pay() {
-            if (this.paymentToken) {
-                window.snap.pay(`${this.paymentToken}`, {
-                    onSuccess: function (result) {
-                        let referenceNumber = null
-
-                        if (result.payment_type === 'echannel') {
-                            referenceNumber = result.bill_key
-                        } else if (result.payment_type === 'bank_transfer') {
-                            if (result.va_numbers?.length) {
-                                referenceNumber = result.va_numbers
-                                    .map((va) => va.va_number)
-                                    .join(', ')
-                            } else if (result.permata_va_number) {
-                                referenceNumber = result.permata_va_number
-                            } else if (result.bca_va_number) {
-                                referenceNumber = result.bca_va_number
-                            }
-                        }
-
-                        if (referenceNumber !== null) {
-                            $wire.dispatch('payment-successful', {
-                                referenceNumber: referenceNumber,
-                            })
-                        }
-                    },
-                    onPending: function (result) {
-                        alert('Transaction has been canceled or an error occurred.')
-                        console.log('Error or cancellation:', result)
-                    },
-                    onError: function (result) {
-                        $wire.dispatch('payment-error', {
-                            error: result,
-                        })
-                    },
-                    onClose: function () {
-                        if (this.timeRemaining !== 0) {
-                            $wire.dispatch('check-transaction-status')
-                        }
-                    },
-                })
-            }
-        },
-    }"
+    x-data="paymentHandler"
+    x-init="startTimer()"
     class="mx-auto flex max-w-3xl flex-col items-center p-4 md:p-6"
 >
     <section class="mb-6 w-full">
@@ -310,7 +256,7 @@ new #[Layout('layouts.app')] class extends Component {
                         wire:navigate
                     >
                         <img
-                            src="{{ asset('uploads/product-images/' .$item->productVariant->product->images()->thumbnail()->first()->file_name,) }}"
+                            src="{{ asset('storage/uploads/product-images/' .$item->productVariant->product->images()->thumbnail()->first()->file_name,) }}"
                             alt="Gambar produk {{ strtolower($item->productVariant->product->name) }}"
                             class="aspect-square h-full w-full scale-100 object-cover brightness-100 transition-all ease-in-out hover:scale-105 hover:brightness-95"
                             loading="lazy"
@@ -416,3 +362,68 @@ new #[Layout('layouts.app')] class extends Component {
         </p>
     </section>
 </section>
+
+@push('scripts')
+    @script
+        <script>
+            Alpine.data('paymentHandler', () => {
+                return {
+                    timeRemaining: $wire.entangle('timeRemaining'),
+                    timer: null,
+                    paymentToken: $wire.entangle('paymentToken'),
+                    startTimer() {
+                        if (this.timeRemaining > 0) {
+                            this.timer = setInterval(() => {
+                                this.timeRemaining--;
+                                $wire.timeRemaining = this.timeRemaining;
+                            }, 1000);
+                        }
+                    },
+                    pay() {
+                        if (this.paymentToken) {
+                            window.snap.pay(`${this.paymentToken}`, {
+                                onSuccess: (result) => {
+                                    let referenceNumber = null;
+
+                                    if (result.payment_type === 'echannel') {
+                                        referenceNumber = result.bill_key;
+                                    } else if (result.payment_type === 'bank_transfer') {
+                                        if (result.va_numbers?.length) {
+                                            referenceNumber = result.va_numbers.map((va) => va.va_number).join(', ');
+                                        } else if (result.permata_va_number) {
+                                            referenceNumber = result.permata_va_number;
+                                        } else if (result.bca_va_number) {
+                                            referenceNumber = result.bca_va_number;
+                                        }
+                                    }
+
+                                    if (referenceNumber !== null) {
+                                        $wire.dispatch('payment-successful', {
+                                            referenceNumber: referenceNumber,
+                                        });
+                                    }
+                                },
+                                onPending: (result) => {
+                                    this.test(result);
+                                },
+                                onError: (result) => {
+                                    $wire.dispatch('payment-error', {
+                                        error: result,
+                                    });
+                                },
+                                onClose: () => {
+                                    if (this.timeRemaining !== 0) {
+                                        $wire.dispatch('check-transaction-status');
+                                    }
+                                },
+                            });
+                        }
+                    },
+                    test(data) {
+                        console.log(data);
+                    },
+                };
+            });
+        </script>
+    @endscript
+@endpush

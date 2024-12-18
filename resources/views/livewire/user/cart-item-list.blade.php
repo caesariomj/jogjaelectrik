@@ -67,8 +67,7 @@ new class extends Component {
         if ($newQuantity > $existingCartItem->productVariant->stock) {
             $this->addError(
                 'quantity-' . $cartItemId,
-                'Jumlah kuantitas produk melebihi stok yang tersedia. Stok tersedia:' .
-                    $existingCartItem->productVariant->stock,
+                'Jumlah produk melebihi stok yang tersedia. Stok tersedia:' . $existingCartItem->productVariant->stock,
             );
             return;
         }
@@ -134,8 +133,7 @@ new class extends Component {
         if ($quantity > $existingCartItem->productVariant->stock) {
             $this->addError(
                 'quantity-' . $cartItemId,
-                'Jumlah kuantitas produk melebihi stok yang tersedia. Stok tersedia:' .
-                    $existingCartItem->productVariant->stock,
+                'Jumlah produk melebihi stok yang tersedia. Stok tersedia:' . $existingCartItem->productVariant->stock,
             );
             return;
         }
@@ -491,7 +489,7 @@ new class extends Component {
                                         wire:navigate
                                     >
                                         <img
-                                            src="{{ asset('uploads/product-images/' .$item->productVariant->product->images()->thumbnail()->first()->file_name,) }}"
+                                            src="{{ asset('storage/uploads/product-images/' .$item->productVariant->product->images()->thumbnail()->first()->file_name,) }}"
                                             alt="Gambar produk {{ strtolower($item->productVariant->product->name) }}"
                                             class="aspect-square h-full w-full scale-100 object-cover brightness-100 transition-all ease-in-out hover:scale-105 hover:brightness-95"
                                             loading="lazy"
@@ -705,7 +703,7 @@ new class extends Component {
                                             wire:navigate
                                         >
                                             <img
-                                                src="{{ asset('uploads/product-images/' .$item->productVariant->product->images()->thumbnail()->first()->file_name,) }}"
+                                                src="{{ asset('storage/uploads/product-images/' .$item->productVariant->product->images()->thumbnail()->first()->file_name,) }}"
                                                 alt="Gambar produk {{ strtolower($item->productVariant->product->name) }}"
                                                 class="aspect-square h-full w-40 scale-100 object-cover brightness-100 transition-all ease-in-out hover:scale-105 hover:brightness-95"
                                                 loading="lazy"
@@ -744,7 +742,7 @@ new class extends Component {
                                                             wire:click="decrement('{{ $item->id }}')"
                                                             type="button"
                                                             class="flex size-8 items-center justify-center rounded-md border border-neutral-300 p-2 text-black disabled:cursor-not-allowed disabled:opacity-50"
-                                                            aria-label="Kurangi kuantitas produk"
+                                                            aria-label="Kurangi jumlah produk"
                                                             wire:loading.attr="disabled"
                                                             @disabled($item->quantity <= 1)
                                                         >
@@ -789,7 +787,7 @@ new class extends Component {
                                                             wire:click="increment('{{ $item->id }}')"
                                                             type="button"
                                                             class="flex size-8 items-center justify-center rounded-md border border-neutral-300 p-2 text-black disabled:cursor-not-allowed disabled:opacity-50"
-                                                            aria-label="Tambah kuantitas produk"
+                                                            aria-label="Tambah jumlah produk"
                                                             wire:loading.attr="disabled"
                                                             @disabled($item->quantity >= $item->productVariant->stock)
                                                         >
@@ -945,7 +943,8 @@ new class extends Component {
                                     Biaya Pengiriman
                                     <x-common.tooltip
                                         id="shipping-cost"
-                                        text="Biaya pengiriman akan dihitung pada halaman checkout."
+                                        class="w-52"
+                                        text="Biaya pengiriman akan dihitung pada halaman checkout berdasarkan kurir dan layanan yang anda pilih."
                                     />
                                 </dt>
                                 <dd class="text-end font-medium tracking-tight text-black">&mdash;</dd>
