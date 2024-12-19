@@ -44,11 +44,7 @@ Route::middleware(['auth', 'role:admin|super_admin'])->prefix('admin')->name('ad
     Route::prefix('manajemen-diskon')->name('discounts.')->group(function () {
         Route::get('/', [DiscountController::class, 'index'])->name('index');
         Route::get('/tambah', [DiscountController::class, 'create'])->name('create');
-        Route::post('/', [DiscountController::class, 'store'])->name('store');
         Route::get('/{code}/detail', [DiscountController::class, 'show'])->name('show');
         Route::get('/{code}/ubah', [DiscountController::class, 'edit'])->name('edit');
-        Route::patch('/{discount}/reset-penggunaan-diskon', [DiscountController::class, 'resetUsage'])->name('resetUsage');
-        Route::patch('/{discount}', [DiscountController::class, 'update'])->name('update');
-        Route::delete('/{discount}', [DiscountController::class, 'destroy'])->name('destroy');
     });
 });

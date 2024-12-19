@@ -3,6 +3,8 @@
 namespace App\Livewire\Forms;
 
 use App\Models\Discount;
+use App\Rules\PercentageDiscount;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Validate;
 use Livewire\Form;
 
@@ -13,34 +15,41 @@ class DiscountForm extends Form
     #[Validate]
     public string $name = '';
 
-    #[Validate]
     public string $description = '';
 
-    #[Validate]
     public bool $isActive = true;
 
-    #[Validate]
     public string $code = '';
 
-    #[Validate]
     public string $type = 'fixed';
 
-    #[Validate]
     public string $value = '';
 
-    #[Validate]
+    public string $maxDiscountAmount = '';
+
     public string $usageLimit = '';
 
-    #[Validate]
     public string $minimumPurchase = '';
 
-    #[Validate]
     public string $startDate = '';
 
-    #[Validate]
     public string $endDate = '';
 
-    public function rules()
+    protected function prepareForValidation($attributes)
+    {
+        if ($attributes['type'] === 'fixed') {
+            $attributes['value'] = (int) str_replace('.', '', $attributes['value']);
+        } elseif ($attributes['type'] === 'percentage') {
+            $attributes['value'] = (int) preg_replace('/[^0-9]/', '', $attributes['value']);
+            $attributes['maxDiscountAmount'] = (int) str_replace('.', '', $attributes['maxDiscountAmount']);
+        }
+
+        $attributes['minimumPurchase'] = (int) str_replace('.', '', $attributes['minimumPurchase']);
+
+        return $attributes;
+    }
+
+    protected function rules()
     {
         return [
             'name' => [
@@ -77,12 +86,15 @@ class DiscountForm extends Form
                 'required',
                 'numeric',
                 'gt:0',
-                'max:99999999.99',
-                function ($attribute, $value, $fail) {
-                    if ($this->type === 'percentage' && $value >= 100) {
-                        $fail(':attribute tidak boleh lebih dari 100 jika jenis diskon adalah persentase.');
-                    }
-                },
+                'lt:99999999',
+                Rule::when($this->type === 'percentage', [new PercentageDiscount]),
+            ],
+            'maxDiscountAmount' => [
+                'nullable',
+                'required_if:type,percentage',
+                'numeric',
+                'gt:0',
+                'lt:99999999',
             ],
             'usageLimit' => [
                 'nullable',
@@ -94,7 +106,7 @@ class DiscountForm extends Form
                 'required',
                 'numeric',
                 'gt:0',
-                'max:99999999.99',
+                'lt:99999999',
             ],
             'startDate' => [
                 'nullable',
@@ -109,7 +121,7 @@ class DiscountForm extends Form
         ];
     }
 
-    public function validationAttributes()
+    protected function validationAttributes()
     {
         return [
             'name' => 'Nama diskon',
@@ -118,8 +130,9 @@ class DiscountForm extends Form
             'code' => 'Kode diskon',
             'type' => 'Tipe diskon',
             'value' => 'Nilai potongan',
+            'maxDiscountAmount' => 'Maksimal potongan harga',
             'usageLimit' => 'Pemakaian diskon',
-            'minimumPurchase' => 'Minimum pembelian',
+            'minimumPurchase' => 'Minimum harga pembelian',
             'startDate' => 'Tanggal mulai diskon',
             'endDate' => 'Tanggal berakhir diskon',
         ];
@@ -134,6 +147,7 @@ class DiscountForm extends Form
         $this->code = $discount->code;
         $this->type = $discount->type;
         $this->value = number_format($discount->value, 0, '.', '');
+        $this->maxDiscountAmount = $discount->max_discount_amount ? number_format($discount->max_discount_amount, 0, '.', '') : '';
         $this->usageLimit = $discount->usage_limit ?? '';
         $this->minimumPurchase = number_format($discount->minimum_purchase, 0, '.', '');
         $this->startDate = ! is_null($discount->start_date) ? date('d-m-Y', strtotime($discount->start_date)) : '';

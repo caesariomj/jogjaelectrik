@@ -5,7 +5,7 @@
 @section('content')
     <section>
         <div class="mb-4 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-            <h1 class="text-black">Manajemen Diskon</h1>
+            <h1 class="leading-none text-black">Manajemen Diskon</h1>
             @can('create discounts')
                 <x-common.button
                     :href="route('admin.discounts.create')"

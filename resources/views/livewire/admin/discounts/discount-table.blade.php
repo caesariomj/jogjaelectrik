@@ -1,5 +1,10 @@
 <?php
 
+use App\Models\Discount;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\QueryException;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
@@ -17,8 +22,10 @@ new class extends Component {
     #[Computed]
     public function discounts()
     {
-        return \App\Models\Discount::when($this->search !== '', function ($query) {
-            return $query->where('name', 'like', '%' . $this->search . '%');
+        return Discount::when($this->search !== '', function ($query) {
+            return $query
+                ->where('name', 'like', '%' . $this->search . '%')
+                ->orWhere('code', 'like', '%' . $this->search . '%');
         })
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate(10);
@@ -39,6 +46,86 @@ new class extends Component {
 
         $this->sortField = $field;
     }
+
+    public function resetUsage(string $id)
+    {
+        $discount = Discount::find($id);
+
+        if (! $discount) {
+            session()->flash('error', 'Diskon tidak ditemukan.');
+            return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
+        }
+
+        try {
+            $this->authorize('manage', $discount);
+
+            DB::transaction(function () use ($discount) {
+                $discount->update([
+                    'used_count' => 0,
+                ]);
+            });
+
+            session()->flash('success', 'Penggunaan diskon ' . $discount->name . ' berhasil di-reset.');
+            return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during discount usage reset: ', $e->getMessage());
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam me-reset penggunaan diskon ' .
+                    $discount->name .
+                    ', silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected discount usage reset error: ', $e->getMessage());
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
+        }
+    }
+
+    public function delete(string $id)
+    {
+        $discount = Discount::find($id);
+
+        if (! $discount) {
+            session()->flash('error', 'Diskon tidak ditemukan.');
+            return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
+        }
+
+        $discountName = $discount->name;
+
+        try {
+            $this->authorize('delete', $discount);
+
+            DB::transaction(function () use ($discount) {
+                $discount->delete();
+            });
+
+            session()->flash('success', 'Diskon ' . $discountName . ' berhasil dihapus.');
+            return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during discount deletion: ', $e->getMessage());
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam menghapus diskon ' . $discountName . ', silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected discount deletion error: ' . $e->getMessage());
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
+        }
+    }
 }; ?>
 
 <div>
@@ -46,29 +133,29 @@ new class extends Component {
         <div class="relative">
             <div class="pointer-events-none absolute inset-y-0 start-0 z-20 flex items-center ps-3.5">
                 <svg
-                    class="size-4 shrink-0 text-neutral-600"
+                    class="size-4 shrink-0 text-black/70"
                     xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
                     stroke-width="2"
                     stroke-linecap="round"
                     stroke-linejoin="round"
+                    aria-hidden="true"
                 >
                     <circle cx="11" cy="11" r="8" />
                     <path d="m21 21-4.3-4.3" />
                 </svg>
             </div>
             <div class="relative">
-                <input
-                    wire:model.debounce.live="search"
-                    class="block w-full rounded-lg border border-neutral-300 py-2 pe-4 ps-10 text-sm placeholder:text-neutral-600 focus:border-primary focus:ring-primary disabled:pointer-events-none disabled:opacity-50"
+                <x-form.input
+                    id="discount-search"
+                    name="discount-search"
+                    wire:model.live.debounce.250ms="search"
+                    class="block w-full ps-10"
                     type="text"
                     role="combobox"
-                    aria-expanded="false"
-                    placeholder="Cari data diskon produk berdasarkan nama..."
+                    placeholder="Cari data diskon berdasarkan nama atau kode..."
                 />
                 <div
                     wire:loading
@@ -76,9 +163,7 @@ new class extends Component {
                     class="pointer-events-none absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                 >
                     <svg
-                        class="size-5 animate-spin text-neutral-900"
-                        width="16"
-                        height="16"
+                        class="size-5 shrink-0 animate-spin text-black"
                         fill="currentColor"
                         viewBox="0 0 256 256"
                         aria-hidden="true"
@@ -97,9 +182,7 @@ new class extends Component {
                         class="absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                     >
                         <svg
-                            class="size-5 text-neutral-900"
-                            width="16"
-                            height="16"
+                            class="size-5 shrink-0 text-black"
                             fill="currentColor"
                             viewBox="0 0 256 256"
                             aria-hidden="true"
@@ -113,7 +196,7 @@ new class extends Component {
             </div>
         </div>
     </div>
-    <div class="w-full overflow-hidden overflow-x-auto">
+    <div class="relative w-full overflow-hidden overflow-x-auto">
         <table class="w-full text-left text-sm">
             <thead class="border-b border-neutral-300">
                 <tr>
@@ -129,7 +212,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'name' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -141,7 +224,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'name' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -165,7 +248,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'code' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -177,7 +260,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'code' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -201,7 +284,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'type' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -213,7 +296,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'type' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -237,7 +320,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'value' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -249,7 +332,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'value' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -273,7 +356,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'is_active' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -285,7 +368,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'is_active' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -309,7 +392,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'start_date' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -321,7 +404,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'start_date' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -345,7 +428,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'used_count' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -357,7 +440,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'used_count' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -375,20 +458,31 @@ new class extends Component {
             </thead>
             <tbody class="divide-y divide-neutral-300">
                 @forelse ($this->discounts as $discount)
-                    <tr wire:key="{{ $discount->id }}" wire:loading.class="opacity-50">
-                        <td class="p-4 font-normal tracking-tight text-black/80" align="left">
+                    <tr
+                        wire:key="{{ $discount->id }}"
+                        wire:loading.class="opacity-50"
+                        wire:target="search,sortBy,resetSearch"
+                    >
+                        <td class="p-4 font-normal tracking-tight text-black/70" align="left">
                             {{ $loop->index + 1 . '.' }}
                         </td>
                         <td class="min-w-32 p-4 font-medium tracking-tight text-black" align="left">
                             {{ ucwords($discount->name) }}
                         </td>
-                        <td class="min-w-40 p-4 font-normal tracking-tight text-black/80" align="center">
+                        <td class="min-w-40 p-4 font-normal tracking-tight text-black/70" align="center">
                             {{ $discount->code }}
                         </td>
-                        <td class="min-w-24 p-4 font-normal tracking-tight text-black/80" align="center">
+                        <td class="min-w-24 p-4 font-normal tracking-tight text-black/70" align="center">
                             {{ $discount->type === 'fixed' ? 'Nominal' : 'Persentase' }}
                         </td>
-                        <td class="min-w-44 p-4 font-normal tracking-tight text-black/80" align="center">
+                        <td
+                            @class([
+                                'min-w-44 p-4 font-normal tracking-tight text-black/70',
+                                '' => $discount->type === 'fixed',
+                                'inline-flex flex-col items-center justify-center gap-y-0.5' => $discount->type === 'percentage',
+                            ])
+                            align="center"
+                        >
                             @if ($discount->type === 'fixed')
                                 Rp
                             @endif
@@ -397,44 +491,55 @@ new class extends Component {
 
                             @if ($discount->type === 'percentage')
                                 %
+                                @if ($discount->max_discount_amount)
+                                    <small>Maks: Rp {{ formatPrice($discount->max_discount_amount) }}</small>
+                                @endif
                             @endif
                         </td>
                         <td class="min-w-32 p-4" align="center">
-                            @if ($discount->is_active)
+                            @if ($discount->is_active && (! $discount->end_date || $discount->end_date >= now()->toDateString()))
                                 <span
                                     class="inline-flex items-center gap-x-1.5 rounded-full bg-teal-100 px-3 py-1 text-xs font-medium tracking-tight text-teal-800"
                                 >
                                     <span class="inline-block size-1.5 rounded-full bg-teal-800"></span>
                                     Aktif
                                 </span>
+                            @elseif ($discount->end_date && $discount->end_date < now()->toDateString())
+                                <span
+                                    class="inline-flex items-center gap-x-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-medium tracking-tight text-red-800"
+                                >
+                                    <span class="inline-block size-1.5 rounded-full bg-red-800"></span>
+                                    Kadaluarsa
+                                </span>
                             @else
                                 <span
-                                    class="inline-flex items-center gap-x-1.5 rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium tracking-tight text-neutral-800"
+                                    class="inline-flex items-center gap-x-1.5 rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium tracking-tight text-yellow-800"
                                 >
-                                    <span class="inline-block size-1.5 rounded-full bg-neutral-800"></span>
+                                    <span class="inline-block size-1.5 rounded-full bg-yellow-800"></span>
                                     Non-Aktif
                                 </span>
                             @endif
                         </td>
-                        <td class="min-w-52 p-4 font-normal tracking-tight text-black/80" align="center">
+                        <td class="min-w-52 p-4 font-normal tracking-tight text-black/70" align="center">
                             @if ($discount->start_date && $discount->end_date)
                                 {{ formatDate($discount->start_date) . ' - ' . formatDate($discount->end_date) }}
                             @else
                                 Periode tidak ditentukan.
                             @endif
                         </td>
-                        <td class="min-w-52 p-4 font-normal tracking-tight text-black/80" align="center">
-                            @if ($discount->used_count === 0)
-                                Belum pernah digunakan.
-                            @else
-                                {{ $discount->used_count }} /
-                                {{ $discount->usage_limit ?? 'Tidak ada batasan penggunaan.' }}
-                            @endif
+                        <td class="min-w-52 p-4 font-normal tracking-tight text-black/70" align="center">
+                            {{ $discount->used_count }} /
+                            {{ $discount->usage_limit ?? 'Tidak ada batasan penggunaan.' }}
                         </td>
                         <td class="relative px-4 py-2" align="right">
                             <x-common.dropdown width="60">
                                 <x-slot name="trigger">
-                                    <button type="button" class="rounded-full p-2 text-black hover:bg-neutral-100">
+                                    <button
+                                        type="button"
+                                        class="rounded-full p-2 text-black hover:bg-neutral-100 disabled:hover:bg-white"
+                                        wire:loading.attr="disabled"
+                                        wire:target="search,sortBy,resetSearch"
+                                    >
                                         <svg
                                             class="size-4"
                                             xmlns="http://www.w3.org/2000/svg"
@@ -502,76 +607,108 @@ new class extends Component {
                                     @endcan
 
                                     @can('manage discount usage')
-                                        <x-common.dropdown-link
-                                            x-on:click.prevent="$dispatch('open-modal', 'reset-discount-usage-{{ $discount->id }}')"
-                                        >
-                                            <svg
-                                                class="size-4"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                viewBox="0 0 24 24"
-                                                fill="none"
-                                                stroke="currentColor"
-                                                stroke-width="2"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
+                                        @if ($discount->usage_limit)
+                                            @php
+                                                $disabled = ($discount->end_date && $discount->end_date < now()->toDateString()) || $discount->used_count == 0;
+                                            @endphp
+
+                                            <x-common.dropdown-link
+                                                class="!items-start"
+                                                x-on:click.prevent="$dispatch('open-modal', 'reset-discount-usage-{{ $discount->id }}')"
+                                                :disabled="$disabled"
                                             >
-                                                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
-                                                <path d="M3 3v5h5" />
-                                            </svg>
-                                            Reset Penggunaan Diskon
-                                        </x-common.dropdown-link>
-                                        @push('overlays')
-                                            <x-common.modal
-                                                name="reset-discount-usage-{{ $discount->id }}"
-                                                :show="$errors->isNotEmpty()"
-                                                focusable
-                                            >
-                                                <form
-                                                    action="{{ route('admin.discounts.resetUsage', ['discount' => $discount]) }}"
-                                                    method="POST"
-                                                    class="flex flex-col items-center p-6"
+                                                <svg
+                                                    class="mt-0.5 size-4"
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    stroke-width="2"
+                                                    stroke-linecap="round"
+                                                    stroke-linejoin="round"
                                                 >
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <div class="mb-4 rounded-full bg-red-100 p-4" aria-hidden="true">
-                                                        <svg
-                                                            xmlns="http://www.w3.org/2000/svg"
-                                                            viewBox="0 0 24 24"
-                                                            fill="currentColor"
-                                                            class="size-16 text-red-500"
+                                                    <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                                                    <path d="M3 3v5h5" />
+                                                </svg>
+                                                Reset Penggunaan Diskon
+                                            </x-common.dropdown-link>
+                                            <template x-teleport="body">
+                                                <x-common.modal
+                                                    name="reset-discount-usage-{{ $discount->id }}"
+                                                    :show="$errors->isNotEmpty()"
+                                                    focusable
+                                                >
+                                                    <div class="flex flex-col items-center p-6">
+                                                        <div
+                                                            class="mb-4 rounded-full bg-red-100 p-4"
+                                                            aria-hidden="true"
                                                         >
-                                                            <path
-                                                                fill-rule="evenodd"
-                                                                d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
-                                                                clip-rule="evenodd"
-                                                            />
-                                                        </svg>
-                                                    </div>
-                                                    <h2 class="mb-2 text-center text-black">
-                                                        Reset Penggunaan Diskon {{ ucwords($discount->name) }}
-                                                    </h2>
-                                                    <p
-                                                        class="mb-8 text-center text-base font-medium tracking-tight text-black/70"
-                                                    >
-                                                        Apakah anda yakin ingin me-reset penggunaan diskon
-                                                        <strong>"{{ strtolower($discount->name) }}"</strong>
-                                                        ini ? Aksi ini akan mengembalikan jumlah penggunaan diskon
-                                                        menjadi nol dan pengguna dapat menggunakan diskon ini kembali.
-                                                    </p>
-                                                    <div class="flex justify-end gap-4">
-                                                        <x-common.button
-                                                            variant="secondary"
-                                                            x-on:click="$dispatch('close')"
+                                                            <svg
+                                                                xmlns="http://www.w3.org/2000/svg"
+                                                                viewBox="0 0 24 24"
+                                                                fill="currentColor"
+                                                                class="size-16 text-red-500"
+                                                            >
+                                                                <path
+                                                                    fill-rule="evenodd"
+                                                                    d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+                                                                    clip-rule="evenodd"
+                                                                />
+                                                            </svg>
+                                                        </div>
+                                                        <h2 class="mb-2 text-center text-black">
+                                                            Reset Penggunaan Diskon {{ ucwords($discount->name) }}
+                                                        </h2>
+                                                        <p
+                                                            class="mb-8 text-center text-base font-medium tracking-tight text-black/70"
                                                         >
-                                                            Batal
-                                                        </x-common.button>
-                                                        <x-common.button type="submit" variant="primary">
-                                                            Reset Penggunaan Diskon
-                                                        </x-common.button>
+                                                            Apakah anda yakin ingin me-reset penggunaan diskon
+                                                            <strong>"{{ strtolower($discount->name) }}"</strong>
+                                                            ini ? Aksi ini akan mengembalikan jumlah penggunaan diskon
+                                                            menjadi nol dan pengguna dapat menggunakan diskon ini
+                                                            kembali.
+                                                        </p>
+                                                        <div class="flex justify-end gap-4">
+                                                            <x-common.button
+                                                                variant="secondary"
+                                                                x-on:click="$dispatch('close')"
+                                                                wire:loading.class="!pointers-event-nonte !cursor-not-allowed opacity-50"
+                                                                wire:target="resetUsage('{{ $discount->id }}')"
+                                                            >
+                                                                Batal
+                                                            </x-common.button>
+                                                            <x-common.button
+                                                                wire:click="resetUsage('{{ $discount->id }}')"
+                                                                variant="danger"
+                                                                wire:loading.attr="disabled"
+                                                                wire:target="resetUsage('{{ $discount->id }}')"
+                                                            >
+                                                                <span
+                                                                    wire:loading.remove
+                                                                    wire:target="resetUsage('{{ $discount->id }}')"
+                                                                >
+                                                                    Reset Penggunaan Diskon
+                                                                </span>
+                                                                <span
+                                                                    wire:loading.flex
+                                                                    wire:target="resetUsage('{{ $discount->id }}')"
+                                                                    class="items-center gap-x-2"
+                                                                >
+                                                                    <div
+                                                                        class="inline-block size-4 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
+                                                                        role="status"
+                                                                        aria-label="loading"
+                                                                    >
+                                                                        <span class="sr-only">Sedang diproses...</span>
+                                                                    </div>
+                                                                    Sedang diproses...
+                                                                </span>
+                                                            </x-common.button>
+                                                        </div>
                                                     </div>
-                                                </form>
-                                            </x-common.modal>
-                                        @endpush
+                                                </x-common.modal>
+                                            </template>
+                                        @endif
                                     @endcan
 
                                     @can('delete discounts')
@@ -597,19 +734,13 @@ new class extends Component {
                                             </svg>
                                             Hapus
                                         </x-common.dropdown-link>
-                                        @push('overlays')
+                                        <template x-teleport="body">
                                             <x-common.modal
                                                 name="confirm-discount-deletion-{{ $discount->id }}"
                                                 :show="$errors->isNotEmpty()"
                                                 focusable
                                             >
-                                                <form
-                                                    action="{{ route('admin.discounts.destroy', ['discount' => $discount]) }}"
-                                                    method="POST"
-                                                    class="flex flex-col items-center p-6"
-                                                >
-                                                    @csrf
-                                                    @method('DELETE')
+                                                <div class="flex flex-col items-center p-6">
                                                     <div class="mb-4 rounded-full bg-red-100 p-4" aria-hidden="true">
                                                         <svg
                                                             xmlns="http://www.w3.org/2000/svg"
@@ -639,28 +770,89 @@ new class extends Component {
                                                         <x-common.button
                                                             variant="secondary"
                                                             x-on:click="$dispatch('close')"
+                                                            wire:loading.class="!pointers-event-nonte !cursor-not-allowed opacity-50"
+                                                            wire:target="delete('{{ $discount->id }}')"
                                                         >
                                                             Batal
                                                         </x-common.button>
-                                                        <x-common.button type="submit" variant="danger">
-                                                            Hapus Diskon
+                                                        <x-common.button
+                                                            wire:click="delete('{{ $discount->id }}')"
+                                                            variant="danger"
+                                                            wire:loading.attr="disabled"
+                                                            wire:target="delete('{{ $discount->id }}')"
+                                                        >
+                                                            <span
+                                                                wire:loading.remove
+                                                                wire:target="delete('{{ $discount->id }}')"
+                                                            >
+                                                                Hapus Diskon
+                                                            </span>
+                                                            <span
+                                                                wire:loading.flex
+                                                                wire:target="delete('{{ $discount->id }}')"
+                                                                class="items-center gap-x-2"
+                                                            >
+                                                                <div
+                                                                    class="inline-block size-4 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
+                                                                    role="status"
+                                                                    aria-label="loading"
+                                                                >
+                                                                    <span class="sr-only">Sedang diproses...</span>
+                                                                </div>
+                                                                Sedang diproses...
+                                                            </span>
                                                         </x-common.button>
                                                     </div>
-                                                </form>
+                                                </div>
                                             </x-common.modal>
-                                        @endpush
+                                        </template>
                                     @endcan
                                 </x-slot>
                             </x-common.dropdown>
                         </td>
                     </tr>
                 @empty
-                    <tr>
-                        <td class="p-4" colspan="6">Data diskon tidak ditemukan</td>
+                    <tr wire:loading.class="opacity-50" wire:target="search,sortBy,resetSearch">
+                        <td class="p-4" colspan="9">
+                            <figure class="my-4 flex h-full flex-col items-center justify-center">
+                                <img
+                                    src="https://placehold.co/400"
+                                    class="mb-6 size-72 object-cover"
+                                    alt="Gambar ilustrasi diskon tidak ditemukan"
+                                />
+                                <figcaption class="flex flex-col items-center">
+                                    <h2 class="mb-3 text-center !text-2xl text-black">Diskon Tidak Ditemukan</h2>
+                                    <p class="text-center text-base font-normal tracking-tight text-black/70">
+                                        @if ($search)
+                                            Diskon yang Anda cari tidak ditemukan, silakan coba untuk mengubah kata kunci
+                                        pencarian Anda.
+                                        @else
+                                            Seluruh diskon Anda akan ditampilkan di halaman ini. Anda dapat menambahkan
+                                            diskon baru dengan menekan tombol
+                                            <strong>Tambah</strong>
+                                            diatas.
+                                        @endif
+                                    </p>
+                                </figcaption>
+                            </figure>
+                        </td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
+        <div
+            class="absolute left-1/2 top-16 h-full -translate-x-1/2"
+            wire:loading
+            wire:target="search,sortBy,resetSearch"
+        >
+            <div
+                class="inline-block size-10 animate-spin rounded-full border-4 border-current border-t-transparent text-primary"
+                role="status"
+                aria-label="loading"
+            >
+                <span class="sr-only">Sedang diproses...</span>
+            </div>
+        </div>
     </div>
     {{ $this->discounts->links() }}
 </div>
