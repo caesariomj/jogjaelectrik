@@ -15,7 +15,7 @@ return new class extends Migration
             $table->uuid('id')->primary()->unique();
             $table->foreignUuid('order_id')->constrained()->cascadeOnDelete();
             $table->uuid('token');
-            $table->string('method', 50);
+            $table->string('method', 50)->nullable();
             $table->enum('status', ['pending', 'settlement', 'deny', 'cancel', 'expire', 'failure', 'refund'])->default('pending');
             $table->string('reference_number', 512)->nullable();
             $table->timestamps();
