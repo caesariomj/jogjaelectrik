@@ -1,5 +1,6 @@
 <?php
 
+use App\Console\Commands\UpdateDiscountStatusCommand;
 use App\Console\Commands\UpdateOrderStatusCommand;
 use Illuminate\Foundation\Inspiring;
 use Illuminate\Support\Facades\Artisan;
@@ -10,3 +11,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote')->hourly();
 
 Schedule::command(UpdateOrderStatusCommand::class)->daily();
+Schedule::command(UpdateDiscountStatusCommand::class)->daily();
