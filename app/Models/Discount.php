@@ -32,6 +32,7 @@ class Discount extends Model
         'code',
         'type',
         'value',
+        'max_discount_amount',
         'start_date',
         'end_date',
         'usage_limit',
