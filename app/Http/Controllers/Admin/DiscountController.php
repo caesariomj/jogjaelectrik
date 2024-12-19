@@ -15,9 +15,15 @@ class DiscountController extends Controller
      */
     public function index(): View
     {
-        $this->authorize('viewAny', Discount::class);
+        try {
+            $this->authorize('viewAny', Discount::class);
 
-        return view('pages.admin.discounts.index');
+            return view('pages.admin.discounts.index');
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return redirect()->route('admin.dashboard');
+        }
     }
 
     /**

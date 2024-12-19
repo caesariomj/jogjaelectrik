@@ -15,9 +15,15 @@ class ProductController extends Controller
      */
     public function index(): View
     {
-        $this->authorize('viewAny', Product::class);
+        try {
+            $this->authorize('viewAny', Product::class);
 
-        return view('pages.admin.products.index');
+            return view('pages.admin.products.index');
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return redirect()->route('admin.dashboard');
+        }
     }
 
     /**
@@ -56,7 +62,7 @@ class ProductController extends Controller
             ->first();
 
         if (! $product) {
-            session()->flash('error', 'Data produk tidak ditemukan.');
+            session()->flash('error', 'Produk tidak ditemukan.');
 
             return redirect()->route('admin.products.index');
         }
@@ -80,7 +86,7 @@ class ProductController extends Controller
         $product = Product::with(['images', 'variants.combinations.variationVariant.variation'])->findBySlug($slug)->first();
 
         if (! $product) {
-            session()->flash('error', 'Data produk tidak ditemukan.');
+            session()->flash('error', 'Produk tidak ditemukan.');
 
             return redirect()->route('admin.products.index');
         }

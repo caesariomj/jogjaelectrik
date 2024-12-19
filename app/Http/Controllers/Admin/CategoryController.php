@@ -15,9 +15,15 @@ class CategoryController extends Controller
      */
     public function index(): View
     {
-        $this->authorize('viewAny', Category::class);
+        try {
+            $this->authorize('viewAny', Category::class);
 
-        return view('pages.admin.categories.index');
+            return view('pages.admin.categories.index');
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return redirect()->route('admin.dashboard');
+        }
     }
 
     /**
@@ -44,7 +50,7 @@ class CategoryController extends Controller
         $category = Category::withCount(['subcategories', 'products'])->findBySlug($slug)->first();
 
         if (! $category) {
-            session()->flash('error', 'Data kategori tidak ditemukan.');
+            session()->flash('error', 'Kategori tidak ditemukan.');
 
             return redirect()->route('admin.categories.index');
         }
@@ -68,7 +74,7 @@ class CategoryController extends Controller
         $category = Category::findBySlug($slug)->first();
 
         if (! $category) {
-            session()->flash('error', 'Data kategori tidak ditemukan.');
+            session()->flash('error', 'Kategori tidak ditemukan.');
 
             return redirect()->route('admin.categories.index');
         }

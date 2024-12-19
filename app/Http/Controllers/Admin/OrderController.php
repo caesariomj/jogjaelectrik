@@ -13,22 +13,13 @@ class OrderController extends Controller
     public function index(): View|RedirectResponse
     {
         try {
-            $this->authorize('viewAny', new Order);
+            $this->authorize('viewAny', Order::class);
 
             return view('pages.admin.orders.index');
-        } catch (AuthorizationException $authException) {
-            session()->flash('error', $authException->getMessage());
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
 
-            return redirect()->route('home');
-        } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\Log::error('An unexpected error occurred when admin tried to access order management page', [
-                'error' => $th->getMessage(),
-                'trace' => $th->getTraceAsString(),
-            ]);
-
-            session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-
-            return redirect()->route('home');
+            return redirect()->route('admin.dashboard');
         }
     }
 
@@ -37,7 +28,7 @@ class OrderController extends Controller
         $order = Order::with(['details.productVariant.product.images', 'payment', 'user.city.province'])->where('order_number', $orderNumber)->first();
 
         if (! $order) {
-            session()->flash('error', 'Data pesanan dengan nomor '.$orderNumber.' tidak ditemukan.');
+            session()->flash('error', 'Pesanan dengan nomor '.$orderNumber.' tidak ditemukan.');
 
             return redirect()->route('admin.orders.index');
         }
@@ -46,19 +37,10 @@ class OrderController extends Controller
             $this->authorize('view', $order);
 
             return view('pages.admin.orders.show', compact('order'));
-        } catch (AuthorizationException $authException) {
-            session()->flash('error', $authException->getMessage());
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
 
-            return redirect()->route('home');
-        } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\Log::error('An unexpected error occurred when admin tried to access order management page', [
-                'error' => $th->getMessage(),
-                'trace' => $th->getTraceAsString(),
-            ]);
-
-            session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-
-            return redirect()->route('home');
+            return redirect()->route('admin.orders.index');
         }
     }
 }

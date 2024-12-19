@@ -15,9 +15,15 @@ class SubcategoryController extends Controller
      */
     public function index(): View
     {
-        $this->authorize('viewAny', Subcategory::class);
+        try {
+            $this->authorize('viewAny', Subcategory::class);
 
-        return view('pages.admin.subcategories.index');
+            return view('pages.admin.subcategories.index');
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return redirect()->route('admin.dashboard');
+        }
     }
 
     /**
@@ -44,7 +50,7 @@ class SubcategoryController extends Controller
         $subcategory = Subcategory::with('category')->withCount('products')->findBySlug($slug)->first();
 
         if (! $subcategory) {
-            session()->flash('error', 'Data subkategori tidak ditemukan.');
+            session()->flash('error', 'Subkategori tidak ditemukan.');
 
             return redirect()->route('admin.subcategories.index');
         }
@@ -68,7 +74,7 @@ class SubcategoryController extends Controller
         $subcategory = Subcategory::findBySlug($slug)->first();
 
         if (! $subcategory) {
-            session()->flash('error', 'Data subkategori tidak ditemukan.');
+            session()->flash('error', 'Subkategori tidak ditemukan.');
 
             return redirect()->route('admin.subcategories.index');
         }
