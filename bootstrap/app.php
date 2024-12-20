@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'order_ownership_check' => \App\Http\Middleware\OrderOwnershipCheck::class,
+            'admin_page_access' => \App\Http\Middleware\AdminPageAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
