@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
@@ -19,6 +20,8 @@ new class extends Component {
 
     public string $sortField = 'name';
     public string $sortDirection = 'asc';
+
+    #[Locked]
     public bool $archived = false;
 
     public function mount($archived = false)
@@ -361,7 +364,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'name' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -373,7 +376,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'name' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -397,7 +400,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'subcategory_name' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -409,7 +412,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'subcategory_name' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -433,7 +436,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'total_sold' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -445,7 +448,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'total_sold' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -469,7 +472,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'total_stock' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -481,7 +484,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'total_stock' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -505,7 +508,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'base_price' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -517,7 +520,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'base_price' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -541,7 +544,7 @@ new class extends Component {
                                 <rect width="256" height="256" fill="none" />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'is_active' && $sortDirection === 'desc',
                                     ])
                                     points="80 176 128 224 176 176"
@@ -553,7 +556,7 @@ new class extends Component {
                                 />
                                 <polyline
                                     @class([
-                                        'text-neutral-500',
+                                        'text-black/70',
                                         'text-primary' => $sortField === 'is_active' && $sortDirection === 'asc',
                                     ])
                                     points="80 80 128 32 176 80"
@@ -576,7 +579,7 @@ new class extends Component {
                         wire:loading.class="opacity-50"
                         wire:target="search,sortBy,resetSearch"
                     >
-                        <td class="p-4 font-normal tracking-tight text-black/80" align="left">
+                        <td class="p-4 font-normal tracking-tight text-black/70" align="left">
                             {{ $loop->index + 1 . '.' }}
                         </td>
                         <td class="h-full p-4 align-middle font-medium tracking-tight text-black" align="left">
@@ -616,20 +619,20 @@ new class extends Component {
                                 </div>
                             </div>
                         </td>
-                        <td class="p-4 font-normal tracking-tight text-black/80" align="left">
+                        <td class="p-4 font-normal tracking-tight text-black/70" align="left">
                             @if ($product->subcategory_id)
                                 {{ ucwords($product->subcategory->name) }}
                             @else
                                     Produk belum terkait pada subkategori
                             @endif
                         </td>
-                        <td class="p-4 font-normal tracking-tight text-black/80" align="center">
+                        <td class="p-4 font-normal tracking-tight text-black/70" align="center">
                             {{ $product->total_sold ? formatPrice($product->total_sold) : 0 }}
                         </td>
-                        <td class="p-4 font-normal tracking-tight text-black/80" align="center">
+                        <td class="p-4 font-normal tracking-tight text-black/70" align="center">
                             {{ formatPrice($product->totalStock()) }}
                         </td>
-                        <td class="h-full p-4 align-middle font-normal tracking-tight text-black/80" align="center">
+                        <td class="h-full p-4 align-middle font-normal tracking-tight text-black/70" align="center">
                             <div class="flex h-full min-w-24 flex-col items-stretch gap-y-1">
                                 @if ($product->variants->count() > 1)
                                     <span>Mulai dari</span>
@@ -643,7 +646,7 @@ new class extends Component {
                                 @endif
                             </div>
                         </td>
-                        <td class="p-4 font-normal tracking-tight text-black/80" align="center">
+                        <td class="p-4 font-normal tracking-tight text-black/70" align="center">
                             @if ($product->trashed())
                                 <span
                                     class="inline-flex items-center gap-x-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-medium tracking-tight text-red-800"
@@ -1018,7 +1021,7 @@ new class extends Component {
                                 <img
                                     src="https://placehold.co/400"
                                     class="mb-6 size-72 object-cover"
-                                    alt="Gambar ilustrasi diskon tidak ditemukan"
+                                    alt="Gambar ilustrasi produk tidak ditemukan"
                                 />
                                 <figcaption class="flex flex-col items-center">
                                     <h2 class="mb-3 text-center !text-2xl text-black">Produk Tidak Ditemukan</h2>
@@ -1045,7 +1048,7 @@ new class extends Component {
             </tbody>
         </table>
         <div
-            class="absolute left-1/2 top-32 h-full -translate-x-1/2"
+            class="absolute left-1/2 top-16 h-full -translate-x-1/2"
             wire:loading
             wire:target="search,sortBy,resetSearch"
         >

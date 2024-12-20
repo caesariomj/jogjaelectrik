@@ -1,7 +1,9 @@
 <?php
 
 use App\Models\Order;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
@@ -106,7 +108,7 @@ new class extends Component {
 
         if (! $order) {
             session()->flash('error', 'Pesanan dengan nomor: ' . $order->order_number . ' tidak dapat ditemukan.');
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         }
 
         try {
@@ -119,16 +121,15 @@ new class extends Component {
             });
 
             session()->flash('success', 'Pesanan dengan nomor: ' . $order->order_number . ' berhasil diproses.');
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
-            session()->flash('error', $authException->getMessage());
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         } catch (\Exception $e) {
-            session()->flash(
-                'error',
-                'Terjadi kesalahan dalam memproses pesanan ini, silakan coba beberapa saat lagi.',
-            );
-            return $this->redirect(request()->header('Referer'), true);
+            Log::error('Unexpected order processing error: ' . $e->getMessage());
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         }
     }
 
@@ -139,7 +140,7 @@ new class extends Component {
 
         if (! $this->order) {
             session()->flash('error', 'Pesanan tidak dapat ditemukan.');
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         }
 
         $this->dispatch('open-modal', 'confirm-order-shipping-' . $this->order->id);
@@ -164,13 +165,15 @@ new class extends Component {
             });
 
             session()->flash('success', 'Pesanan dengan nomor: ' . $order->order_number . ' berhasil dikirim.');
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
-            session()->flash('error', $authException->getMessage());
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         } catch (\Exception $e) {
-            session()->flash('error', 'Terjadi kesalahan dalam mengirim pesanan ini, silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
+            Log::error('Unexpected order shipping error: ' . $e->getMessage());
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         }
     }
 
@@ -181,7 +184,7 @@ new class extends Component {
 
         if (! $this->order) {
             session()->flash('error', 'Pesanan tidak dapat ditemukan.');
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         }
 
         $this->dispatch('open-modal', 'confirm-order-cancelation-' . $this->order->id);
@@ -217,16 +220,15 @@ new class extends Component {
             });
 
             session()->flash('success', 'Pesanan dengan nomor: ' . $order->order_number . ' berhasil dibatalkan.');
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
-            session()->flash('error', $authException->getMessage());
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         } catch (\Exception $e) {
-            session()->flash(
-                'error',
-                'Terjadi kesalahan dalam membatalkan pesanan ini, silakan coba beberapa saat lagi.',
-            );
-            return $this->redirect(request()->header('Referer'), true);
+            Log::error('Unexpected order cancelation error: ' . $e->getMessage());
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         }
     }
 
@@ -237,7 +239,7 @@ new class extends Component {
 
         if (! $this->order) {
             session()->flash('error', 'Pesanan tidak dapat ditemukan.');
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         }
 
         $this->dispatch('open-modal', 'confirm-order-finishing-' . $this->order->id);
@@ -257,13 +259,15 @@ new class extends Component {
             });
 
             session()->flash('success', 'Pesanan dengan nomor: ' . $order->order_number . ' berhasil diselesaikan.');
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
-            session()->flash('error', $authException->getMessage());
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         } catch (\Exception $e) {
-            session()->flash('error', 'Terjadi kesalahan dalam mengirim pesanan ini, silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
+            Log::error('Unexpected order finishing error: ' . $e->getMessage());
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         }
     }
 }; ?>
@@ -275,14 +279,13 @@ new class extends Component {
                 <svg
                     class="size-4 shrink-0 text-black/70"
                     xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
                     stroke-width="2"
                     stroke-linecap="round"
                     stroke-linejoin="round"
+                    aria-hidden="true"
                 >
                     <circle cx="11" cy="11" r="8" />
                     <path d="m21 21-4.3-4.3" />
@@ -290,11 +293,12 @@ new class extends Component {
             </div>
             <div class="relative">
                 <x-form.input
+                    id="order-search"
+                    name="order-search"
                     wire:model.live.debounce.250ms="search"
                     class="block w-full ps-10"
                     type="text"
                     role="combobox"
-                    aria-expanded="false"
                     placeholder="Cari data pesanan berdasarkan nomor pesanan..."
                 />
                 <div
@@ -303,9 +307,7 @@ new class extends Component {
                     class="pointer-events-none absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                 >
                     <svg
-                        class="size-5 animate-spin text-neutral-900"
-                        width="16"
-                        height="16"
+                        class="size-5 shrink-0 animate-spin text-black"
                         fill="currentColor"
                         viewBox="0 0 256 256"
                         aria-hidden="true"
@@ -324,9 +326,7 @@ new class extends Component {
                         class="absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                     >
                         <svg
-                            class="size-5 text-neutral-900"
-                            width="16"
-                            height="16"
+                            class="size-5 shrink-0 text-black"
                             fill="currentColor"
                             viewBox="0 0 256 256"
                             aria-hidden="true"
@@ -339,9 +339,9 @@ new class extends Component {
                 @endif
             </div>
         </div>
-        <ul class="flex flex-nowrap overflow-x-auto pb-4 text-center">
+        <ul class="flex flex-nowrap gap-x-2 overflow-x-auto pb-2 text-center">
             @foreach ($orderStatuses as $orderStatus)
-                <li class="me-2">
+                <li>
                     <x-form.radio
                         :inputAttributes="
                             [
@@ -1139,7 +1139,7 @@ new class extends Component {
                 <img
                     src="https://placehold.co/400"
                     class="mb-6 size-72 object-cover"
-                    alt="Gambar ilustrasi keranjang kosong"
+                    alt="Gambar ilustrasi pesanan tidak ditemukan"
                 />
                 <figcaption class="flex flex-col items-center">
                     <h2 class="mb-3 text-center !text-2xl text-black">

@@ -49,6 +49,12 @@ new class extends Component {
     public function delete(string $id)
     {
         $category = Category::find($id);
+
+        if (! $category) {
+            session()->flash('error', 'Kategori tidak ditemukan.');
+            return $this->redirectIntended(route('admin.categories.index'), navigate: true);
+        }
+
         $categoryName = $category->name;
 
         try {
@@ -87,8 +93,6 @@ new class extends Component {
                 <svg
                     class="size-4 shrink-0 text-black/70"
                     xmlns="http://www.w3.org/2000/svg"
-                    width="24"
-                    height="24"
                     viewBox="0 0 24 24"
                     fill="none"
                     stroke="currentColor"
@@ -103,11 +107,13 @@ new class extends Component {
             </div>
             <div class="relative">
                 <x-form.input
+                    id="category-search"
+                    name="category-search"
                     wire:model.live.debounce.250ms="search"
                     class="block w-full ps-10"
                     type="text"
                     role="combobox"
-                    placeholder="Cari data kategori produk berdasarkan nama..."
+                    placeholder="Cari data kategori berdasarkan nama..."
                 />
                 <div
                     wire:loading
@@ -115,9 +121,7 @@ new class extends Component {
                     class="pointer-events-none absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                 >
                     <svg
-                        class="size-5 animate-spin text-black"
-                        width="16"
-                        height="16"
+                        class="size-5 shrink-0 animate-spin text-black"
                         fill="currentColor"
                         viewBox="0 0 256 256"
                         aria-hidden="true"
@@ -136,9 +140,7 @@ new class extends Component {
                         class="absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                     >
                         <svg
-                            class="size-5 text-black"
-                            width="16"
-                            height="16"
+                            class="size-5 shrink-0 text-black"
                             fill="currentColor"
                             viewBox="0 0 256 256"
                             aria-hidden="true"
@@ -511,14 +513,36 @@ new class extends Component {
                         </td>
                     </tr>
                 @empty
-                    <tr>
-                        <td class="p-4" colspan="6">Data kategori tidak ditemukan</td>
+                    <tr wire:loading.class="opacity-50" wire:target="search,sortBy,resetSearch">
+                        <td class="p-4" colspan="6">
+                            <figure class="my-4 flex h-full flex-col items-center justify-center">
+                                <img
+                                    src="https://placehold.co/400"
+                                    class="mb-6 size-72 object-cover"
+                                    alt="Gambar ilustrasi kategori tidak ditemukan"
+                                />
+                                <figcaption class="flex flex-col items-center">
+                                    <h2 class="mb-3 text-center !text-2xl text-black">Kategori Tidak Ditemukan</h2>
+                                    <p class="text-center text-base font-normal tracking-tight text-black/70">
+                                        @if ($search)
+                                            Kategori yang Anda cari tidak ditemukan, silakan coba untuk mengubah kata kunci
+                                        pencarian Anda.
+                                        @else
+                                            Seluruh kategori Anda akan ditampilkan di halaman ini. Anda dapat
+                                            menambahkan kategori baru dengan menekan tombol
+                                            <strong>Tambah</strong>
+                                            diatas.
+                                        @endif
+                                    </p>
+                                </figcaption>
+                            </figure>
+                        </td>
                     </tr>
                 @endforelse
             </tbody>
         </table>
         <div
-            class="absolute left-1/2 top-32 h-full -translate-x-1/2"
+            class="absolute left-1/2 top-16 h-full -translate-x-1/2"
             wire:loading
             wire:target="search,sortBy,resetSearch"
         >
