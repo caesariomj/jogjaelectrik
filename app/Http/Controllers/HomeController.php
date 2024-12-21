@@ -21,16 +21,12 @@ class HomeController extends Controller
      */
     public function productDetail(string $slug): View
     {
-        $product = Product::with(['subcategory.category', 'images', 'variants.combinations.variationVariant.variation'])->findBySlug($slug)->first();
-
-        if (! $product) {
-            session()->flash('error', 'Data produk tidak ditemukan.');
-
-            return redirect()->route('products');
-        }
+        $product = Product::with(['subcategory.category', 'images', 'variants.combinations.variationVariant.variation'])->findBySlug($slug)->firstOrFail();
 
         $productRecommendations = Product::whereHas('subcategory', function ($query) use ($product) {
-            $query->where('category_id', $product->subcategory->category->id);
+            if ($product->subcategory) {
+                return $query->where('category_id', $product->subcategory->category->id);
+            }
         })
             ->where('id', '!=', $product->id)
             ->active()
