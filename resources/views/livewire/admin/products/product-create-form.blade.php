@@ -72,9 +72,10 @@ new class extends Component {
 
                     $minPriceDiscountVariant = $variants
                         ->filter(function ($variant) {
-                            return isset($variant['priceDiscount'], $variant['price']) &&
+                            return isset($variant['priceDiscount'], $variant['price'], $variant['isVariantActive']) &&
                                 is_numeric($variant['priceDiscount']) &&
-                                $variant['priceDiscount'] > 0;
+                                $variant['priceDiscount'] > 0 &&
+                                $variant['isVariantActive'];
                         })
                         ->sortBy('priceDiscount')
                         ->first();
@@ -83,7 +84,9 @@ new class extends Component {
                         $minPriceDiscountVariant ?:
                         $variants
                             ->filter(function ($variant) {
-                                return isset($variant['price']) && is_numeric($variant['price']);
+                                return isset($variant['price']) &&
+                                    is_numeric($variant['price']) &&
+                                    $variant['isVariantActive'];
                             })
                             ->sortBy('price')
                             ->first();
