@@ -3,7 +3,11 @@
 use App\Models\Cart;
 use App\Models\Product;
 use App\Models\ProductVariant;
+use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Volt\Component;
 
@@ -13,46 +17,52 @@ new class extends Component {
     public ProductVariant $productVariant;
 
     public ?string $selectedVariantSku = null;
-
     public int $quantity = 1;
 
+    #[Locked]
     public int $stock = 0;
-
     public string $price = '';
-
     public ?string $priceDiscount = null;
-
-    public function rules()
-    {
-        return [
-            'quantity' => 'required|integer|min:1|max:' . $this->productVariant->stock,
-        ];
-    }
-
-    public function validationAttributes()
-    {
-        return [
-            'quantity' => 'Jumlah produk',
-        ];
-    }
 
     public function mount(Product $product)
     {
         $this->product = $product;
-
         $this->setProductVariant($this->product);
     }
 
     private function setProductVariant($product)
     {
-        $this->productVariant = $product->variants->first();
+        if ($product->variants->count() > 1) {
+            $minPriceDiscountVariant = $product->variants
+                ->filter(function ($variant) {
+                    return isset($variant['price_discount'], $variant['price'], $variant['is_active']) &&
+                        is_numeric($variant['price_discount']) &&
+                        $variant['price_discount'] > 0 &&
+                        $variant['is_active'];
+                })
+                ->sortBy('price_discount')
+                ->first();
 
-        $this->selectedVariantSku = $product->variants->count() > 1 ? $this->productVariant->variant_sku : null;
+            $minPriceVariant =
+                $minPriceDiscountVariant ?:
+                $product->variants
+                    ->filter(function ($variant) {
+                        return isset($variant['price'], $variant['is_active']) &&
+                            is_numeric($variant['price']) &&
+                            $variant['is_active'];
+                    })
+                    ->sortBy('price')
+                    ->first();
+
+            $this->productVariant = $minPriceVariant;
+            $this->selectedVariantSku = $this->productVariant->variant_sku;
+        } else {
+            $this->productVariant = $product->variants->first();
+            $this->selectedVariantSku = null;
+        }
 
         $this->price = $this->productVariant->price;
-
         $this->priceDiscount = $this->productVariant->price_discount ?? null;
-
         $this->stock = $this->productVariant->stock;
     }
 
@@ -76,31 +86,28 @@ new class extends Component {
 
     public function updatedSelectedVariantSku($value)
     {
-        $selectedVariant =
-            $this->product->variants->count() > 1
-                ? $this->product
-                    ->variants()
-                    ->where('variant_sku', $value)
-                    ->first()
-                : $this->product->variants->first();
+        if ($this->product->variants->count() === 1) {
+            return;
+        }
 
-        if (! $selectedVariant->is_active) {
+        $selectedVariant = $this->product
+            ->variants()
+            ->where('variant_sku', $value)
+            ->first();
+
+        if (! $selectedVariant || ! $selectedVariant->is_active) {
             $this->addError(
                 'selectedVariantSku',
                 'Varian produk yang dipilih tidak tersedia. Silakan pilih varian produk lain.',
             );
 
             $this->selectedVariantSku = $this->productVariant->variant_sku;
-
             return;
         }
 
         $this->productVariant = $selectedVariant;
-
         $this->price = $selectedVariant->price;
-
         $this->priceDiscount = $selectedVariant->price_discount;
-
         $this->stock = $selectedVariant->stock;
     }
 
@@ -147,7 +154,14 @@ new class extends Component {
             return $this->redirectRoute('login', navigate: true);
         }
 
-        $validated = $this->validate();
+        $validated = $this->validate(
+            rules: [
+                'quantity' => 'required|integer|min:1|max:' . $this->productVariant->stock,
+            ],
+            attributes: [
+                'quantity' => 'Jumlah produk',
+            ],
+        );
 
         $cart = auth()
             ->user()
@@ -216,37 +230,30 @@ new class extends Component {
             });
 
             session()->flash('success', 'Produk berhasil ditambahkan ke dalam keranjang belanja.');
+            return $this->redirectIntended(route('products.detail', ['slug' => $this->product->slug]), navigate: true);
+        } catch (AuthorizationException $e) {
+            $errorMessage = $e->getMessage();
 
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
-            $errorMessage = $authException->getMessage();
-
-            if ($authException->getCode() === 401) {
+            if ($e->getCode() === 401) {
                 session()->flash('error', $errorMessage);
 
                 return $this->redirectRoute('login', navigate: true);
             }
 
             session()->flash('error', $errorMessage);
-
             return $this->redirect(request()->header('Referer'), true);
-        } catch (\Illuminate\Database\QueryException $queryException) {
-            \Illuminate\Support\Facades\Log::error('Database error during transaction', [
-                'error' => $queryException->getMessage(),
-                'trace' => $queryException->getTraceAsString(),
-            ]);
+        } catch (QueryException $e) {
+            Log::error('Database error during cart item creation: ' . $e->getMessage());
 
-            session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
-
+            session(
+                'error',
+                'Terjadi kesalahan dalam menambahkan produk ke dalam keranjang belanja, silakan coba beberapa saat lagi.',
+            );
             return $this->redirect(request()->header('Referer'), true);
-        } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\Log::error('Unexpected error occurred', [
-                'error' => $th->getMessage(),
-                'trace' => $th->getTraceAsString(),
-            ]);
+        } catch (\Exception $e) {
+            Log::error('Unexpected cart item creation error: ' . $e->getMessage());
 
-            session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-
+            session('error', 'Terjadi kesalahan tak terduga, silakan coba beberapa saat lagi.');
             return $this->redirect(request()->header('Referer'), true);
         }
     }
@@ -314,7 +321,7 @@ new class extends Component {
 
                 @for ($i = 0 + 4; $i < 5; $i++)
                     <svg
-                        class="size-4 text-neutral-300"
+                        class="size-4 text-black opacity-20"
                         xmlns="http://www.w3.org/2000/svg"
                         width="24"
                         height="24"
@@ -332,19 +339,17 @@ new class extends Component {
                     </svg>
                 @endfor
 
-                <span class="ml-2 text-sm tracking-tighter text-black/70">42 penilaian</span>
+                <span class="ml-2 text-sm font-medium tracking-tighter text-black/70">42 penilaian</span>
             </div>
             <p class="mb-4 inline-flex items-center gap-4">
-                @if ($product->base_price_discount)
-                    <data value="{{ $product->base_price }}" class="text-3xl font-bold tracking-tighter text-primary">
-                        Rp {{ formatPrice($product->base_price) }}
+                @if ($priceDiscount)
+                    <data value="{{ $priceDiscount }}" class="text-3xl font-bold tracking-tighter text-primary">
+                        Rp {{ formatPrice($priceDiscount) }}
                     </data>
-                    <del class="text-base tracking-tighter text-black/60">
-                        Rp {{ formatPrice($product->base_price_discount) }}
-                    </del>
+                    <del class="text-base tracking-tighter text-black/60">Rp {{ formatPrice($price) }}</del>
                 @else
-                    <data value="{{ $product->base_price }}" class="text-3xl font-bold tracking-tighter text-primary">
-                        Rp {{ formatPrice($product->base_price) }}
+                    <data value="{{ $price }}" class="text-3xl font-bold tracking-tighter text-primary">
+                        Rp {{ formatPrice($price) }}
                     </data>
                 @endif
             </p>
@@ -372,7 +377,7 @@ new class extends Component {
                                 <label
                                     wire:target="selectedVariantSku"
                                     for="variant-{{ strtolower($variant->combinations->first()->variationVariant->name) }}"
-                                    class="inline-flex min-w-28 cursor-pointer items-center justify-center gap-x-2 rounded-full border border-neutral-900 bg-white px-4 py-3 text-sm font-semibold tracking-tight text-neutral-900 transition-colors hover:bg-neutral-200 focus:bg-neutral-200 focus:outline-none disabled:pointer-events-none disabled:opacity-50 peer-checked:border-neutral-900 peer-checked:bg-neutral-900 peer-checked:text-white peer-disabled:cursor-wait peer-disabled:border-neutral-900 peer-disabled:bg-white peer-disabled:text-neutral-900 peer-disabled:opacity-50"
+                                    class="inline-flex min-w-28 cursor-pointer items-center justify-center gap-x-2 rounded-full border border-black bg-white px-4 py-3 text-sm font-semibold tracking-tight text-black transition-colors hover:bg-neutral-200 focus:bg-neutral-200 focus:outline-none disabled:pointer-events-none disabled:opacity-50 peer-checked:border-black peer-checked:bg-black peer-checked:text-white peer-disabled:cursor-wait peer-disabled:border-black peer-disabled:bg-white peer-disabled:text-black peer-disabled:opacity-50"
                                     wire:loading.class="opacity-50 cursor-wait"
                                 >
                                     {{ ucwords($variant->combinations->first()->variationVariant->name) }}
@@ -391,11 +396,11 @@ new class extends Component {
                         <h3 class="text-lg tracking-tight text-black lg:text-xl">Spesifikasi Produk</h3>
                     </x-slot>
                     <dl class="grid grid-cols-2 gap-y-2 pb-4">
-                        <dt class="text-pretty text-sm tracking-tight text-black/60 lg:text-base">Stok:</dt>
+                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">Stok:</dt>
                         <dl
                             wire:loading.remove
                             wire:target="selectedVariantSku"
-                            class="text-pretty text-sm tracking-tight text-black lg:text-base"
+                            class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base"
                         >
                             @if ($this->stock > 0)
                                 <span class="text-teal-600">• Masih Tersedia</span>
@@ -407,46 +412,54 @@ new class extends Component {
                         <dl
                             wire:loading
                             wire:target="selectedVariantSku"
-                            class="text-pretty text-sm tracking-tight text-black/70 lg:text-base"
+                            class="text-pretty text-sm font-medium tracking-tight text-black/70 lg:text-base"
                         >
                             Sedang dimuat...
                         </dl>
-                        <dt class="text-pretty text-sm tracking-tight text-black/60 lg:text-base">Garansi:</dt>
-                        <dl class="text-pretty text-sm tracking-tight text-black lg:text-base">
+                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">
+                            Garansi:
+                        </dt>
+                        <dl class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base">
                             {{ $product->warranty }}
                         </dl>
-                        <dt class="text-pretty text-sm tracking-tight text-black/60 lg:text-base">Bahan Material:</dt>
-                        <dl class="text-pretty text-sm tracking-tight text-black lg:text-base">
+                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">
+                            Bahan Material:
+                        </dt>
+                        <dl class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base">
                             {{ $product->material }}
                         </dl>
-                        <dt class="text-pretty text-sm tracking-tight text-black/60 lg:text-base">
+                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">
                             Dimensi (panjang x lebar x tinggi):
                         </dt>
-                        <dl class="text-pretty text-sm tracking-tight text-black lg:text-base">
+                        <dl class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base">
                             {{ $product->dimension }} (dalam satuan centimeter)
                         </dl>
-                        <dt class="text-pretty text-sm tracking-tight text-black/60 lg:text-base">Berat Paket:</dt>
-                        <dl class="text-pretty text-sm tracking-tight text-black lg:text-base">
+                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">
+                            Berat Paket:
+                        </dt>
+                        <dl class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base">
                             {{ $product->weight }} gram
                         </dl>
 
                         @if ($product->power && $product->voltage)
-                            <dt class="text-pretty text-sm tracking-tight text-black/60 lg:text-base">Daya Listrik:</dt>
-                            <dl class="text-pretty text-sm tracking-tight text-black lg:text-base">
+                            <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">
+                                Daya Listrik:
+                            </dt>
+                            <dl class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base">
                                 {{ $product->power }} W
                             </dl>
-                            <dt class="text-pretty text-sm tracking-tight text-black/60 lg:text-base">
+                            <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">
                                 Tegangan Listrik:
                             </dt>
-                            <dl class="text-pretty text-sm tracking-tight text-black lg:text-base">
+                            <dl class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base">
                                 {{ $product->voltage }} V
                             </dl>
                         @endif
 
-                        <dt class="text-pretty text-sm tracking-tight text-black/60 lg:text-base">
+                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">
                             Apa Yang Ada Di dalam Paket:
                         </dt>
-                        <dl class="text-pretty text-sm tracking-tight text-black lg:text-base">
+                        <dl class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base">
                             {{ $product->package }}
                         </dl>
                     </dl>
@@ -455,7 +468,9 @@ new class extends Component {
                     <x-slot name="title">
                         <h3 class="text-lg tracking-tight text-black lg:text-xl">Deskripsi Produk</h3>
                     </x-slot>
-                    <p class="-mt-6 whitespace-pre-line text-pretty pb-4 text-sm text-black lg:text-base">
+                    <p
+                        class="-mt-6 whitespace-pre-line text-pretty pb-4 text-sm font-medium tracking-tight text-black lg:text-base"
+                    >
                         {{ $product->description }}
                     </p>
                 </x-common.accordion>
@@ -607,7 +622,6 @@ new class extends Component {
                         <option value="newest" class="text-sm tracking-tight text-black" selected>
                             Penilaian Terbaru
                         </option>
-                        <option value="oldest" class="text-sm tracking-tight text-black">Penilaian Terlama</option>
                         <option value="highest" class="text-sm tracking-tight text-black">Rating Tertinggi</option>
                         <option value="lowest" class="text-sm tracking-tight text-black">Rating Terendah</option>
                     </select>
@@ -615,7 +629,7 @@ new class extends Component {
                 @for ($i = 0; $i < 5; $i++)
                     <article class="flex flex-row items-start gap-x-2 border-b border-neutral-300 py-4">
                         <svg
-                            class="size-10 fill-neutral-300"
+                            class="size-10 text-black opacity-20"
                             xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 24 24"
                             fill="currentColor"
@@ -629,8 +643,11 @@ new class extends Component {
                         </svg>
                         <div class="w-full">
                             <div class="flex flex-row items-center justify-between gap-x-2">
-                                <p class="text-sm font-medium text-black">Nama Pengguna</p>
-                                <time class="text-sm font-medium text-black/50" datetime="2024-11-24 20:00">
+                                <p class="text-sm font-medium tracking-tight text-black">Nama Pengguna</p>
+                                <time
+                                    class="text-sm font-medium tracking-tight text-black/50"
+                                    datetime="2024-11-24 20:00"
+                                >
                                     1 hari yang lalu
                                 </time>
                             </div>
@@ -657,7 +674,7 @@ new class extends Component {
 
                                 @for ($j = 0 + 4; $j < 5; $j++)
                                     <svg
-                                        class="size-3 text-neutral-300"
+                                        class="size-3 text-black opacity-20"
                                         xmlns="http://www.w3.org/2000/svg"
                                         width="24"
                                         height="24"
@@ -680,7 +697,7 @@ new class extends Component {
                                 <span class="sr-only">Penilaian: 5 dari 5 bintang</span>
                             </div>
                             <div class="mt-4">
-                                <p class="text-sm text-black">
+                                <p class="text-sm tracking-tight text-black">
                                     Excellent running shoes. It turns very sharply on the foot!
                                 </p>
                             </div>
@@ -740,7 +757,7 @@ new class extends Component {
 
                 <a
                     href="#"
-                    class="flex items-center justify-center gap-x-4 border-b border-neutral-300 py-4 text-sm tracking-tight text-black transition-colors hover:bg-neutral-100"
+                    class="flex items-center justify-center gap-x-4 border-b border-neutral-300 py-4 text-sm font-medium tracking-tight text-black transition-colors hover:bg-neutral-100"
                 >
                     Lihat Seluruh Penilaian dan Ulasan Produk Ini
                     <svg
@@ -782,7 +799,7 @@ new class extends Component {
 
                     @for ($i = 0 + 4; $i < 5; $i++)
                         <svg
-                            class="size-6 text-neutral-300"
+                            class="size-6 text-black opacity-20"
                             xmlns="http://www.w3.org/2000/svg"
                             width="24"
                             height="24"
@@ -808,7 +825,7 @@ new class extends Component {
                     <div class="flex items-center gap-x-2">
                         <span class="w-4 text-center text-base font-medium tracking-tighter text-black/50">5</span>
                         <div
-                            class="h-2 flex-grow overflow-hidden rounded-full bg-neutral-200"
+                            class="h-2 flex-grow overflow-hidden rounded-full bg-black/10"
                             role="progressbar"
                             aria-valuemin="0"
                             aria-valuemax="100"
@@ -821,7 +838,7 @@ new class extends Component {
                     <div class="flex items-center gap-x-2">
                         <span class="w-4 text-center text-base font-medium tracking-tighter text-black/50">4</span>
                         <div
-                            class="h-2 flex-grow overflow-hidden rounded-full bg-neutral-200"
+                            class="h-2 flex-grow overflow-hidden rounded-full bg-black/10"
                             role="progressbar"
                             aria-valuemin="0"
                             aria-valuemax="100"
@@ -834,7 +851,7 @@ new class extends Component {
                     <div class="flex items-center gap-x-2">
                         <span class="w-4 text-center text-base font-medium tracking-tighter text-black/50">3</span>
                         <div
-                            class="h-2 flex-grow overflow-hidden rounded-full bg-neutral-200"
+                            class="h-2 flex-grow overflow-hidden rounded-full bg-black/10"
                             role="progressbar"
                             aria-valuemin="0"
                             aria-valuemax="100"
@@ -847,7 +864,7 @@ new class extends Component {
                     <div class="flex items-center gap-x-2">
                         <span class="w-4 text-center text-base font-medium tracking-tighter text-black/50">2</span>
                         <div
-                            class="h-2 flex-grow overflow-hidden rounded-full bg-neutral-200"
+                            class="h-2 flex-grow overflow-hidden rounded-full bg-black/10"
                             role="progressbar"
                             aria-valuemin="0"
                             aria-valuemax="100"
@@ -860,7 +877,7 @@ new class extends Component {
                     <div class="flex items-center gap-x-2">
                         <span class="w-4 text-center text-base font-medium tracking-tighter text-black/50">1</span>
                         <div
-                            class="h-2 flex-grow overflow-hidden rounded-full bg-neutral-200"
+                            class="h-2 flex-grow overflow-hidden rounded-full bg-black/10"
                             role="progressbar"
                             aria-valuemin="0"
                             aria-valuemax="100"
