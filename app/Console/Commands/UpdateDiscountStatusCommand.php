@@ -25,11 +25,14 @@ class UpdateDiscountStatusCommand extends Command
      */
     public function handle()
     {
-        $discountsToUpdate = \App\Models\Discount::whereNotNull('start_date')
-            ->whereNotNull('end_date')
-            ->where('end_date', '>=', \Illuminate\Support\Facades\DB::raw('start_date'))
+        $discountsToUpdate = \App\Models\Discount::where(function ($query) {
+            $query->whereNotNull('start_date')
+                ->whereNotNull('end_date')
+                ->where('end_date', '<', now()->toDateString());
+        })
             ->orWhere(function ($query) {
-                return $query->where('used_count', '>=', \Illuminate\Support\Facades\DB::raw('usage_limit'));
+                $query->whereNotNull('usage_limit')
+                    ->whereColumn('used_count', '>=', 'usage_limit');
             })
             ->get();
 
