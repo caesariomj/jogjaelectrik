@@ -4,144 +4,139 @@ namespace App\Services;
 
 use App\Exceptions\ApiRequestException;
 use App\Models\Order;
+use Illuminate\Support\Facades\Crypt;
+use Xendit\Configuration;
+use Xendit\Invoice\CreateInvoiceRequest;
+use Xendit\Invoice\InvoiceApi;
 
 class PaymentService
 {
     public function __construct()
     {
-        \Midtrans\Config::$serverKey = config('services.midtrans.serverKey');
-        \Midtrans\Config::$isProduction = config('services.midtrans.isProduction');
-        \Midtrans\Config::$isSanitized = config('services.midtrans.isSanitized');
-        \Midtrans\Config::$is3ds = config('services.midtrans.is3ds');
+        Configuration::setXenditKey(config('services.xendit.secret_key'));
     }
 
-    public function createSnapToken(Order $order, string $paymentMethod)
+    public function createInvoice(Order $order)
     {
         $user = $order->user;
 
-        $itemDetails = $order->details->map(function ($item) {
-            return [
-                'id' => $item->productVariant->product->id,
-                'price' => $item->price,
-                'quantity' => $item->quantity,
+        $decryptedUserPhoneNumber = Crypt::decryptString($user->phone_number);
+        $decryptedUserAddress = Crypt::decryptString($user->address);
+        $decryptedUserPostalCode = Crypt::decryptString($user->postal_code);
+
+        $customer = [
+            'given_names' => $user->name,
+            'email' => $user->email,
+            'mobile_number' => '+62'.str_replace('-', '', $decryptedUserPhoneNumber),
+            'addresses' => [
+                [
+                    'city' => $user->city->name,
+                    'country' => 'Indonesia',
+                    'postal_code' => $decryptedUserPostalCode,
+                    'state' => $user->city->province->name,
+                    'street_line1' => $decryptedUserAddress,
+                ],
+            ],
+        ];
+
+        $items = $order->details->map(function ($item) {
+            $data = [
                 'name' => $item->productVariant->product->name,
-                'category' => $item->productVariant->product->subcategory->name,
-                'merchant_name' => 'Toko Jogja Electrik',
-                'url' => url('/produk/'.$item->productVariant->product->slug),
+                'quantity' => (int) $item->quantity,
+                'price' => (float) $item->price,
+                'url' => config('app.url').'/produk/'.$item->productVariant->product->slug,
             ];
+
+            if ($item->productVariant->product->subcategory) {
+                $data['category'] = ucwords($item->productVariant->product->subcategory->name);
+            }
+
+            return $data;
         })->toArray();
+
+        $fees = [
+            [
+                'type' => 'Ongkos Kirim '.strtoupper($order->shipping_courier),
+                'value' => $order->shipping_cost_amount,
+            ],
+        ];
 
         if ($order->discount_amount) {
             $discountAmount = [
-                'id' => \Illuminate\Support\Str::uuid()->toString(),
-                'price' => $order->discount_amount,
-                'quantity' => 1,
-                'name' => 'Diskon '.ucwords($order->discounts()->first()->discount->name),
+                'type' => 'Diskon '.ucwords($order->discounts()->first()->discount->name),
+                'value' => (float) $order->discount_amount,
             ];
 
-            array_push($itemDetails, $discountAmount);
+            array_push($fees, $discountAmount);
         }
 
-        $shippingCostAmount = [
-            'id' => \Illuminate\Support\Str::uuid()->toString(),
-            'price' => $order->shipping_cost_amount,
-            'quantity' => 1,
-            'name' => 'Ongkos Kirim '.strtoupper($order->shipping_courier),
-        ];
-
-        array_push($itemDetails, $shippingCostAmount);
-
-        $decryptedUserPhoneNumber = \Illuminate\Support\Facades\Crypt::decryptString($user->phone_number);
-        $decryptedUserAddress = \Illuminate\Support\Facades\Crypt::decryptString($user->address);
-        $decryptedUserPostalCode = \Illuminate\Support\Facades\Crypt::decryptString($user->postal_code);
-
-        $customerDetails = [
-            'first_name' => $user->name,
-            'email' => $user->email,
-            'phone' => '+62'.str_replace('-', '', $decryptedUserPhoneNumber),
-            'billing_address' => [
-                'first_name' => $user->name,
-                'email' => $user->email,
-                'phone' => '+62'.str_replace('-', '', $decryptedUserPhoneNumber),
-                'address' => $decryptedUserAddress,
-                'city' => $user->city->name,
-                'postal_code' => $decryptedUserPostalCode,
-                'country_code' => 'IDN',
-            ],
-            'shipping_address' => [
-                'first_name' => $user->name,
-                'email' => $user->email,
-                'phone' => '+62'.str_replace('-', '', $decryptedUserPhoneNumber),
-                'address' => $decryptedUserAddress,
-                'city' => $user->city->name,
-                'postal_code' => $decryptedUserPostalCode,
-                'country_code' => 'IDN',
-            ],
-        ];
-
         $params = [
-            'transaction_details' => [
-                'order_id' => $order->id,
-                'gross_amount' => $order->total_amount,
+            'external_id' => $order->id,
+            'description' => 'Invoice untuk pembayaran pesanan dengan nomor: '.$order->order_number,
+            'amount' => $order->total_amount,
+            'currency' => 'IDR',
+            'locale' => 'id',
+            'customer' => $customer,
+            'customer_notification_preference' => [
+                'invoice_created' => [
+                    'whatsapp',
+                    'email',
+                ],
+                'invoice_paid' => [
+                    'whatsapp',
+                    'email',
+                ],
             ],
-            'item_details' => $itemDetails,
-            'customer_details' => $customerDetails,
-            'enabled_payments' => [$paymentMethod],
+            'success_redirect_url' => config('app.url'),
+            'failure_redirect_url' => config('app.url'),
+            'items' => $items,
+            'fees' => $fees,
         ];
+
+        $invoiceApi = new InvoiceApi;
+        $createInvoiceRequest = new CreateInvoiceRequest($params);
 
         try {
-            return \Midtrans\Snap::getSnapToken($params);
-        } catch (ApiRequestException $e) {
-            $statusCode = $e->getStatusCode();
+            $result = $invoiceApi->createInvoice($createInvoiceRequest);
 
-            \Illuminate\Support\Facades\Log::error('Error generating Midtrans Snap Token', [
-                'message' => $e->getMessage(),
-                'status_code' => $statusCode,
-                'params' => $params,
-                'exception_trace' => $e->getTraceAsString(),
-            ]);
-
-            switch ($statusCode) {
-                case 401:
-                    throw new ApiRequestException('Terjadi masalah dengan otorisasi. Silakan periksa koneksi anda atau coba beberapa saat lagi.', 401);
-                    break;
-
-                default:
-                    if ($statusCode >= 400 && $statusCode < 500) {
-                        throw new ApiRequestException('Gagal memproses pesanan, periksa kembali data pesanan Anda atau coba beberapa saat lagi.', $statusCode);
-                    }
-
-                    if ($statusCode >= 500 && $statusCode < 600) {
-                        throw new ApiRequestException('Terjadi kesalahan di sistem pembayaran. Silakan coba beberapa saat lagi.', $statusCode);
-                    }
-
-                    throw new ApiRequestException('Terjadi kesalahan yang tidak terduga, silakan coba beberapa saat lagi atau hubungi customer support kami.', $statusCode);
-            }
+            return [
+                'url' => $result['invoice_url'],
+            ];
+        } catch (\Xendit\XenditSdkException $e) {
+            throw new ApiRequestException(
+                logMessage: 'Unexpected error during xendit invoice creation: '.$e->getErrorMessage(),
+                userMessage: 'Terjadi kesalahan pada sistem pembayaran, silakan coba beberapa saat lagi.',
+                statusCode: $e->getErrorCode()
+            );
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Unexpected error generating Midtrans Snap Token', [
-                'message' => $e->getMessage(),
-                'status_code' => $e->getCode(),
-                'params' => $params,
-                'exception_trace' => $e->getTraceAsString(),
-            ]);
-
-            throw new ApiRequestException('Terjadi kesalahan yang tidak terduga, silakan coba beberapa saat lagi atau hubungi customer support kami.', 500);
+            throw new ApiRequestException(
+                logMessage: 'Unexpected error during invoice creation: '.$e->getMessage(),
+                userMessage: 'Terjadi kesalahan tidak terduga pada sistem pembayaran, silakan coba beberapa saat lagi.',
+                statusCode: $e->getCode()
+            );
         }
     }
 
-    public function checkTransactionStatus(string $orderId)
+    public function getInvoice($invoiceId)
     {
-        try {
-            return \Midtrans\Transaction::status($orderId);
-        } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('Unexpected error checking Midtrans transaction status', [
-                'message' => $e->getMessage(),
-                'status_code' => $e->getCode(),
-                'order_id' => $orderId,
-                'exception_trace' => $e->getTraceAsString(),
-            ]);
+        $invoiceApi = new InvoiceApi;
 
-            throw new \Exception('Terjadi kesalahan pada sistem pembayaran, silakan coba beberapa saat lagi.');
+        try {
+            $invoice = $invoiceApi->getInvoiceById($invoiceId);
+
+            return $invoice;
+        } catch (\Xendit\XenditSdkException $e) {
+            throw new ApiRequestException(
+                logMessage: 'Unexpected error during xendit invoice retrieval: '.$e->getErrorMessage(),
+                userMessage: 'Terjadi kesalahan pada sistem pembayaran, silakan coba beberapa saat lagi.',
+                statusCode: $e->getErrorCode()
+            );
+        } catch (\Exception $e) {
+            throw new ApiRequestException(
+                logMessage: 'Unexpected error during invoice retrieval: '.$e->getMessage(),
+                userMessage: 'Terjadi kesalahan tidak terduga pada sistem pembayaran, silakan coba beberapa saat lagi.',
+                statusCode: $e->getCode()
+            );
         }
     }
 }
