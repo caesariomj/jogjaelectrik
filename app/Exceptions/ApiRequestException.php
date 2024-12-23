@@ -6,12 +6,28 @@ use Exception;
 
 class ApiRequestException extends Exception
 {
-    protected $statusCode;
+    protected string $logMessage;
 
-    public function __construct($message = '', $statusCode = 500)
+    protected string $userMessage;
+
+    protected int $statusCode;
+
+    public function __construct($logMessage = '', $userMessage = '', $statusCode = 500)
     {
-        parent::__construct();
-        $this->statusCode = $statusCode;
+        parent::__construct($logMessage);
+        $this->logMessage = (string) $logMessage;
+        $this->userMessage = (string) $userMessage;
+        $this->statusCode = (int) $statusCode;
+    }
+
+    public function getLogMessage()
+    {
+        return $this->logMessage;
+    }
+
+    public function getUserMessage()
+    {
+        return $this->userMessage;
     }
 
     public function getStatusCode()
