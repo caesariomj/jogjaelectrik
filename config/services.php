@@ -40,12 +40,10 @@ return [
         'package' => env('RAJAONGKIR_API_PACKAGE'),
     ],
 
-    'midtrans' => [
-        'serverKey' => env('MIDTRANS_SERVER_KEY'),
-        'clientKey' => env('MIDTRANS_CLIENT_KEY'),
-        'isProduction' => env('MIDTRANS_IS_PRODUCTION'),
-        'isSanitized' => env('MIDTRANS_IS_SANITIZED'),
-        'is3ds' => env('MIDTRANS_IS_3DS'),
+    'xendit' => [
+        'secret_key' => env('XENDIT_SECRET_KEY'),
+        'public_key' => env('XENDIT_PUBLIC_KEY'),
+        'webhook_token' => env('XENDIT_WEBHOOK_TOKEN'),
     ],
 
 ];
