@@ -26,10 +26,18 @@ class PaymentPolicy
     /**
      * Determine whether the user can view the payment.
      */
-    public function view(User $user, Payment $payment): bool|Response
+    public function view(User $user, ?Payment $payment): bool|Response
     {
+        if ($user->can('view all orders')) {
+            return true;
+        }
+
         if (! $user->can('view own payments')) {
             return $this->deny('Anda tidak memiliki izin untuk melihat seluruh pembayaran pesanan Anda.', 403);
+        }
+
+        if ($payment->id === null) {
+            return true;
         }
 
         if ($user->id !== $payment->order->user_id) {
@@ -45,7 +53,7 @@ class PaymentPolicy
     public function pay(User $user, Payment $payment): bool|Response
     {
         if (! $user->can('pay orders')) {
-            return $this->deny('Anda tidak memiliki izin untuk membayar pesanan pelanggan.', 403);
+            return $this->deny('Anda tidak memiliki izin untuk membayar pesanan dengan nomor: '.$payment->order->order_number.'.', 403);
         }
 
         if ($user->id !== $payment->order->user_id) {
@@ -61,7 +69,7 @@ class PaymentPolicy
     public function refund(User $user, Payment $payment): bool|Response
     {
         if (! $user->can('refund payments')) {
-            return $this->deny('Anda tidak memiliki izin untuk me-refund pembayaran pesanan pelanggan.', 403);
+            return $this->deny('Anda tidak memiliki izin untuk me-refund pembayaran pesanan dengan nomor: '.$payment->order->order_number.'.', 403);
         }
 
         return true;

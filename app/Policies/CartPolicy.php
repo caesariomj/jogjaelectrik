@@ -12,14 +12,10 @@ class CartPolicy
     use HandlesAuthorization;
 
     /**
-     * Determine whether the user can view the model.
+     * Determine whether the user can view the cart.
      */
-    public function view(?User $user, Cart $cart): bool|Response
+    public function view(User $user, Cart $cart): bool|Response
     {
-        if (! $user) {
-            return $this->deny('Silakan masuk terlebih dahulu untuk melihat keranjang belanja.', 401);
-        }
-
         if (! $user->can('view own cart')) {
             return $this->deny('Anda tidak memiliki izin untuk melihat keranjang belanja ini.', 403);
         }
@@ -32,14 +28,10 @@ class CartPolicy
     }
 
     /**
-     * Determine whether the user can create models.
+     * Determine whether the user can create cart.
      */
-    public function create(?User $user): bool|Response
+    public function create(User $user): bool|Response
     {
-        if (! $user) {
-            return $this->deny('Silakan masuk terlebih dahulu sebelum menambahkan produk ke dalam keranjang belanja.', 401);
-        }
-
         if (! $user->can('create cart')) {
             return $this->deny('Anda tidak memiliki izin untuk membuat keranjang belanja.', 403);
         }
@@ -48,14 +40,10 @@ class CartPolicy
     }
 
     /**
-     * Determine whether the user can update the model.
+     * Determine whether the user can update the cart.
      */
-    public function update(?User $user, Cart $cart): bool|Response
+    public function update(User $user, Cart $cart): bool|Response
     {
-        if (! $user) {
-            return $this->deny('Silakan masuk terlebih dahulu sebelum mengubah produk di dalam keranjang belanja anda.', 401);
-        }
-
         if (! $user->can('edit cart')) {
             return $this->deny('Anda tidak memiliki izin untuk mengubah keranjang belanja ini.', 403);
         }
@@ -68,14 +56,10 @@ class CartPolicy
     }
 
     /**
-     * Determine whether the user can delete the model.
+     * Determine whether the user can delete the cart.
      */
-    public function delete(?User $user, Cart $cart): bool|Response
+    public function delete(User $user, Cart $cart): bool|Response
     {
-        if (! $user) {
-            return $this->deny('Silakan masuk terlebih dahulu untuk melihat keranjang belanja.', 401);
-        }
-
         if (! $user->can('delete cart')) {
             return $this->deny('Anda tidak memiliki izin untuk menghapus keranjang belanja ini.', 403);
         }
@@ -88,14 +72,10 @@ class CartPolicy
     }
 
     /**
-     * Determine whether the user can use the discount on the model.
+     * Determine whether the user can use discount on the cart.
      */
-    public function applyDiscount(?User $user, Cart $cart): bool|Response
+    public function applyDiscount(User $user, Cart $cart): bool|Response
     {
-        if (! $user) {
-            return $this->deny('Silakan masuk terlebih dahulu untuk menerapkan diskon.', 401);
-        }
-
         if (! $user->can('apply discounts')) {
             return $this->deny('Anda tidak memiliki izin untuk menerapkan diskon pada keranjang belanja ini.', 403);
         }
@@ -108,14 +88,10 @@ class CartPolicy
     }
 
     /**
-     * Determine whether the user can access the checkout page.
+     * Determine whether the user can access checkout page.
      */
-    public function checkout(?User $user, Cart $cart): bool|Response
+    public function checkout(User $user, Cart $cart): bool|Response
     {
-        if (! $user) {
-            return $this->deny('Silakan masuk terlebih dahulu untuk mengakses halaman checkout.', 401);
-        }
-
         if (! $user->can('access checkout page')) {
             return $this->deny('Anda tidak memiliki izin untuk mengakses halaman checkout.', 403);
         }
