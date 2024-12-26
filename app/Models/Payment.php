@@ -27,10 +27,11 @@ class Payment extends Model
      */
     protected $fillable = [
         'order_id',
-        'token',
+        'invoice_url',
         'method',
         'status',
         'reference_number',
+        'paid_at',
     ];
 
     /**
