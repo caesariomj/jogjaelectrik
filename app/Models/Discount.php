@@ -115,7 +115,13 @@ class Discount extends Model
         if ($this->type === 'fixed') {
             return min($this->value, $cartTotal);
         } elseif ($this->type === 'percentage') {
-            return $cartTotal * ($this->value / 100);
+            $discountAmount = $cartTotal * ($this->value / 100);
+
+            if ($this->max_discount_amount && $discountAmount > $this->max_discount_amount) {
+                return $this->max_discount_amount;
+            }
+
+            return $discountAmount;
         }
 
         return 0;
