@@ -3,7 +3,9 @@
 use App\Exceptions\ApiRequestException;
 use App\Livewire\Forms\CheckoutForm;
 use App\Models\Cart;
+use App\Models\City;
 use App\Models\Order;
+use App\Models\Province;
 use App\Services\PaymentService;
 use App\Services\ShippingService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -20,6 +22,7 @@ new class extends Component {
     protected PaymentService $paymentService;
 
     public CheckoutForm $form;
+
     public Collection $provinces;
     public Collection $cities;
 
@@ -39,52 +42,6 @@ new class extends Component {
         ],
     ];
     public array $selectedCourierServices = [];
-    // public array $supportedPaymentMethods = [
-    //     [
-    //         'name' => 'QRIS',
-    //         'code' => 'qris',
-    //         'image' => 'qris',
-    //     ],
-    //     [
-    //         'name' => 'Gopay',
-    //         'code' => 'gopay',
-    //         'image' => 'gopay',
-    //     ],
-    //     [
-    //         'name' => 'ShopeePay',
-    //         'code' => 'shopeepay',
-    //         'image' => 'shopeepay',
-    //     ],
-    //     [
-    //         'name' => 'BCA VA',
-    //         'code' => 'bca_va',
-    //         'image' => 'bca',
-    //     ],
-    //     [
-    //         'name' => 'BNI VA',
-    //         'code' => 'bni_va',
-    //         'image' => 'bni',
-    //     ],
-    //     [
-    //         'name' => 'BRI VA',
-    //         'code' => 'bri_va',
-    //         'image' => 'bri',
-    //     ],
-    //     [
-    //         'name' => 'Mandiri Bill Payment',
-    //         'code' => 'echannel',
-    //         'image' => 'mandiri',
-    //     ],
-    //     [
-    //         'name' => 'Permata VA',
-    //         'code' => 'permata_va',
-    //         'image' => 'permata',
-    //     ],
-    //     [
-    //         'name' => 'VA Bank Lainnya',
-    //         'code' => 'other_va',
-    //     ],
-    // ];
 
     public function boot(ShippingService $shippingService, PaymentService $paymentService)
     {
@@ -95,9 +52,9 @@ new class extends Component {
     public function mount(Cart $cart)
     {
         $this->form->setCheckoutData($cart);
-        $this->provinces = \App\Models\Province::select('id as value', 'name as label')->get();
+        $this->provinces = Province::select('id as value', 'name as label')->get();
         $this->cities = $this->form->province
-            ? \App\Models\City::select('id as value', 'name as label')
+            ? City::select('id as value', 'name as label')
                 ->where('province_id', $this->form->province)
                 ->get()
             : collect();
@@ -114,22 +71,31 @@ new class extends Component {
         if ($comboboxInstanceName == 'provinsi') {
             $this->form->province = $value;
             $this->form->city = null;
-            $this->cities = \App\Models\City::select('id as value', 'name as label')
+            $this->cities = City::select('id as value', 'name as label')
                 ->where('province_id', $this->form->province)
                 ->get();
         } elseif ($comboboxInstanceName == 'kabupaten/kota') {
             $this->form->city = $value;
-            $this->cities = \App\Models\City::select('id as value', 'name as label')
+            $this->cities = City::select('id as value', 'name as label')
                 ->where('province_id', $this->form->province)
                 ->get();
             $this->getSelectedCourierServices();
         }
+
+        $this->selectedCourierServices = [];
+
+        $this->form->shippingCourier = null;
+        $this->form->shippingCourierService = null;
+        $this->form->shippingCourierServiceTax = 0;
     }
 
     public function updatedFormShippingCourier()
     {
         $this->selectedCourierServices = [];
+
+        $this->form->shippingCourierService = null;
         $this->form->shippingCourierServiceTax = 0;
+
         $this->getSelectedCourierServices();
     }
 
@@ -151,9 +117,21 @@ new class extends Component {
             }
 
             $this->selectedCourierServices = $result;
+        } catch (ApiRequestException $e) {
+            Log::error('RajaOngkir API Request Exception During Checkout Process', [
+                'error_message' => $e->getLogMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            session('error', $e->getUserMessage());
+            return $this->redirectIntended(route('checkout'), navigate: true);
         } catch (\Exception $e) {
-            $this->selectedCourierServices = [];
-            session()->flash('error', $e->getMessage());
+            Log::error('Unexpected Error During Selected Courier Service Retrieval', [
+                'error_message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            session()->flash('error', 'Terjadi kesalahan yang tidak terduga, silakan coba beberapa saat lagi.');
             return $this->redirectIntended(route('checkout'), navigate: true);
         }
     }
@@ -204,7 +182,10 @@ new class extends Component {
 
         $selectedCourierServiceData = reset($selectedCourierServiceData);
 
-        if ($this->form->shippingCourierService !== strtolower($selectedCourierServiceData['service'])) {
+        if (
+            $this->form->shippingCourierService !== strtolower($selectedCourierServiceData['service']) ||
+            (float) $this->form->shippingCourierServiceTax !== (float) $selectedCourierServiceData['cost_value']
+        ) {
             $this->addError(
                 'form.shippingCourierService',
                 'Layanan kurir ekspedisi yang dipilih tidak sesuai dengan data yang tersedia.',
@@ -212,20 +193,12 @@ new class extends Component {
             return;
         }
 
-        if ((float) $this->form->shippingCourierServiceTax !== (float) $selectedCourierServiceData['cost_value']) {
-            $this->addError(
-                'form.shippingCourierService',
-                'Biaya layanan yang dipilih tidak sesuai dengan layanan kurir yang dipilih.',
-            );
-            return;
-        }
-
         try {
             $this->authorize('create', Order::class);
 
-            $orderNumber = null;
+            $invoiceUrl = null;
 
-            DB::transaction(function () use ($validated, $selectedCourierServiceData, &$orderNumber) {
+            DB::transaction(function () use ($validated, $selectedCourierServiceData, &$invoiceUrl) {
                 $encryptedPhoneNumber = Crypt::encryptString(ltrim($validated['phone'], '0'));
                 $encryptedAddress = Crypt::encryptString($validated['address']);
                 $encryptedPostalCode = Crypt::encryptString($validated['postalCode']);
@@ -272,8 +245,6 @@ new class extends Component {
                         (float) $this->form->shippingCourierServiceTax,
                 ]);
 
-                $orderNumber = $order->order_number;
-
                 foreach ($this->form->items as $item) {
                     $orderDetail = $order->details()->create([
                         'product_variant_id' => $item->productVariant->id,
@@ -298,52 +269,43 @@ new class extends Component {
                     $this->form->cart->discount()->increment('used_count');
                 }
 
-                $snapToken = $this->paymentService->createSnapToken($order);
+                $invoice = $this->paymentService->createInvoice($order);
 
                 $order->payment()->create([
-                    'token' => $snapToken,
-                    'method' => 'test',
+                    'invoice_url' => $invoice['url'],
                 ]);
+
+                $invoiceUrl = $invoice['url'];
 
                 $this->form->cart->delete();
             });
 
-            session()->flash('success', 'Pesanan anda berhasil dibuat.');
-            return $this->redirectRoute('orders.success', ['orderNumber' => $orderNumber], navigate: true);
+            return $this->redirect($invoiceUrl);
         } catch (AuthorizationException $e) {
-            $errorMessage = $e->getMessage();
-
-            if ($e->getCode() === 401) {
-                session()->flash('error', $errorMessage);
-                return $this->redirectRoute('login', navigate: true);
-            }
-
-            session()->flash('error', $errorMessage);
+            session()->flash('error', $e->getMessage());
             return $this->redirectIntended(route('checkout'), navigate: true);
         } catch (QueryException $e) {
-            Log::error('Database error during transaction', [
-                'error' => $e->getMessage(),
-                'exception_trace' => $e->getTraceAsString(),
+            Log::error('Database Error During Checkout Process', [
+                'error_message' => $e->getMessage(),
             ]);
 
-            session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
+            session()->flash('error', 'Terjadi kesalahan dalam proses checkout, silakan coba beberapa saat lagi.');
             return $this->redirectIntended(route('checkout'), navigate: true);
         } catch (ApiRequestException $e) {
-            Log::error('Payment processing failed in controller', [
-                'message' => $e->getMessage(),
-                'status_code' => $e->getStatusCode(),
-                'exception_trace' => $e->getTraceAsString(),
+            Log::error('Xendit API Request Exception During Checkout Process', [
+                'error_message' => $e->getLogMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
-            session('error', 'Terjadi kesalahan tak terduga pada sistem. Silakan coba beberapa saat lagi');
+            session('error', $e->getUserMessage());
             return $this->redirectIntended(route('checkout'), navigate: true);
         } catch (\Exception $e) {
-            Log::error('Unexpected error occurred', [
-                'error' => $e->getMessage(),
-                'exception_trace' => $e->getTraceAsString(),
+            Log::error('Unexpected Error During Checkout Process', [
+                'error_message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
-            session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
+            session('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
             return $this->redirectIntended(route('checkout'), navigate: true);
         }
     }
@@ -452,7 +414,7 @@ new class extends Component {
             </legend>
             <div class="grid grid-cols-1 gap-4 pb-8 pt-4 md:grid-cols-2">
                 <div class="w-full">
-                    <p class="mb-1 block text-sm font-medium text-black">
+                    <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
                         Pilih Provinsi
                         <span class="text-red-500">*</span>
                     </p>
@@ -466,7 +428,7 @@ new class extends Component {
                     <x-form.input-error :messages="$errors->get('form.province')" class="mt-2" />
                 </div>
                 <div class="w-full">
-                    <p class="mb-1 block text-sm font-medium text-black">
+                    <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
                         Pilih Kabupaten/Kota
                         <span class="text-red-500">*</span>
                     </p>
@@ -476,7 +438,7 @@ new class extends Component {
                             class="inline-flex w-full items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-tight text-black transition hover:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:cursor-not-allowed disabled:opacity-50"
                             disabled
                         >
-                            <span class="text-sm font-normal capitalize text-black">
+                            <span class="text-sm font-medium capitalize tracking-tight text-black">
                                 Silakan pilih provinsi anda terlebih dahulu
                             </span>
                             <svg
@@ -540,11 +502,11 @@ new class extends Component {
                     <x-form.input-error :messages="$errors->get('form.postalCode')" class="mt-2" />
                 </div>
                 <div class="md:col-span-2">
-                    <p class="mb-1 block text-sm font-medium text-black">
+                    <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
                         Pilih Kurir Ekspedisi
                         <span class="text-red-500">*</span>
                     </p>
-                    <ul x-data="{ selected: '' }" class="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <ul class="grid grid-cols-1 gap-4 md:grid-cols-3">
                         @foreach ($supportedCourierExpeditions as $expedition)
                             <li class="relative w-full">
                                 <x-form.radio
@@ -560,8 +522,8 @@ new class extends Component {
                                     :labelAttributes="
                                         [
                                             'for' => 'expedition-' . $expedition['code'],
-                                            'wire:loading.class' => 'opacity-50 !cursor-not-allowed hover:bg-white',
-                                            'wire:target' => 'form.shippingCourier,form.city',
+                                            'wire:loading.class' => 'opacity-50 !cursor-wait hover:bg-white',
+                                            'wire:target' => 'form.shippingCourier, form.city, handleComboboxChange',
                                         ]
                                     "
                                     :hasError="$errors->has('form.shippingCourier')"
@@ -581,30 +543,31 @@ new class extends Component {
                                         </span>
                                     </p>
                                 </x-form.radio>
-                                <svg
-                                    class="absolute end-4 top-3 size-5 shrink-0 fill-primary stroke-primary-50"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    width="24"
-                                    height="24"
-                                    viewBox="0 0 24 24"
-                                    fill="currentColor"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
-                                    aria-hidden="true"
-                                    x-show="selected === '{{ $expedition['code'] }}'"
-                                >
-                                    <circle cx="12" cy="12" r="10" />
-                                    <path d="m9 12 2 2 4-4" />
-                                </svg>
+                                @if ($form->shippingCourier === $expedition['code'])
+                                    <svg
+                                        class="absolute end-4 top-3 size-5 shrink-0 fill-primary stroke-primary-50"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        width="24"
+                                        height="24"
+                                        viewBox="0 0 24 24"
+                                        fill="currentColor"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        aria-hidden="true"
+                                    >
+                                        <circle cx="12" cy="12" r="10" />
+                                        <path d="m9 12 2 2 4-4" />
+                                    </svg>
+                                @endif
                             </li>
                         @endforeach
                     </ul>
                     <x-form.input-error :messages="$errors->get('form.shippingCourier')" class="mt-2" />
                 </div>
                 <div class="md:col-span-2">
-                    <p class="mb-1 block text-sm font-medium text-black">
+                    <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
                         Pilih Layanan Ekspedisi
                         <span class="text-red-500">*</span>
                     </p>
@@ -614,7 +577,7 @@ new class extends Component {
                             class="mb-4 flex items-start rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800"
                             role="alert"
                             wire:loading.remove
-                            wire:target="form.shippingCourier,form.city"
+                            wire:target="form.shippingCourier, form.city"
                             x-cloak
                         >
                             <svg
@@ -637,7 +600,7 @@ new class extends Component {
                         </div>
                         <div
                             wire:loading.flex
-                            wire:target="form.shippingCourier,form.city"
+                            wire:target="form.shippingCourier, form.city"
                             class="items-center rounded-lg border border-neutral-300 p-4 text-sm font-medium text-black shadow-sm"
                             x-cloak
                         >
@@ -663,7 +626,7 @@ new class extends Component {
                             Sedang diproses...
                         </div>
                     @else
-                        <ul x-data="{ selected: '' }" class="grid grid-cols-1 gap-4">
+                        <ul class="grid grid-cols-1 gap-4">
                             @foreach ($this->selectedCourierServices as $service)
                                 <li class="relative">
                                     <x-form.radio
@@ -679,8 +642,8 @@ new class extends Component {
                                         :labelAttributes="
                                             [
                                                 'for' => 'expedition-' . strtolower($service['courier_code']) . '-service-' . strtolower($service['service']),
-                                                'wire:loading.class' => 'opacity-50 !cursor-not-allowed hover:bg-white',
-                                                'wire:target' => 'form.shippingCourier,form.city',
+                                                'wire:loading.class' => 'opacity-50 !cursor-wait hover:bg-white',
+                                                'wire:target' => 'form.shippingCourier, form.city, form.shippingCourierService, handleComboboxChange',
                                             ]
                                         "
                                         :hasError="$errors->has('form.shippingCourierService')"
@@ -705,23 +668,24 @@ new class extends Component {
                                             </span>
                                         </p>
                                     </x-form.radio>
-                                    <svg
-                                        class="absolute end-4 top-3 size-5 shrink-0 fill-primary stroke-primary-50"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="24"
-                                        height="24"
-                                        viewBox="0 0 24 24"
-                                        fill="currentColor"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        aria-hidden="true"
-                                        x-show="selected === '{{ strtolower($service['service']) }}'"
-                                    >
-                                        <circle cx="12" cy="12" r="10" />
-                                        <path d="m9 12 2 2 4-4" />
-                                    </svg>
+                                    @if ($form->shippingCourierService === strtolower($service['service']))
+                                        <svg
+                                            class="absolute end-4 top-3 size-5 shrink-0 fill-primary stroke-primary-50"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            width="24"
+                                            height="24"
+                                            viewBox="0 0 24 24"
+                                            fill="currentColor"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            aria-hidden="true"
+                                        >
+                                            <circle cx="12" cy="12" r="10" />
+                                            <path d="m9 12 2 2 4-4" />
+                                        </svg>
+                                    @endif
                                 </li>
                             @endforeach
                         </ul>
@@ -731,87 +695,6 @@ new class extends Component {
                 </div>
             </div>
         </fieldset>
-        {{--
-            <fieldset>
-            <legend class="flex w-full flex-col border-t border-neutral-300 py-4">
-            <h2 class="mb-2 text-xl text-black">Metode Pembayaran</h2>
-            <p class="text-base tracking-tight text-black/70">
-            Pilih salah satu metode pembayaran yang tersedia di bawah ini.
-            </p>
-            </legend>
-            <div class="pb-8 pt-4">
-            <ul x-data="{ selected: '' }" class="grid grid-cols-2 gap-4 md:grid-cols-3">
-            @foreach ($this->supportedPaymentMethods as $method)
-            <li class="relative w-full">
-            <x-form.radio
-            :inputAttributes="
-            [
-            'wire:model.lazy' => 'form.paymentMethod',
-            'id' => 'payment-method-' . strtolower($method['name']),
-            'name' => 'select-payment-method',
-            'value' => $method['code'],
-            'x-on:input' => 'selected = \'' . $method['code'] . '\'',
-            ]
-            "
-            :labelAttributes="
-            [
-            'for' => 'payment-method-' . strtolower($method['name']),
-            ]
-            "
-            :hasError="$errors->has('form.paymentMethod')"
-            >
-            @if (array_key_exists('image', $method))
-            <img
-            src="{{ asset('images/logos/payments/' . $method['image'] . '.webp') }}"
-            alt="Logo {{ strtoupper($method['name']) }}"
-            class="h-auto w-12"
-            loading="lazy"
-            />
-            @else
-            <svg
-            class="size-6 text-black"
-            xmlns="http://www.w3.org/2000/svg"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke-width="1.5"
-            stroke="currentColor"
-            aria-hidden="true"
-            >
-            <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0 0 12 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75Z"
-            />
-            </svg>
-            @endif
-            <p class="text-sm font-semibold tracking-tight text-black">
-            {{ ucwords($method['name']) }}
-            </p>
-            </x-form.radio>
-            <svg
-            class="absolute end-4 top-3 size-5 shrink-0 fill-primary stroke-primary-50"
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="currentColor"
-            stroke="currentColor"
-            stroke-width="2"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            aria-hidden="true"
-            x-show="selected === '{{ $method['code'] }}'"
-            >
-            <circle cx="12" cy="12" r="10" />
-            <path d="m9 12 2 2 4-4" />
-            </svg>
-            </li>
-            @endforeach
-            </ul>
-            <x-form.input-error :messages="$errors->get('form.paymentMethod')" class="mt-2" />
-            </div>
-            </fieldset>
-        --}}
     </div>
     <aside class="relative h-full w-full md:w-1/3">
         <div>
@@ -879,7 +762,7 @@ new class extends Component {
             <div class="mb-4">
                 <div class="mb-1 flex items-center justify-between">
                     <x-form.input-label for="note" value="Catatan Pesanan" :required="false" />
-                    <span class="text-sm tracking-tight text-black/70">(opsional)</span>
+                    <span class="text-sm font-medium tracking-tight text-black/70">(opsional)</span>
                 </div>
                 <x-form.textarea
                     wire:model.lazy="form.note"

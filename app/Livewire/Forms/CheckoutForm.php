@@ -43,9 +43,7 @@ class CheckoutForm extends Form
 
     public ?string $shippingCourierService = null;
 
-    public ?float $shippingCourierServiceTax = 0;
-
-    public ?string $paymentMethod = null;
+    public float $shippingCourierServiceTax = 0;
 
     public string $note = '';
 
@@ -102,11 +100,6 @@ class CheckoutForm extends Form
                 'numeric',
                 'gt:0',
             ],
-            'paymentMethod' => [
-                'required',
-                'string',
-                'in:qris,gopay,shopeepay,dana,other_qris,bca_va,bni_va,bri_va,echannel,permata_va,cimb_va,other_va',
-            ],
             'note' => [
                 'nullable',
                 'string',
@@ -132,7 +125,6 @@ class CheckoutForm extends Form
             'shippingCourier' => 'Kurir ekspedisi',
             'shippingCourierService' => 'Layanan ekspedisi',
             'shippingCourierServiceTax' => 'Biaya pengiriman',
-            'paymentMethod' => 'Metode pembayaran',
             'note' => 'Catatan pesanan',
             'acceptTermsAndCondition' => 'Syarat dan Ketentuan toko',
         ];
