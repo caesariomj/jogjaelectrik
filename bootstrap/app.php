@@ -17,6 +17,10 @@ return Application::configure(basePath: dirname(__DIR__))
             'role_or_permission' => \Spatie\Permission\Middleware\RoleOrPermissionMiddleware::class,
             'order_ownership_check' => \App\Http\Middleware\OrderOwnershipCheck::class,
             'admin_page_access' => \App\Http\Middleware\AdminPageAccess::class,
+            'validate_xendit_webhook_token' => \App\Http\Middleware\ValidateXenditWebhookToken::class,
+        ]);
+        $middleware->validateCsrfTokens(except: [
+            '/api/xendit/webhook',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
