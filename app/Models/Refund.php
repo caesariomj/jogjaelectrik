@@ -5,9 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
-class Payment extends Model
+class Refund extends Model
 {
     use HasUuids;
 
@@ -27,24 +26,16 @@ class Payment extends Model
      * @var array<int, string>
      */
     protected $fillable = [
-        'order_id',
-        'invoice_url',
-        'method',
+        'payment_id',
         'status',
-        'reference_number',
-        'paid_at',
+        'succeeded_at',
     ];
 
     /**
      * Model relations.
      */
-    public function order(): BelongsTo
+    public function payment(): BelongsTo
     {
-        return $this->belongsTo(Order::class);
-    }
-
-    public function refund(): HasOne
-    {
-        return $this->hasOne(Refund::class);
+        return $this->belongsTo(Payment::class);
     }
 }
