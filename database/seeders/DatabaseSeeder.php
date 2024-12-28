@@ -23,6 +23,7 @@ class DatabaseSeeder extends Seeder
             CheckoutPageAccessSeeder::class,
             OrderPermissionsSeeder::class,
             PaymentPermissionsSeeder::class,
+            RefundPermissionsSeeder::class,
         ]);
     }
 }
