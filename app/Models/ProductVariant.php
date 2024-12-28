@@ -70,6 +70,11 @@ class ProductVariant extends Model
         return $this->hasMany(OrderDetail::class);
     }
 
+    public function reviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
+    }
+
     /**
      * Product-related functions.
      */
