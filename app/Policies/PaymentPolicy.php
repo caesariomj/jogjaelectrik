@@ -28,7 +28,7 @@ class PaymentPolicy
      */
     public function view(User $user, ?Payment $payment): bool|Response
     {
-        if ($user->can('view all orders')) {
+        if ($user->can('view all payments')) {
             return true;
         }
 
@@ -58,18 +58,6 @@ class PaymentPolicy
 
         if ($user->id !== $payment->order->user_id) {
             return $this->deny('Anda hanya dapat membayar pesanan Anda sendiri.', 403);
-        }
-
-        return true;
-    }
-
-    /**
-     * Determine whether the user can refund the payments.
-     */
-    public function refund(User $user, Payment $payment): bool|Response
-    {
-        if (! $user->can('refund payments')) {
-            return $this->deny('Anda tidak memiliki izin untuk me-refund pembayaran pesanan dengan nomor: '.$payment->order->order_number.'.', 403);
         }
 
         return true;

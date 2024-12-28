@@ -17,7 +17,6 @@ class PaymentPermissionsSeeder extends Seeder
             'pay orders',
             'view all payments',
             'view own payments',
-            'refund payments',
         ];
 
         foreach ($permissions as $permission) {
@@ -34,7 +33,6 @@ class PaymentPermissionsSeeder extends Seeder
         $adminRole->givePermissionTo('view all payments');
 
         $superAdminRole->givePermissionTo('view all payments');
-        $superAdminRole->givePermissionTo('refund payments');
 
         $this->command->info('Payment permissions successfully seeded.');
     }
