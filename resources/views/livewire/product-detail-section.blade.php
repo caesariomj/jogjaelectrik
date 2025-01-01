@@ -109,6 +109,8 @@ new class extends Component {
         $this->price = $selectedVariant->price;
         $this->priceDiscount = $selectedVariant->price_discount;
         $this->stock = $selectedVariant->stock;
+
+        $this->quantity = $this->quantity > $this->stock ? $this->stock : $this->quantity;
     }
 
     public function increment()
@@ -375,10 +377,10 @@ new class extends Component {
                                     @disabled(! $variant->is_active)
                                 />
                                 <label
-                                    wire:target="selectedVariantSku"
                                     for="variant-{{ strtolower($variant->combinations->first()->variationVariant->name) }}"
-                                    class="inline-flex min-w-28 cursor-pointer items-center justify-center gap-x-2 rounded-full border border-black bg-white px-4 py-3 text-sm font-semibold tracking-tight text-black transition-colors hover:bg-neutral-200 focus:bg-neutral-200 focus:outline-none disabled:pointer-events-none disabled:opacity-50 peer-checked:border-black peer-checked:bg-black peer-checked:text-white peer-disabled:cursor-wait peer-disabled:border-black peer-disabled:bg-white peer-disabled:text-black peer-disabled:opacity-50"
-                                    wire:loading.class="opacity-50 cursor-wait"
+                                    class="inline-flex min-w-28 cursor-pointer items-center justify-center gap-x-2 rounded-full border border-black bg-white px-4 py-3 text-sm font-semibold tracking-tight text-black transition-colors hover:bg-neutral-200 focus:bg-neutral-200 focus:outline-none disabled:pointer-events-none disabled:opacity-50 peer-checked:border-black peer-checked:bg-black peer-checked:text-white peer-disabled:cursor-not-allowed peer-disabled:border-black peer-disabled:bg-white peer-disabled:text-black peer-disabled:opacity-50"
+                                    wire:loading.class="opacity-50 !cursor-wait"
+                                    wire:target="selectedVariantSku"
                                 >
                                     {{ ucwords($variant->combinations->first()->variationVariant->name) }}
                                 </label>
@@ -485,10 +487,10 @@ new class extends Component {
                             <div class="flex items-center gap-2">
                                 <button
                                     type="button"
-                                    class="flex size-11 items-center justify-center rounded-md border border-neutral-300 p-2 text-black transition-colors hover:bg-neutral-100 disabled:cursor-wait disabled:opacity-50"
+                                    class="flex size-11 items-center justify-center rounded-md border border-neutral-300 p-2 text-black transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
                                     aria-label="Kurangi jumlah produk"
                                     wire:click="decrement"
-                                    wire:loading.attr="disabled"
+                                    wire:loading.class="!cursor-wait pointers-event-none opacity-50 hover:!bg-white"
                                     wire:target="selectedVariantSku, increment, decrement,addToCart"
                                     @disabled($quantity <= 1)
                                 >
@@ -519,7 +521,7 @@ new class extends Component {
                                 </button>
                                 <x-form.input
                                     wire:model.lazy="quantity"
-                                    class="w-14 text-center text-black [appearance:textfield] disabled:cursor-wait disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
+                                    class="w-14 text-center text-black [appearance:textfield] disabled:cursor-not-allowed disabled:opacity-50 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                     type="number"
                                     name="quantity"
                                     id="quantity"
@@ -528,17 +530,17 @@ new class extends Component {
                                     max="{{ $stock }}"
                                     autofocus
                                     x-on:change="$dispatch('update-quantity', { quantity: $event.target.value })"
-                                    wire:loading.attr="disabled"
+                                    wire:loading.class="!cursor-wait pointers-event-none opacity-50 hover:!bg-white"
                                     wire:target="selectedVariantSku, increment, decrement, addToCart"
                                     :hasError="$errors->has('quantity')"
                                 />
                                 <button
                                     type="button"
-                                    class="flex size-11 items-center justify-center rounded-md border border-neutral-300 p-2 text-black transition-colors hover:bg-neutral-100 disabled:cursor-wait disabled:opacity-50"
+                                    class="flex size-11 items-center justify-center rounded-md border border-neutral-300 p-2 text-black transition-colors hover:bg-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
                                     aria-label="Tambah jumlah produk"
                                     wire:click="increment"
-                                    wire:loading.attr="disabled"
-                                    wire:target="selectedVariantSku, increment, decrement,addToCart"
+                                    wire:loading.class="disabled"
+                                    wire:target="selectedVariantSku, increment, decrement, addToCart"
                                     @disabled($quantity >= $stock)
                                 >
                                     <svg
