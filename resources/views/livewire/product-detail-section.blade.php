@@ -23,11 +23,17 @@ new class extends Component {
     public int $stock = 0;
     public string $price = '';
     public ?string $priceDiscount = null;
+    public $reviews;
+    public int $totalReviewCount = 0;
+    public int $averageRating = 0;
+    public $reviewCountByRating = [];
+    public $reviewPercentageByRating = [];
 
     public function mount(Product $product)
     {
         $this->product = $product;
         $this->setProductVariant($this->product);
+        $this->setProductReview($this->product);
     }
 
     private function setProductVariant($product)
@@ -64,6 +70,28 @@ new class extends Component {
         $this->price = $this->productVariant->price;
         $this->priceDiscount = $this->productVariant->price_discount ?? null;
         $this->stock = $this->productVariant->stock;
+    }
+
+    private function setProductReview($product)
+    {
+        $this->reviews = $product->reviews->sortByDesc('created_at');
+
+        $this->totalReviewCount = $this->reviews->count();
+        $this->averageRating = number_format($this->reviews->avg('rating'), 0);
+
+        $this->reviewCountByRating = $this->reviews->groupBy('rating')->map->count();
+
+        $this->reviewCountByRating = collect([5, 4, 3, 2, 1])
+            ->mapWithKeys(function ($rating) {
+                return [$rating => $this->reviewCountByRating->get($rating, 0)];
+            })
+            ->toArray();
+
+        $this->reviewPercentageByRating = collect($this->reviewCountByRating)
+            ->map(function ($count) {
+                return $this->totalReviewCount > 0 ? ($count / $this->totalReviewCount) * 100 : 0;
+            })
+            ->toArray();
     }
 
     public function redirectToProduct(?string $category = null, ?string $subcategory = null)
@@ -301,7 +329,7 @@ new class extends Component {
 
             <h1 class="mb-2 leading-tight text-black">{{ $product->name }}</h1>
             <div class="mb-4 flex items-center gap-x-1">
-                @for ($i = 1; $i < 5; $i++)
+                @for ($i = 0; $i < $averageRating; $i++)
                     <svg
                         class="size-4 text-yellow-500"
                         xmlns="http://www.w3.org/2000/svg"
@@ -321,7 +349,7 @@ new class extends Component {
                     </svg>
                 @endfor
 
-                @for ($i = 0 + 4; $i < 5; $i++)
+                @for ($i = 0 + $averageRating; $i < 5; $i++)
                     <svg
                         class="size-4 text-black opacity-20"
                         xmlns="http://www.w3.org/2000/svg"
@@ -341,7 +369,10 @@ new class extends Component {
                     </svg>
                 @endfor
 
-                <span class="ml-2 text-sm font-medium tracking-tighter text-black/70">42 penilaian</span>
+                <p class="ml-2 text-sm font-medium tracking-tighter text-black/70">
+                    <span class="mr-1">{{ $totalReviewCount }}</span>
+                    penilaian
+                </p>
             </div>
             <p class="mb-4 inline-flex items-center gap-4">
                 @if ($priceDiscount)
@@ -397,7 +428,7 @@ new class extends Component {
                     <x-slot name="title">
                         <h3 class="text-lg tracking-tight text-black lg:text-xl">Spesifikasi Produk</h3>
                     </x-slot>
-                    <dl class="grid grid-cols-2 gap-y-2 pb-4">
+                    <dl class="grid grid-cols-2 gap-2 pb-4">
                         <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">Stok:</dt>
                         <dl
                             wire:loading.remove
@@ -618,18 +649,11 @@ new class extends Component {
         <h3 class="mb-4 text-lg font-semibold tracking-tight text-black lg:text-xl">Penilaian dan Ulasan Produk</h3>
         <section class="flex flex-col-reverse gap-6 lg:flex-row">
             <section class="w-full lg:w-3/4">
-                <div class="mb-2 flex items-center justify-between gap-x-4 lg:justify-start">
-                    <x-form.input-label for="sort-by" value="Urutkan Berdasarkan" :required="false" />
-                    <select name="sort-by" id="sort-by" class="text-sm tracking-tight text-black">
-                        <option value="newest" class="text-sm tracking-tight text-black" selected>
-                            Penilaian Terbaru
-                        </option>
-                        <option value="highest" class="text-sm tracking-tight text-black">Rating Tertinggi</option>
-                        <option value="lowest" class="text-sm tracking-tight text-black">Rating Terendah</option>
-                    </select>
-                </div>
-                @for ($i = 0; $i < 5; $i++)
-                    <article class="flex flex-row items-start gap-x-2 border-b border-neutral-300 py-4">
+                @forelse ($reviews->take(5) as $review)
+                    <article
+                        wire:key="{{ $review->id }}"
+                        class="flex flex-row items-start gap-x-2 border-b border-neutral-300 py-4"
+                    >
                         <svg
                             class="size-10 text-black opacity-20"
                             xmlns="http://www.w3.org/2000/svg"
@@ -645,16 +669,16 @@ new class extends Component {
                         </svg>
                         <div class="w-full">
                             <div class="flex flex-row items-center justify-between gap-x-2">
-                                <p class="text-sm font-medium tracking-tight text-black">Nama Pengguna</p>
+                                <p class="text-sm font-medium tracking-tight text-black">{{ $review->user->name }}</p>
                                 <time
                                     class="text-sm font-medium tracking-tight text-black/50"
                                     datetime="2024-11-24 20:00"
                                 >
-                                    1 hari yang lalu
+                                    {{ $review->created_at->diffForHumans() }}
                                 </time>
                             </div>
                             <div class="mt-1 inline-flex items-center gap-x-0.5" aria-labelledby="product-rating">
-                                @for ($j = 1; $j < 5; $j++)
+                                @for ($i = 0; $i < $review->rating; $i++)
                                     <svg
                                         class="size-3 text-yellow-500"
                                         xmlns="http://www.w3.org/2000/svg"
@@ -674,7 +698,7 @@ new class extends Component {
                                     </svg>
                                 @endfor
 
-                                @for ($j = 0 + 4; $j < 5; $j++)
+                                @for ($i = 0 + $review->rating; $i < 5; $i++)
                                     <svg
                                         class="size-3 text-black opacity-20"
                                         xmlns="http://www.w3.org/2000/svg"
@@ -694,92 +718,59 @@ new class extends Component {
                                     </svg>
                                 @endfor
 
-                                <p class="ml-2 text-sm tracking-tighter text-black/50">(5)</p>
-                                <p class="ml-4 text-sm tracking-tight text-black/50">Variasi Merah</p>
-                                <span class="sr-only">Penilaian: 5 dari 5 bintang</span>
+                                <p class="ml-2 text-sm tracking-tighter text-black/50">({{ $review->rating }})</p>
+
+                                @if ($review->productVariant->variant_sku)
+                                    <p class="ml-4 text-sm tracking-tight text-black/50">
+                                        Variasi
+                                        {{ ucwords($item->productVariant->combinations->first()->variationVariant->name) }}
+                                    </p>
+                                @endif
+
+                                <span class="sr-only">Penilaian: {{ $review->rating }} dari 5 bintang</span>
                             </div>
-                            <div class="mt-4">
-                                <p class="text-sm tracking-tight text-black">
-                                    Excellent running shoes. It turns very sharply on the foot!
-                                </p>
-                            </div>
-                            <div class="mt-4 flex items-center justify-end gap-x-2">
-                                <x-common.button
-                                    id="like-button"
-                                    variant="secondary"
-                                    class="!px-4 !py-2"
-                                    aria-label="Like"
-                                    aria-pressed="false"
-                                >
-                                    <svg
-                                        class="size-4 shrink-0"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                    >
-                                        <path d="M7 10v12" />
-                                        <path
-                                            d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2a3.13 3.13 0 0 1 3 3.88Z"
-                                        />
-                                    </svg>
-                                    <span class="text-sm" aria-live="polite">10</span>
-                                </x-common.button>
-                                <x-common.button
-                                    id="dislike-button"
-                                    variant="secondary"
-                                    class="!px-4 !py-2"
-                                    aria-label="Dislike"
-                                    aria-pressed="false"
-                                >
-                                    <svg
-                                        class="size-4 shrink-0"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                    >
-                                        <path d="M17 14V2" />
-                                        <path
-                                            d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22a3.13 3.13 0 0 1-3-3.88Z"
-                                        />
-                                    </svg>
-                                    <span class="text-sm" aria-live="polite">2</span>
-                                </x-common.button>
-                            </div>
+
+                            @if ($review->review)
+                                <div class="mt-4">
+                                    <p class="text-sm tracking-tight text-black">
+                                        {{ $review->review }}
+                                    </p>
+                                </div>
+                            @endif
                         </div>
                     </article>
-                @endfor
+                @empty
+                    <p class="py-4 text-base font-medium tracking-tight text-black">
+                        Belum ada penilaian dan ulasan untuk produk ini.
+                    </p>
+                @endforelse
 
-                <a
-                    href="#"
-                    class="flex items-center justify-center gap-x-4 border-b border-neutral-300 py-4 text-sm font-medium tracking-tight text-black transition-colors hover:bg-neutral-100"
-                >
-                    Lihat Seluruh Penilaian dan Ulasan Produk Ini
-                    <svg
-                        class="size-5"
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
+                @if ($reviews->count() > 5)
+                    <a
+                        href="#"
+                        class="flex items-center justify-center gap-x-4 border-b border-neutral-300 py-4 text-sm font-medium tracking-tight text-black transition-colors hover:bg-neutral-100"
+                        wire:navigate
                     >
-                        <path d="m9 18 6-6-6-6" />
-                    </svg>
-                </a>
+                        Lihat Seluruh Penilaian dan Ulasan Produk Ini
+                        <svg
+                            class="size-5"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path d="m9 18 6-6-6-6" />
+                        </svg>
+                    </a>
+                @endif
             </section>
             <aside class="relative h-full w-full lg:sticky lg:top-20 lg:w-1/4">
                 <div class="flex items-center gap-x-1">
-                    @for ($i = 1; $i < 5; $i++)
+                    @for ($i = 0; $i < $averageRating; $i++)
                         <svg
                             class="size-6 text-yellow-500"
                             xmlns="http://www.w3.org/2000/svg"
@@ -799,7 +790,7 @@ new class extends Component {
                         </svg>
                     @endfor
 
-                    @for ($i = 0 + 4; $i < 5; $i++)
+                    @for ($i = 0 + $averageRating; $i < 5; $i++)
                         <svg
                             class="size-6 text-black opacity-20"
                             xmlns="http://www.w3.org/2000/svg"
@@ -819,76 +810,35 @@ new class extends Component {
                         </svg>
                     @endfor
 
-                    <p class="ml-auto text-xl font-semibold tracking-tighter text-black">4.0</p>
-                    <span class="sr-only">Penilaian: 4.0 dari 5 bintang</span>
+                    <p class="ml-auto text-xl font-semibold tracking-tighter text-black">
+                        {{ $averageRating . '.0' }}
+                    </p>
+                    <span class="sr-only">Penilaian: {{ $averageRating . '.0' }} dari 5 bintang</span>
                 </div>
                 <hr class="my-4 border-neutral-300" />
                 <div class="flex flex-col gap-y-1">
-                    <div class="flex items-center gap-x-2">
-                        <span class="w-4 text-center text-base font-medium tracking-tighter text-black/50">5</span>
-                        <div
-                            class="h-2 flex-grow overflow-hidden rounded-full bg-black/10"
-                            role="progressbar"
-                            aria-valuemin="0"
-                            aria-valuemax="100"
-                            aria-valuenow="65"
-                        >
-                            <div class="h-full rounded-full bg-primary" style="width: 65%"></div>
+                    @foreach ($reviewCountByRating as $rating => $count)
+                        <div class="flex items-center gap-x-2">
+                            <span class="w-4 text-center text-base font-medium tracking-tighter text-black/50">
+                                {{ $rating }}
+                            </span>
+                            <div
+                                class="h-2 flex-grow overflow-hidden rounded-full bg-black/10"
+                                role="progressbar"
+                                aria-valuemin="0"
+                                aria-valuemax="100"
+                                aria-valuenow="{{ round($reviewPercentageByRating[$rating]) }}"
+                            >
+                                <div
+                                    class="h-full rounded-full bg-primary"
+                                    style="width: {{ round($reviewPercentageByRating[$rating]) }}%"
+                                ></div>
+                            </div>
+                            <span class="w-8 text-end text-base font-medium tracking-tighter text-black">
+                                {{ $count }}
+                            </span>
                         </div>
-                        <span class="w-8 text-end text-base font-medium tracking-tighter text-black">99+</span>
-                    </div>
-                    <div class="flex items-center gap-x-2">
-                        <span class="w-4 text-center text-base font-medium tracking-tighter text-black/50">4</span>
-                        <div
-                            class="h-2 flex-grow overflow-hidden rounded-full bg-black/10"
-                            role="progressbar"
-                            aria-valuemin="0"
-                            aria-valuemax="100"
-                            aria-valuenow="42"
-                        >
-                            <div class="h-full rounded-full bg-primary" style="width: 42%"></div>
-                        </div>
-                        <span class="w-8 text-end text-base font-medium tracking-tighter text-black">14</span>
-                    </div>
-                    <div class="flex items-center gap-x-2">
-                        <span class="w-4 text-center text-base font-medium tracking-tighter text-black/50">3</span>
-                        <div
-                            class="h-2 flex-grow overflow-hidden rounded-full bg-black/10"
-                            role="progressbar"
-                            aria-valuemin="0"
-                            aria-valuemax="100"
-                            aria-valuenow="30"
-                        >
-                            <div class="h-full rounded-full bg-primary" style="width: 30%"></div>
-                        </div>
-                        <span class="w-8 text-end text-base font-medium tracking-tighter text-black">8</span>
-                    </div>
-                    <div class="flex items-center gap-x-2">
-                        <span class="w-4 text-center text-base font-medium tracking-tighter text-black/50">2</span>
-                        <div
-                            class="h-2 flex-grow overflow-hidden rounded-full bg-black/10"
-                            role="progressbar"
-                            aria-valuemin="0"
-                            aria-valuemax="100"
-                            aria-valuenow="25"
-                        >
-                            <div class="h-full rounded-full bg-primary" style="width: 25%"></div>
-                        </div>
-                        <span class="w-8 text-end text-base font-medium tracking-tighter text-black">5</span>
-                    </div>
-                    <div class="flex items-center gap-x-2">
-                        <span class="w-4 text-center text-base font-medium tracking-tighter text-black/50">1</span>
-                        <div
-                            class="h-2 flex-grow overflow-hidden rounded-full bg-black/10"
-                            role="progressbar"
-                            aria-valuemin="0"
-                            aria-valuemax="100"
-                            aria-valuenow="10"
-                        >
-                            <div class="h-full rounded-full bg-primary" style="width: 10%"></div>
-                        </div>
-                        <span class="w-8 text-end text-base font-medium tracking-tighter text-black">2</span>
-                    </div>
+                    @endforeach
                 </div>
             </aside>
         </section>
