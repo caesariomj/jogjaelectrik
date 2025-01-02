@@ -84,6 +84,11 @@ class Product extends Model
         return $this->hasManyThrough(OrderDetail::class, ProductVariant::class, 'product_id', 'product_variant_id', 'id', 'id');
     }
 
+    public function reviews(): HasManyThrough
+    {
+        return $this->hasManyThrough(ProductReview::class, ProductVariant::class, 'product_id', 'product_variant_id', 'id', 'id');
+    }
+
     /**
      * Product-related functions.
      */
