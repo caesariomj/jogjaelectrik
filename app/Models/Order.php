@@ -102,6 +102,11 @@ class Order extends Model
         return 'ORDR-'.$date.'-'.$shortUuid;
     }
 
+    public function hasBeenReviewed()
+    {
+        return $this->details()->whereHas('productReview')->exists();
+    }
+
     /**
      * The "booted" method of the model.
      */
