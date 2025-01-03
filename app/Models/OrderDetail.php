@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class OrderDetail extends Model
 {
@@ -48,5 +49,10 @@ class OrderDetail extends Model
     public function productVariant(): BelongsTo
     {
         return $this->belongsTo(ProductVariant::class);
+    }
+
+    public function productReviews(): HasMany
+    {
+        return $this->hasMany(ProductReview::class);
     }
 }
