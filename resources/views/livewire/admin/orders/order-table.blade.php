@@ -66,6 +66,7 @@ new class extends Component {
 
     public string $shipmentTrackingNumber = '';
     public string $cancelationReason = '';
+    public string $otherCancelationReason = '';
 
     public function mount()
     {
@@ -148,9 +149,14 @@ new class extends Component {
 
     public function shipOrder()
     {
-        $validated = $this->validate([
-            'shipmentTrackingNumber' => 'required|string|min:5|max:50',
-        ]);
+        $validated = $this->validate(
+            rules: [
+                'shipmentTrackingNumber' => 'required|string|min:5|max:50',
+            ],
+            attributes: [
+                'shipmentTrackingNumber' => 'Nomor resi pengiriman',
+            ],
+        );
 
         $order = $this->order;
 
@@ -187,14 +193,21 @@ new class extends Component {
             return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         }
 
-        $this->dispatch('open-modal', 'confirm-order-cancelation-' . $this->order->id);
+        $this->dispatch('open-modal', 'confirm-order-cancellation-' . $this->order->id);
     }
 
     public function cancelOrder()
     {
-        $validated = $this->validate([
-            'cancelationReason' => 'required|string',
-        ]);
+        $validated = $this->validate(
+            rules: [
+                'cancelationReason' => 'required|string|max:255',
+                'otherCancelationReason' => 'nullable|required_if:cancelationReason,alasan_lainnya|string|max:255',
+            ],
+            attributes: [
+                'cancelationReason' => 'Alasan pembatalan',
+                'otherCancelationReason' => 'Alasan pembatalan lainnya',
+            ],
+        );
 
         $order = $this->order;
 
@@ -300,6 +313,7 @@ new class extends Component {
                     type="text"
                     role="combobox"
                     placeholder="Cari data pesanan berdasarkan nomor pesanan..."
+                    autocomplete="off"
                 />
                 <div
                     wire:loading
@@ -433,7 +447,7 @@ new class extends Component {
             <article
                 class="relative rounded-lg border border-neutral-300 shadow-sm"
                 wire:loading.class="opacity-50"
-                wire:target="status"
+                wire:target="status, search, resetSearch"
             >
                 <header class="mb-4 border-b border-neutral-300 p-4">
                     <div class="flex flex-col gap-2">
@@ -526,19 +540,19 @@ new class extends Component {
                                             <time
                                                 datetime="{{ $order->created_at->addDays($order->estimated_shipping_min_days) }}"
                                             >
-                                                {{ formatTimestamp($order->created_at->addDays($order->estimated_shipping_min_days)) }}
+                                                {{ formatDate($order->created_at->addDays($order->estimated_shipping_min_days)) }}
                                             </time>
                                         @else
                                             <time
                                                 datetime="{{ $order->created_at->addDays($order->estimated_shipping_min_days) }}"
                                             >
-                                                {{ formatTimestamp($order->created_at->addDays($order->estimated_shipping_min_days)) }}
+                                                {{ formatDate($order->created_at->addDays($order->estimated_shipping_min_days)) }}
                                             </time>
                                             &mdash;
                                             <time
                                                 datetime="{{ $order->created_at->addDays($order->estimated_shipping_max_days) }}"
                                             >
-                                                {{ formatTimestamp($order->created_at->addDays($order->estimated_shipping_max_days)) }}
+                                                {{ formatDate($order->created_at->addDays($order->estimated_shipping_max_days)) }}
                                             </time>
                                         @endif
                                     </p>
@@ -820,12 +834,13 @@ new class extends Component {
                                 />
                             </p>
                         </div>
-                        <div class="inline-flex flex-col items-center gap-2 md:flex-row">
+                        <div class="inline-flex w-full flex-col items-center gap-2 md:w-fit md:flex-row">
                             <x-common.button
                                 :href="route('admin.orders.show', ['orderNumber' => $order->order_number])"
                                 variant="secondary"
                                 class="w-full md:w-fit"
                                 aria-label="Lihat detail pesanan"
+                                wire:navigate
                             >
                                 Detail Pesanan
                             </x-common.button>
@@ -843,7 +858,7 @@ new class extends Component {
                                         Batalkan Pesanan
                                     </x-common.button>
                                     <x-common.modal
-                                        name="confirm-order-cancelation-{{ $order->id }}"
+                                        name="confirm-order-cancellation-{{ $order->id }}"
                                         :show="$errors->isNotEmpty()"
                                         focusable
                                     >
@@ -887,7 +902,7 @@ new class extends Component {
                                                 </a>
                                                 .
                                             </p>
-                                            <div class="mb-8 flex w-full flex-col items-start">
+                                            <div class="flex w-full flex-col items-start">
                                                 <x-form.input-label value="Alasan Pembatalan" for="reason" />
                                                 <select
                                                     wire:model.lazy="cancelationReason"
@@ -927,13 +942,34 @@ new class extends Component {
                                                             Kesalahan harga pada produk
                                                         </option>
                                                     </optgroup>
+                                                    <optgroup label="Alasan lainnya">
+                                                        <option value="alasan_lainnya">Alasan lainnya</option>
+                                                    </optgroup>
                                                 </select>
                                                 <x-form.input-error
                                                     :messages="$errors->get('cancelationReason')"
                                                     class="mt-2"
                                                 />
                                             </div>
-                                            <div class="flex justify-end gap-4">
+                                            @if ($cancelationReason === 'alasan_lainnya')
+                                                <div class="mt-4">
+                                                    <x-form.input-label value="Alasan Lainnya" for="other-reason" />
+                                                    <textarea
+                                                        wire:model.lazy="otherCancelationReason"
+                                                        name="other-reason"
+                                                        id="other-reason"
+                                                        class="mt-1 block w-full rounded-lg border-neutral-300 px-4 py-3 pe-9 text-sm focus:border-primary focus:ring-primary"
+                                                        placeholder="Masukkan alasan lainnya..."
+                                                        required
+                                                    ></textarea>
+                                                    <x-form.input-error
+                                                        :messages="$errors->get('otherCancelationReason')"
+                                                        class="mt-2"
+                                                    />
+                                                </div>
+                                            @endif
+
+                                            <div class="mt-8 flex justify-end gap-4">
                                                 <x-common.button variant="secondary" x-on:click="$dispatch('close')">
                                                     Batal
                                                 </x-common.button>
@@ -1134,7 +1170,7 @@ new class extends Component {
             <figure
                 class="flex h-full flex-col items-center justify-center"
                 wire:loading.class="opacity-50"
-                wire:target="status"
+                wire:target="status, search, resetSearch"
             >
                 <img
                     src="https://placehold.co/400"
@@ -1150,9 +1186,9 @@ new class extends Component {
                             @if ($status === 'waiting_payment')
                                 Menunggu Pembayaran
                             @elseif ($status === 'payment_received')
-                                Untuk Diproses
+                                Menunggu Diproses
                             @elseif ($status === 'processing')
-                                Untuk Dikirim
+                                Menunggu Dikirim
                             @elseif ($status === 'shipping')
                                 Dalam Pengiriman
                             @elseif ($status === 'completed')
@@ -1193,7 +1229,11 @@ new class extends Component {
                 </figcaption>
             </figure>
         @endforelse
-        <div class="absolute left-1/2 top-32 h-full -translate-x-1/2" wire:loading wire:target="status">
+        <div
+            class="absolute left-1/2 top-32 h-full -translate-x-1/2"
+            wire:loading
+            wire:target="status, search, resetSearch"
+        >
             <div
                 class="inline-block size-10 animate-spin rounded-full border-4 border-current border-t-transparent text-primary"
                 role="status"
