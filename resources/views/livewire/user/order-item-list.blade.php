@@ -147,18 +147,16 @@ new class extends Component {
             $this->authorize('cancel', $order);
 
             if (in_array($order->payment->status, ['paid', 'settled'])) {
-                $this->authorize('refund', $order->payment);
+                $this->authorize('create', Refund::class);
             }
 
             DB::transaction(function () use ($order, $validated) {
-                $order->update(['status' => 'canceled']);
-
                 if ($order->payment->status === 'unpaid') {
                     $order->payment->update([
                         'status' => 'expired',
                     ]);
 
-                    $this->paymentService->expireInvoice($order->payment->id);
+                    $this->paymentService->expireInvoice($order->id);
                 } elseif (in_array($order->payment->status, ['paid', 'settled'])) {
                     $order->payment->update([
                         'status' => 'refunded',
@@ -169,10 +167,16 @@ new class extends Component {
                     ]);
                 }
 
+                $cancelationReason = 'Dibatalkan oleh pelanggan: ';
+                if ($validated['otherCancelationReason'] !== '') {
+                    $cancelationReason .= strtolower($validated['otherCancelationReason']);
+                } else {
+                    $cancelationReason .= strtolower(str_replace('_', ' ', $validated['cancelationReason']));
+                }
+
                 $order->update([
                     'status' => 'canceled',
-                    'cancelation_reason' =>
-                        'Dibatalkan oleh pelanggan: ' . str_replace('_', ' ', $validated['cancelationReason']),
+                    'cancelation_reason' => $cancelationReason,
                 ]);
             });
 

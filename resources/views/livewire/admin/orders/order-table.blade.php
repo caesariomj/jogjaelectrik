@@ -225,10 +225,16 @@ new class extends Component {
                     ]);
                 }
 
+                $cancelationReason = 'Dibatalkan oleh admin: ';
+                if ($validated['otherCancelationReason'] !== '') {
+                    $cancelationReason .= strtolower($validated['otherCancelationReason']);
+                } else {
+                    $cancelationReason .= strtolower(str_replace('_', ' ', $validated['cancelationReason']));
+                }
+
                 $order->update([
                     'status' => 'canceled',
-                    'cancelation_reason' =>
-                        'Dibatalkan oleh admin: ' . str_replace('_', ' ', $validated['cancelationReason']),
+                    'cancelation_reason' => $cancelationReason,
                 ]);
             });
 
