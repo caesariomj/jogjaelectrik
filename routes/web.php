@@ -17,7 +17,7 @@ Volt::route('/produk', 'pages.products')->name('products');
 
 Route::get('/produk/{slug}', [HomeController::class, 'productDetail'])->name('products.detail');
 
-Route::post('/api/xendit/webhook', XenditWebhookController::class)->middleware(['ensure_post_method', 'validate_xendit_webhook_token', 'throttle:10,1']);
+Route::post('/api/xendit/webhook', XenditWebhookController::class)->middleware(['validate_xendit_webhook_token', 'throttle:10,1']);
 
 Route::match(['get', 'put', 'patch', 'delete', 'options'], '/api/xendit/webhook', function () {
     abort(404);
