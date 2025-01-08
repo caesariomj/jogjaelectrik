@@ -172,7 +172,7 @@
                             <dt class="w-full tracking-tight text-black/70 md:w-1/3">Link Pembayaran</dt>
                             <dd class="w-full md:w-2/3">
                                 <a
-                                    href="{{ $order->payment->invoice_url }}"
+                                    href="{{ $order->payment->xendit_invoice_url }}"
                                     class="inline-flex items-center gap-x-1 font-medium tracking-tight text-black underline transition-colors hover:text-primary"
                                 >
                                     Klik disini untuk mengakses link pembayaran

@@ -272,7 +272,7 @@ new class extends Component {
                 $invoice = $this->paymentService->createInvoice($order);
 
                 $order->payment()->create([
-                    'invoice_url' => $invoice['url'],
+                    'xendit_invoice_url' => $invoice['url'],
                 ]);
 
                 $invoiceUrl = $invoice['url'];

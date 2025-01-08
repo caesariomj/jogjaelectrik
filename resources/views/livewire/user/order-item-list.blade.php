@@ -156,7 +156,7 @@ new class extends Component {
                         'status' => 'expired',
                     ]);
 
-                    $this->paymentService->expireInvoice($order->id);
+                    $this->paymentService->expireInvoice($order->payment->xendit_invoice_id);
                 } elseif (in_array($order->payment->status, ['paid', 'settled'])) {
                     $order->payment->update([
                         'status' => 'refunded',
@@ -1019,7 +1019,7 @@ new class extends Component {
 
                             @if ($order->status === 'waiting_payment')
                                 <x-common.button
-                                    :href="$order->payment->invoice_url"
+                                    :href="$order->payment->xendit_invoice_url"
                                     variant="primary"
                                     class="w-full md:w-fit"
                                     aria-label="Bayar pesanan"
