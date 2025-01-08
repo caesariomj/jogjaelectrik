@@ -29,8 +29,6 @@ class XenditWebhookController extends Controller
 
             $order = Order::with('payment')->find($request->external_id);
 
-            return response()->json(['invoice' => $invoice], 200); // for debugging purpose
-
             if (! $order) {
                 return response()->json([
                     'success' => false,
@@ -73,6 +71,7 @@ class XenditWebhookController extends Controller
                 }
 
                 $order->payment->update([
+                    'xendit_invoice_id' => $invoice['id'],
                     'status' => strtolower($invoice['status']),
                     'method' => $paymentMethod,
                     'reference_number' => $referenceNumber ?? null,
@@ -80,6 +79,12 @@ class XenditWebhookController extends Controller
                 ]);
 
                 $message = 'Pembayaran pesanan dengan nomor: '.$order->order_number.' berhasil.';
+            } elseif ($invoice['status'] === 'SETTLED') {
+                $order->payment->update([
+                    'status' => strtolower($invoice['status']),
+                ]);
+
+                $message = 'Status pembayaran pesanan dengan nomor: '.$order->order_number.' telah settled.';
             } elseif ($invoice['status'] === 'EXPIRED') {
                 $order->update([
                     'status' => 'failed',
