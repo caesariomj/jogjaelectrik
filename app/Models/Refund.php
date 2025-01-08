@@ -27,7 +27,10 @@ class Refund extends Model
      */
     protected $fillable = [
         'payment_id',
+        'xendit_refund_id',
         'status',
+        'rejection_reason',
+        'approved_at',
         'succeeded_at',
     ];
 
