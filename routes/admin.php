@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DiscountController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Admin\SubcategoryController;
 use Illuminate\Support\Facades\Route;
 
@@ -14,6 +15,11 @@ Route::middleware(['auth', 'admin_page_access'])->prefix('admin')->name('admin.'
     Route::prefix('manajemen-pesanan')->name('orders.')->group(function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');
         Route::get('/{orderNumber}/detail', [OrderController::class, 'show'])->name('show');
+    });
+
+    Route::prefix('manajemen-refund')->name('refunds.')->group(function () {
+        Route::get('/', [RefundController::class, 'index'])->name('index');
+        Route::get('/{id}/detail', [RefundController::class, 'show'])->name('show');
     });
 
     Route::prefix('manajemen-produk')->name('products.')->group(function () {
