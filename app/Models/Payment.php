@@ -28,7 +28,8 @@ class Payment extends Model
      */
     protected $fillable = [
         'order_id',
-        'invoice_url',
+        'xendit_invoice_id',
+        'xendit_invoice_url',
         'method',
         'status',
         'reference_number',
