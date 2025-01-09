@@ -243,18 +243,22 @@
                                 @class([
                                     'inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium tracking-tight',
                                     'bg-yellow-100 text-yellow-800' => $order->payment->refund->status === 'pending',
-                                    'bg-teal-100 text-teal-800' => $order->payment->refund->status === 'succeeded',
-                                    'bg-red-100 text-red-800' => $order->payment->refund->status === 'failed',
+                                    'bg-teal-100 text-teal-800' => in_array($order->payment->refund->status, ['approved', 'succeeded']),
+                                    'bg-red-100 text-red-800' => in_array($order->payment->refund->status, ['failed', 'rejected']),
                                 ])
                                 role="status"
                             >
                                 <span class="mb-0.5">•</span>
                                 @if ($order->payment->refund->status === 'pending')
                                     Menunggu Diproses
+                                @elseif ($order->payment->refund->status === 'approved')
+                                    Disetujui
                                 @elseif ($order->payment->refund->status === 'succeeded')
                                     Berhasil
                                 @elseif ($order->payment->refund->status === 'failed')
                                     Gagal
+                                @elseif ($order->payment->refund->status === 'rejected')
+                                    Ditolak
                                 @endif
                             </span>
                         </dd>
