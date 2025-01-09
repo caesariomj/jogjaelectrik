@@ -23,6 +23,7 @@ class ProductResource extends JsonResource
             'price' => $this->base_price,
             'price_discount' => $this->base_price_discount,
             'thumbnail' => $thumbnail ? asset('storage/uploads/product-images/'.$thumbnail->file_name) : null,
+            'rating' => $this->reviews()->avg('rating') ?? 0,
         ];
     }
 }
