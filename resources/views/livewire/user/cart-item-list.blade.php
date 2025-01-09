@@ -1,8 +1,11 @@
 <?php
 
 use App\Models\Cart;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
@@ -83,32 +86,32 @@ new class extends Component {
 
             $this->calculateTotal();
             return;
-        } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
-            $errorMessage = $authException->getMessage();
+        } catch (AuthorizationException $e) {
+            $errorMessage = $e->getMessage();
 
-            if ($authException->getCode() === 401) {
+            if ($e->getCode() === 401) {
                 session()->flash('error', $errorMessage);
                 return $this->redirectRoute('login', navigate: true);
             }
 
             session()->flash('error', $errorMessage);
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Illuminate\Database\QueryException $queryException) {
-            \Illuminate\Support\Facades\Log::error('Database error during transaction', [
-                'error' => $queryException->getMessage(),
-                'trace' => $queryException->getTraceAsString(),
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during transaction', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\Log::error('Unexpected error occurred', [
-                'error' => $th->getMessage(),
-                'trace' => $th->getTraceAsString(),
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected error occurred', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('cart'), navigate: true);
         }
     }
 
@@ -151,32 +154,32 @@ new class extends Component {
 
             $this->calculateTotal();
             return;
-        } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
-            $errorMessage = $authException->getMessage();
+        } catch (AuthorizationException $e) {
+            $errorMessage = $e->getMessage();
 
-            if ($authException->getCode() === 401) {
+            if ($e->getCode() === 401) {
                 session()->flash('error', $errorMessage);
                 return $this->redirectRoute('login', navigate: true);
             }
 
             session()->flash('error', $errorMessage);
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Illuminate\Database\QueryException $queryException) {
-            \Illuminate\Support\Facades\Log::error('Database error during transaction', [
-                'error' => $queryException->getMessage(),
-                'trace' => $queryException->getTraceAsString(),
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during transaction', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\Log::error('Unexpected error occurred', [
-                'error' => $th->getMessage(),
-                'trace' => $th->getTraceAsString(),
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected error occurred', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('cart'), navigate: true);
         }
     }
 
@@ -205,32 +208,32 @@ new class extends Component {
 
             $this->calculateTotal();
             return;
-        } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
-            $errorMessage = $authException->getMessage();
+        } catch (AuthorizationException $e) {
+            $errorMessage = $e->getMessage();
 
-            if ($authException->getCode() === 401) {
+            if ($e->getCode() === 401) {
                 session()->flash('error', $errorMessage);
                 return $this->redirectRoute('login', navigate: true);
             }
 
             session()->flash('error', $errorMessage);
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Illuminate\Database\QueryException $queryException) {
-            \Illuminate\Support\Facades\Log::error('Database error during transaction', [
-                'error' => $queryException->getMessage(),
-                'trace' => $queryException->getTraceAsString(),
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during transaction', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\Log::error('Unexpected error occurred', [
-                'error' => $th->getMessage(),
-                'trace' => $th->getTraceAsString(),
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected error occurred', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('cart'), navigate: true);
         }
     }
 
@@ -238,14 +241,14 @@ new class extends Component {
     {
         if (! $this->cart) {
             session()->flash('error', 'Keranjang belanja anda kosong.');
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('cart'), navigate: true);
         }
 
         $existingCartItem = $this->items->find($cartItemId);
 
         if (! $existingCartItem) {
             session()->flash('error', 'Produk tidak ditemukan pada keranjang belanja anda.');
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('cart'), navigate: true);
         }
 
         try {
@@ -256,34 +259,34 @@ new class extends Component {
             });
 
             session()->flash('success', 'Produk berhasil dihapus dari keranjang belanja.');
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
-            $errorMessage = $authException->getMessage();
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (AuthorizationException $e) {
+            $errorMessage = $e->getMessage();
 
-            if ($authException->getCode() === 401) {
+            if ($e->getCode() === 401) {
                 session()->flash('error', $errorMessage);
                 return $this->redirectRoute('login', navigate: true);
             }
 
             session()->flash('error', $errorMessage);
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Illuminate\Database\QueryException $queryException) {
-            \Illuminate\Support\Facades\Log::error('Database error during transaction', [
-                'error' => $queryException->getMessage(),
-                'trace' => $queryException->getTraceAsString(),
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during transaction', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
 
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\Log::error('Unexpected error occurred', [
-                'error' => $th->getMessage(),
-                'trace' => $th->getTraceAsString(),
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected error occurred', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('cart'), navigate: true);
         }
     }
 
@@ -308,7 +311,7 @@ new class extends Component {
 
         $discount = \App\Models\Discount::findByCode($this->discountCode)
             ->active()
-            ->usable()
+            ->usable(auth()->id())
             ->first();
 
         if (! $discount) {
@@ -335,33 +338,34 @@ new class extends Component {
                 ]);
             });
 
-            return;
-        } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
-            $errorMessage = $authException->getMessage();
+            session()->flash('success', 'Diskon berhasil diterapkan.');
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (AuthorizationException $e) {
+            $errorMessage = $e->getMessage();
 
-            if ($authException->getCode() === 401) {
+            if ($e->getCode() === 401) {
                 session()->flash('error', $errorMessage);
                 return $this->redirectRoute('login', navigate: true);
             }
 
             session()->flash('error', $errorMessage);
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Illuminate\Database\QueryException $queryException) {
-            \Illuminate\Support\Facades\Log::error('Database error during transaction', [
-                'error' => $queryException->getMessage(),
-                'trace' => $queryException->getTraceAsString(),
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during transaction', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\Log::error('Unexpected error occurred', [
-                'error' => $th->getMessage(),
-                'trace' => $th->getTraceAsString(),
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected error occurred', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('cart'), navigate: true);
         }
     }
 
@@ -375,7 +379,7 @@ new class extends Component {
             $this->authorize('update', $this->cart);
 
             $this->discountCode = null;
-            $this->discountAmount = null;
+            $this->discountAmount = 0;
 
             DB::transaction(function () {
                 $this->cart->update([
@@ -383,33 +387,34 @@ new class extends Component {
                 ]);
             });
 
-            return;
-        } catch (\Illuminate\Auth\Access\AuthorizationException $authException) {
-            $errorMessage = $authException->getMessage();
+            session()->flash('success', 'Penggunaan diskon berhasil dibatalkan.');
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (AuthorizationException $e) {
+            $errorMessage = $e->getMessage();
 
-            if ($authException->getCode() === 401) {
+            if ($e->getCode() === 401) {
                 session()->flash('error', $errorMessage);
                 return $this->redirectRoute('login', navigate: true);
             }
 
             session()->flash('error', $errorMessage);
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Illuminate\Database\QueryException $queryException) {
-            \Illuminate\Support\Facades\Log::error('Database error during transaction', [
-                'error' => $queryException->getMessage(),
-                'trace' => $queryException->getTraceAsString(),
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database error during transaction', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan pada sistem. Silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
-        } catch (\Throwable $th) {
-            \Illuminate\Support\Facades\Log::error('Unexpected error occurred', [
-                'error' => $th->getMessage(),
-                'trace' => $th->getTraceAsString(),
+            return $this->redirectIntended(route('cart'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected error occurred', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
             ]);
 
             session('error', 'Terjadi kesalahan tak terduga. Silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirectIntended(route('cart'), navigate: true);
         }
     }
 }; ?>
@@ -914,6 +919,183 @@ new class extends Component {
                                         <path d="m9 18 6-6-6-6" />
                                     </svg>
                                 </x-common.button>
+                                <template x-teleport="body">
+                                    <x-common.modal name="discount-selection" :show="$errors->isNotEmpty()" focusable>
+                                        <div class="p-4">
+                                            <h2 class="mb-2 !text-2xl leading-none text-black">Diskon</h2>
+                                            @if ($this->discounts->count() > 0)
+                                                <p class="tracking-tight text-black">
+                                                    Silakan pilih salah satu dari diskon yang tersedia di bawah ini.
+                                                </p>
+                                                <hr class="my-4 border-neutral-300" />
+                                                <ul
+                                                    class="flex h-full max-h-[28rem] w-full flex-col gap-y-2 overflow-y-auto"
+                                                >
+                                                    @foreach ($this->discounts as $discount)
+                                                        <li wire:key="{{ $discount->id }}">
+                                                            <input
+                                                                wire:model.lazy="discountCode"
+                                                                id="discount-{{ $discount->code }}"
+                                                                name="discount-code"
+                                                                type="radio"
+                                                                value="{{ $discount->code }}"
+                                                                class="peer hidden"
+                                                                @checked($discountCode === $discount->code)
+                                                                @disabled($totalPrice < $discount->minimum_purchase)
+                                                            />
+                                                            <label
+                                                                for="discount-{{ $discount->code }}"
+                                                                @class([
+                                                                    'inline-flex w-full cursor-pointer flex-col items-start rounded-lg border p-4 peer-checked:border-primary peer-checked:bg-primary-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-disabled:hover:bg-white',
+                                                                    'border-neutral-300 bg-white hover:bg-neutral-100' => $discountCode !== $discount->code,
+                                                                    'border-primary bg-primary-50' => $discountCode === $discount->code,
+                                                                ])
+                                                                class=""
+                                                                wire:target="discountCode, cancelDiscountUsage"
+                                                                wire:loading.class="opacity-50 !cursor-not-allowed"
+                                                            >
+                                                                <p
+                                                                    class="mb-2 inline-flex w-full items-center gap-x-2 text-lg font-semibold tracking-tight text-black"
+                                                                >
+                                                                    <svg
+                                                                        class="size-5 shrink-0"
+                                                                        xmlns="http://www.w3.org/2000/svg"
+                                                                        viewBox="0 0 24 24"
+                                                                        fill="none"
+                                                                        stroke="currentColor"
+                                                                        stroke-width="2"
+                                                                        stroke-linecap="round"
+                                                                        stroke-linejoin="round"
+                                                                        aria-hidden="true"
+                                                                    >
+                                                                        <path
+                                                                            d="M2 9a3 3 0 1 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 1 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"
+                                                                        />
+                                                                        <path d="M9 9h.01" />
+                                                                        <path d="m15 9-6 6" />
+                                                                        <path d="M15 15h.01" />
+                                                                    </svg>
+                                                                    {{ ucwords($discount->name) }}
+                                                                    @if ($discountCode === $discount->code)
+                                                                        <svg
+                                                                            class="ml-auto size-5 shrink-0 fill-primary stroke-primary-50"
+                                                                            xmlns="http://www.w3.org/2000/svg"
+                                                                            width="24"
+                                                                            height="24"
+                                                                            viewBox="0 0 24 24"
+                                                                            fill="currentColor"
+                                                                            stroke="currentColor"
+                                                                            stroke-width="2"
+                                                                            stroke-linecap="round"
+                                                                            stroke-linejoin="round"
+                                                                        >
+                                                                            <circle cx="12" cy="12" r="10" />
+                                                                            <path d="m9 12 2 2 4-4" />
+                                                                        </svg>
+                                                                    @endif
+                                                                </p>
+                                                                <p class="text-base tracking-tight text-black">
+                                                                    Diskon sebesar
+                                                                    <span class="mx-1 font-medium text-teal-500">
+                                                                        {{ $discount->type === 'percentage' ? number_format($discount->value, 0) . '%' : 'Rp' . formatPrice($discount->value) }}
+                                                                    </span>
+                                                                    untuk pembelian minimal
+                                                                    <span class="ms-1 font-medium">
+                                                                        Rp
+                                                                        {{ formatPrice($discount->minimum_purchase) }}
+                                                                    </span>
+                                                                </p>
+                                                                @if ($discount->type === 'percentage' && $discount->max_discount_amount)
+                                                                    <div class="inline-flex gap-2">
+                                                                        <p
+                                                                            class="mt-1 text-sm font-medium tracking-tight text-black"
+                                                                        >
+                                                                            (Maksimal potongan diskon: Rp
+                                                                            {{ formatPrice($discount->max_discount_amount) }})
+                                                                        </p>
+                                                                        <x-common.tooltip
+                                                                            id="maximum-discount-off-information"
+                                                                            class="z-[3] w-[28rem]"
+                                                                            text="Maksimal potongan diskon berlaku sesuai dengan ketentuan. Diskon akan dibatasi agar tidak melebihi jumlah yang ditentukan."
+                                                                        />
+                                                                    </div>
+                                                                @endif
+
+                                                                <p
+                                                                    class="ml-auto mt-4 text-sm tracking-tight text-black/70"
+                                                                >
+                                                                    @if ($discount->start_date && $discount->end_date)
+                                                                        Diskon berlaku dari
+                                                                        <time datetime="{{ $discount->start_date }}">
+                                                                            {{ formatDate($discount->start_date) }}
+                                                                        </time>
+                                                                        -
+                                                                        <time datetime="{{ $discount->end_date }}">
+                                                                            {{ formatDate($discount->end_date) }}
+                                                                        </time>
+                                                                    @else
+                                                                            Diskon berlaku tanpa batas waktu.
+                                                                    @endif
+                                                                </p>
+                                                            </label>
+                                                        </li>
+                                                    @endforeach
+                                                </ul>
+                                                <x-form.input-error
+                                                    :messages="$errors->get('discountCode')"
+                                                    class="mt-2"
+                                                />
+                                                <x-common.button
+                                                    variant="secondary"
+                                                    class="mt-4 w-full"
+                                                    wire:click="cancelDiscountUsage"
+                                                    wire:loading.class="opacity-50 !cursor-not-allowed"
+                                                    wire:target="discountCode, cancelDiscountUsage"
+                                                    :disabled="!$discountCode"
+                                                >
+                                                    <span
+                                                        wire:loading.remove
+                                                        wire:target="discountCode, cancelDiscountUsage"
+                                                    >
+                                                        Batalkan Penggunaan Diskon
+                                                    </span>
+                                                    <span
+                                                        wire:loading.flex
+                                                        wire:target="discountCode, cancelDiscountUsage"
+                                                        class="items-center gap-x-2"
+                                                    >
+                                                        <div
+                                                            class="inline-block size-4 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
+                                                            role="status"
+                                                            aria-label="loading"
+                                                        >
+                                                            <span class="sr-only">Sedang diproses...</span>
+                                                        </div>
+                                                        Sedang diproses...
+                                                    </span>
+                                                </x-common.button>
+                                            @else
+                                                <figure class="flex h-full flex-col items-center justify-center">
+                                                    <img
+                                                        src="https://placehold.co/400"
+                                                        class="mb-6 size-72 object-cover"
+                                                        alt="Gambar ilustrasi diskon tidak ditemukan"
+                                                    />
+                                                    <figcaption class="flex flex-col items-center">
+                                                        <h2 class="mb-3 text-center !text-2xl text-black">
+                                                            Diskon Tidak Ditemukan
+                                                        </h2>
+                                                        <p
+                                                            class="mb-8 text-center text-base font-normal tracking-tight text-black/70"
+                                                        >
+                                                            Saat ini, Anda tidak memiliki diskon yang dapat digunakan.
+                                                        </p>
+                                                    </figcaption>
+                                                </figure>
+                                            @endif
+                                        </div>
+                                    </x-common.modal>
+                                </template>
                             @endcan
 
                             <hr class="my-4 border-neutral-300" />
@@ -980,135 +1162,4 @@ new class extends Component {
             @endif
         </div>
     @endif
-    @can('apply discounts')
-        <x-common.modal name="discount-selection" :show="$errors->isNotEmpty()" focusable>
-            <div class="p-4">
-                <h2 class="mb-2 !text-2xl leading-none text-black">Diskon</h2>
-                @if ($this->discounts->count() > 0)
-                    <p class="tracking-tight text-black">
-                        Silakan pilih salah satu dari diskon yang tersedia di bawah ini.
-                    </p>
-                    <hr class="my-4 border-neutral-300" />
-                    <ul class="flex h-full max-h-[28rem] w-full flex-col gap-y-2 overflow-y-auto">
-                        @foreach ($this->discounts as $discount)
-                            <li wire:key="{{ $discount->id }}">
-                                <input
-                                    wire:model.lazy="discountCode"
-                                    id="discount-{{ $discount->code }}"
-                                    name="discount-code"
-                                    type="radio"
-                                    value="{{ $discount->code }}"
-                                    class="peer hidden"
-                                    @checked($discountCode === $discount->code)
-                                    @disabled($totalPrice < $discount->minimum_purchase)
-                                />
-                                <label
-                                    for="discount-{{ $discount->code }}"
-                                    @class([
-                                        'inline-flex w-full cursor-pointer flex-col items-start rounded-lg border p-4 peer-checked:border-primary peer-checked:bg-primary-50 peer-disabled:cursor-not-allowed peer-disabled:opacity-50 peer-disabled:hover:bg-white',
-                                        'border-neutral-300 bg-white hover:bg-neutral-100' => $discountCode !== $discount->code,
-                                        'border-primary bg-primary-50' => $discountCode === $discount->code,
-                                    ])
-                                    class=""
-                                    wire:target="discountCode, cancelDiscountUsage"
-                                    wire:loading.class="opacity-50 !cursor-not-allowed"
-                                >
-                                    <p
-                                        class="mb-2 inline-flex w-full items-center gap-x-2 text-lg font-semibold tracking-tight text-black"
-                                    >
-                                        <svg
-                                            class="size-5 shrink-0"
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            stroke-width="2"
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            aria-hidden="true"
-                                        >
-                                            <path
-                                                d="M2 9a3 3 0 1 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 1 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2Z"
-                                            />
-                                            <path d="M9 9h.01" />
-                                            <path d="m15 9-6 6" />
-                                            <path d="M15 15h.01" />
-                                        </svg>
-                                        {{ ucwords($discount->name) }}
-                                        @if ($discountCode === $discount->code)
-                                            <svg
-                                                class="ml-auto size-5 shrink-0 fill-primary stroke-primary-50"
-                                                xmlns="http://www.w3.org/2000/svg"
-                                                width="24"
-                                                height="24"
-                                                viewBox="0 0 24 24"
-                                                fill="currentColor"
-                                                stroke="currentColor"
-                                                stroke-width="2"
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                            >
-                                                <circle cx="12" cy="12" r="10" />
-                                                <path d="m9 12 2 2 4-4" />
-                                            </svg>
-                                        @endif
-                                    </p>
-                                    <p class="mb-4 text-base tracking-tight text-black">
-                                        Diskon sebesar
-                                        <span class="mx-1 font-medium text-teal-500">
-                                            {{ $discount->type === 'percentage' ? number_format($discount->value, 0) . '%' : 'Rp' . formatPrice($discount->value) }}
-                                        </span>
-                                        untuk pembelian minimal
-                                        <span class="ms-1 font-medium">
-                                            Rp
-                                            {{ formatPrice($discount->minimum_purchase) }}
-                                        </span>
-                                    </p>
-                                    <p class="ml-auto text-sm tracking-tight text-black/70">
-                                        @if ($discount->start_date && $discount->end_date)
-                                            Diskon berlaku dari
-                                            <time datetime="{{ $discount->start_date }}">
-                                                {{ formatDate($discount->start_date) }}
-                                            </time>
-                                            hingga
-                                            <time datetime="{{ $discount->end_date }}">
-                                                {{ formatDate($discount->end_date) }}
-                                            </time>
-                                        @else
-                                                Diskon berlaku tanpa batas waktu.
-                                        @endif
-                                    </p>
-                                </label>
-                            </li>
-                        @endforeach
-                    </ul>
-                    <x-form.input-error :messages="$errors->get('discountCode')" class="mt-2" />
-                    <x-common.button
-                        variant="secondary"
-                        class="mt-4 w-full"
-                        x-on:click="$wire.cancelDiscountUsage()"
-                        wire:target="discountCode, cancelDiscountUsage"
-                        wire:loading.class="opacity-50 !cursor-not-allowed"
-                        :disabled="!$discountCode"
-                    >
-                        Batalkan Penggunaan Diskon
-                    </x-common.button>
-                @else
-                    <figure class="flex h-full flex-col items-center justify-center">
-                        <img
-                            src="https://placehold.co/400"
-                            class="mb-6 size-72 object-cover"
-                            alt="Gambar ilustrasi diskon tidak ditemukan"
-                        />
-                        <figcaption class="flex flex-col items-center">
-                            <h2 class="mb-3 text-center !text-2xl text-black">Diskon Tidak Ditemukan</h2>
-                            <p class="mb-8 text-center text-base font-normal tracking-tight text-black/70">
-                                Saat ini, Anda tidak memiliki diskon yang dapat digunakan.
-                            </p>
-                        </figcaption>
-                    </figure>
-                @endif
-            </div>
-        </x-common.modal>
-    @endcan
 </div>
