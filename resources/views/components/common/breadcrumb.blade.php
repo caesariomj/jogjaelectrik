@@ -26,10 +26,17 @@
             $path .= '/' . $segment;
 
             if ($key == 1 && preg_match('/^manajemen-[\w-]+$/', $segments[0]) && ! in_array($segment, ['tambah', 'ubah', 'edit'])) {
-                $breadcrumbs[] = [
-                    'name' => ucwords(str_replace('-', ' ', $segment)),
-                    'url' => url('/admin' . $path . '/detail'),
-                ];
+                if (! in_array(str_replace('manajemen-', '', $segments[0]), ['produk', 'kategori', 'subkategori', 'diskon'])) {
+                    $breadcrumbs[] = [
+                        'name' => ucwords($segment),
+                        'url' => url('/admin' . $path . '/detail'),
+                    ];
+                } else {
+                    $breadcrumbs[] = [
+                        'name' => ucwords(str_replace('-', ' ', $segment)),
+                        'url' => url('/admin' . $path . '/detail'),
+                    ];
+                }
             } else {
                 $breadcrumbs[] = [
                     'name' => ucwords(str_replace('-', ' ', $segment)),
@@ -38,13 +45,20 @@
             }
         }
     } else {
-        foreach ($segments as $segment) {
+        foreach ($segments as $key => $segment) {
             $path .= '/' . $segment;
 
-            $breadcrumbs[] = [
-                'name' => ucwords(str_replace('-', ' ', $segment)),
-                'url' => url($path),
-            ];
+            if ($key == 1 && in_array(str_replace('-saya', '', $segments[0]), ['pesanan', 'riwayat-transaksi'])) {
+                $breadcrumbs[] = [
+                    'name' => ucwords($segment),
+                    'url' => url($path . '/detail'),
+                ];
+            } else {
+                $breadcrumbs[] = [
+                    'name' => ucwords(str_replace('-', ' ', $segment)),
+                    'url' => url($path),
+                ];
+            }
         }
     }
 @endphp
