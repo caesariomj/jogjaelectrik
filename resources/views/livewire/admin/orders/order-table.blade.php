@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Order;
+use App\Services\DocumentService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -13,6 +14,8 @@ use Livewire\WithPagination;
 
 new class extends Component {
     use WithPagination;
+
+    protected DocumentService $documentService;
 
     public Order $order;
 
@@ -68,6 +71,11 @@ new class extends Component {
     public string $cancelationReason = '';
     public string $otherCancelationReason = '';
 
+    public function boot(DocumentService $documentService)
+    {
+        $this->documentService = $documentService;
+    }
+
     public function mount()
     {
         $this->status = 'all';
@@ -101,6 +109,18 @@ new class extends Component {
     public function resetSearch()
     {
         $this->reset('search');
+    }
+
+    public function downloadInvoice(string $id)
+    {
+        $order = Order::find($id);
+
+        if (! $order) {
+            session()->flash('error', 'Pesanan tidak dapat ditemukan.');
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        }
+
+        return $this->documentService->generateInvoice($order);
     }
 
     public function processOrder(string $id)
@@ -616,23 +636,27 @@ new class extends Component {
                                 </button>
                             </x-slot>
                             <x-slot name="content">
-                                <x-common.dropdown-link href="#" x-on:click="event.stopPropagation()" wire:navigate>
+                                <x-common.dropdown-link
+                                    x-on:click.prevent.stop="$wire.downloadInvoice('{{ $order->id }}')"
+                                    wire:loading.class="!pointers-event-none !cursor-wait opacity-50"
+                                    wire:target="downloadInvoice('{{ $order->id }}')"
+                                >
                                     <svg
                                         class="size-4 shrink-0"
                                         xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
                                         viewBox="0 0 24 24"
-                                        stroke-width="1.8"
+                                        fill="none"
                                         stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
                                         aria-hidden="true"
                                     >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0 1 10.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0 .229 2.523a1.125 1.125 0 0 1-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0 0 21 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 0 0-1.913-.247M6.34 18H5.25A2.25 2.25 0 0 1 3 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 0 1 1.913-.247m10.5 0a48.536 48.536 0 0 0-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5Zm-3 0h.008v.008H15V10.5Z"
-                                        />
+                                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                        <polyline points="7 10 12 15 17 10" />
+                                        <line x1="12" x2="12" y1="15" y2="3" />
                                     </svg>
-                                    Cetak Invoice
+                                    Unduh Invoice
                                 </x-common.dropdown-link>
                                 <x-common.dropdown-link href="#" x-on:click="event.stopPropagation()" wire:navigate>
                                     <svg

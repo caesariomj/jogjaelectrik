@@ -3,6 +3,7 @@
 use App\Models\Order;
 use App\Models\ProductReview;
 use App\Models\Refund;
+use App\Services\DocumentService;
 use App\Services\PaymentService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
@@ -19,6 +20,7 @@ new class extends Component {
     use WithPagination;
 
     protected PaymentService $paymentService;
+    protected DocumentService $documentService;
 
     public Order $order;
 
@@ -73,9 +75,10 @@ new class extends Component {
     public string $cancelationReason = '';
     public string $otherCancelationReason = '';
 
-    public function boot(PaymentService $paymentService)
+    public function boot(PaymentService $paymentService, DocumentService $documentService)
     {
         $this->paymentService = $paymentService;
+        $this->documentService = $documentService;
     }
 
     public function mount()
@@ -114,6 +117,18 @@ new class extends Component {
     public function resetSearch()
     {
         $this->reset('search');
+    }
+
+    public function downloadInvoice(string $id)
+    {
+        $order = Order::find($id);
+
+        if (! $order) {
+            session()->flash('error', 'Pesanan tidak dapat ditemukan.');
+            return $this->redirectIntended(route('orders.index'), navigate: true);
+        }
+
+        return $this->documentService->generateInvoice($order);
     }
 
     public function confirmCancelOrder(string $id)
@@ -694,7 +709,11 @@ new class extends Component {
                                     </button>
                                 </x-slot>
                                 <x-slot name="content">
-                                    <x-common.dropdown-link href="#" x-on:click="event.stopPropagation()" wire:navigate>
+                                    <x-common.dropdown-link
+                                        x-on:click.prevent.stop="$wire.downloadInvoice('{{ $order->id }}')"
+                                        wire:loading.class="!pointers-event-none !cursor-wait opacity-50"
+                                        wire:target="downloadInvoice('{{ $order->id }}')"
+                                    >
                                         <svg
                                             class="size-4 shrink-0"
                                             xmlns="http://www.w3.org/2000/svg"
