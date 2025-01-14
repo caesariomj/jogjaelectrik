@@ -18,4 +18,16 @@ class DocumentService
             'Invoice-'.$order->order_number.'.pdf'
         );
     }
+
+    public function generateShippingLabel(Order $order)
+    {
+        $pdf = Pdf::loadView('documents.shipping-label', compact('order'))
+            ->setPaper('A6', 'portrait')
+            ->output();
+
+        return response()->streamDownload(
+            fn () => print ($pdf),
+            'Label Pengiriman-'.$order->order_number.'.pdf'
+        );
+    }
 }
