@@ -37,4 +37,12 @@ class HomeController extends Controller
 
         return view('pages.product-detail', compact('product', 'productRecommendations'));
     }
+
+    /**
+     * Displays the faq page.
+     */
+    public function faq(): View
+    {
+        return view('pages.faq');
+    }
 }

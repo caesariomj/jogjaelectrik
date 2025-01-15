@@ -22,3 +22,5 @@ Route::post('/api/xendit/webhook', XenditWebhookController::class)->middleware([
 Route::match(['get', 'put', 'patch', 'delete', 'options'], '/api/xendit/webhook', function () {
     abort(404);
 });
+
+Route::get('/faq', [HomeController::class, 'faq'])->name('faq');
