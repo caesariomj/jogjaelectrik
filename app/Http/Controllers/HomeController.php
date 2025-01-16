@@ -21,7 +21,7 @@ class HomeController extends Controller
      */
     public function productDetail(string $slug): View
     {
-        $product = Product::with(['subcategory.category', 'images', 'variants.combinations.variationVariant.variation'])->findBySlug($slug)->firstOrFail();
+        $product = Product::with(['subcategory.category', 'images', 'variants.combinations.variationVariant.variation', 'reviews'])->findBySlug($slug)->firstOrFail();
 
         $productRecommendations = Product::whereHas('subcategory', function ($query) use ($product) {
             if ($product->subcategory) {
