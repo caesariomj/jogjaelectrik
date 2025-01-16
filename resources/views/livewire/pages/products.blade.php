@@ -1,5 +1,7 @@
 <?php
 
+use App\Models\Product;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
 use Livewire\Attributes\Url;
@@ -17,15 +19,12 @@ new #[Layout('layouts.app')] class extends Component {
     public string $sortDirection = 'asc';
 
     public array $categoriesFilter = [];
-
     public array $subcategoriesFilter = [];
-
     public array $ratingsFilter = [];
 
     public function mount()
     {
         $categoryFilter = session()->get('category_filter');
-
         $subcategoryFilter = session()->get('subcategory_filter');
 
         if ($categoryFilter || $subcategoryFilter) {
@@ -38,7 +37,6 @@ new #[Layout('layouts.app')] class extends Component {
             }
 
             session()->forget('category_filter');
-
             session()->forget('subcategory_filter');
         }
     }
@@ -66,20 +64,20 @@ new #[Layout('layouts.app')] class extends Component {
                 $this->sortDirection = 'desc';
                 break;
 
-            // case 'rating_desc':
-            //     $this->sortField = '';
-            //     $this->sortDirection = '';
-            //     break;
+            case 'rating_desc':
+                $this->sortField = 'average_rating';
+                $this->sortDirection = 'desc';
+                break;
 
             case 'newest':
                 $this->sortField = 'created_at';
                 $this->sortDirection = 'desc';
                 break;
 
-            // case 'bestseller':
-            //     $this->sortField = '';
-            //     $this->sortDirection = '';
-            //     break;
+            case 'bestseller':
+                $this->sortField = 'total_sold';
+                $this->sortDirection = 'desc';
+                break;
 
             default:
                 $this->sortField = 'name';
@@ -91,7 +89,17 @@ new #[Layout('layouts.app')] class extends Component {
     #[Computed]
     public function categories()
     {
-        return \App\Models\Category::with('subcategories')->get();
+        return DB::table('categories')
+            ->select('id', 'name', 'slug')
+            ->get();
+    }
+
+    #[Computed]
+    public function subcategories()
+    {
+        return DB::table('subcategories')
+            ->select('id', 'name', 'slug')
+            ->get();
     }
 
     #[Computed]
@@ -105,30 +113,48 @@ new #[Layout('layouts.app')] class extends Component {
 
         $this->search = strip_tags($validated['search']);
 
-        $categoriesFilter = $this->categoriesFilter;
-
-        $subcategoriesFilter = $this->subcategoriesFilter;
-
-        return \App\Models\Product::with('images')
-            ->when(! empty($categoriesFilter), function ($query) use ($categoriesFilter) {
-                $query->whereHas('subcategory.category', function ($subquery) use ($categoriesFilter) {
-                    $subquery->whereIn('slug', $categoriesFilter);
+        return Product::with(['images', 'subcategory', 'subcategory.category', 'reviews', 'orderDetails'])
+            ->withSum(
+                [
+                    'orderDetails as total_sold' => function ($query) {
+                        $query->whereHas('order', function ($q) {
+                            $q->where('status', 'completed');
+                        });
+                    },
+                ],
+                'quantity',
+            )
+            ->withAvg(['reviews as average_rating'], 'rating')
+            ->when(! empty($this->categoriesFilter), function ($query) {
+                $query->whereHas('subcategory.category', function ($subquery) {
+                    $subquery->whereIn('slug', $this->categoriesFilter);
                 });
             })
-            ->when(! empty($subcategoriesFilter), function ($query) use ($subcategoriesFilter) {
-                $query->whereHas('subcategory', function ($subquery) use ($subcategoriesFilter) {
-                    $subquery->whereIn('slug', $subcategoriesFilter);
+            ->when(! empty($this->subcategoriesFilter), function ($query) {
+                $query->whereHas('subcategory', function ($subquery) {
+                    $subquery->whereIn('slug', $this->subcategoriesFilter);
+                });
+            })
+            ->when(! empty($this->ratingsFilter), function ($query) {
+                $query->whereHas('reviews', function ($subquery) {
+                    foreach ($this->ratingsFilter as $rating) {
+                        $minRating = $rating;
+                        $maxRating = $rating < 5 ? $rating + 0.99 : $rating;
+                        $subquery->orHavingRaw('AVG(rating) BETWEEN ? AND ?', [$minRating, $maxRating]);
+                    }
                 });
             })
             ->when($this->search !== '', function ($query) {
-                $query
-                    ->where('name', 'like', '%' . $this->search . '%')
-                    ->orWhereHas('subcategory', function ($query) {
-                        return $query->where('name', 'like', '%' . $this->search . '%');
-                    })
-                    ->orWhereHas('subcategory.category', function ($query) {
-                        return $query->where('name', 'like', '%' . $this->search . '%');
-                    });
+                $query->where(function ($searchQuery) {
+                    $searchQuery
+                        ->where('name', 'like', '%' . $this->search . '%')
+                        ->orWhereHas('subcategory', function ($subquery) {
+                            $subquery->where('name', 'like', '%' . $this->search . '%');
+                        })
+                        ->orWhereHas('subcategory.category', function ($subquery) {
+                            $subquery->where('name', 'like', '%' . $this->search . '%');
+                        });
+                });
             })
             ->active()
             ->orderBy($this->sortField, $this->sortDirection)
@@ -144,6 +170,7 @@ new #[Layout('layouts.app')] class extends Component {
             'categoriesFilter',
             'subcategoriesFilter',
             'ratingsFilter',
+            'search',
         );
     }
 }; ?>
@@ -213,7 +240,7 @@ new #[Layout('layouts.app')] class extends Component {
                     <line x1="16" x2="16" y1="18" y2="22" />
                 </svg>
                 <h2 class="text-xl font-semibold">Filter Produk</h2>
-                @if ($sortBy !== 'name_asc' || ! empty($categoriesFilter) || ! empty($subcategoriesFilter) || ! empty($ratingsFilter))
+                @if ($sortBy !== 'name_asc' || ! empty($categoriesFilter) || ! empty($subcategoriesFilter) || ! empty($ratingsFilter) || $search !== '')
                     <x-common.button variant="secondary" class="ml-auto !px-4 !py-2" wire:click="resetFilter">
                         <svg
                             class="size-4"
@@ -253,11 +280,11 @@ new #[Layout('layouts.app')] class extends Component {
                     class="mx-0.5 block w-full rounded-lg border border-neutral-300 p-2.5 text-sm font-medium text-black focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
                     wire:loading.attr="disabled"
                 >
-                    <option value="name_asc" @selected($sortBy === 'name_asc')>Nama: A ke Z</option>
-                    <option value="name_desc" @selected($sortBy === 'name_desc')>Nama: Z ke A</option>
-                    <option value="price_asc" @selected($sortBy === 'price_asc')>Harga: Rendah ke Tinggi</option>
-                    <option value="price_desc" @selected($sortBy === 'price_desc')>Harga: Tinggi ke Rendah</option>
-                    <option value="rating_desc" @selected($sortBy === 'rating_desc')>Rating: Tertinggi</option>
+                    <option value="name_asc" @selected($sortBy === 'name_asc')>Nama A ke Z</option>
+                    <option value="name_desc" @selected($sortBy === 'name_desc')>Nama Z ke A</option>
+                    <option value="price_asc" @selected($sortBy === 'price_asc')>Harga Rendah ke Tinggi</option>
+                    <option value="price_desc" @selected($sortBy === 'price_desc')>Harga Tinggi ke Rendah</option>
+                    <option value="rating_desc" @selected($sortBy === 'rating_desc')>Rating Tertinggi</option>
                     <option value="newest" @selected($sortBy === 'newest')>Produk Terbaru</option>
                     <option value="bestseller" @selected($sortBy === 'bestseller')>Penjualan Terbanyak</option>
                 </select>
@@ -288,25 +315,23 @@ new #[Layout('layouts.app')] class extends Component {
             <div class="mb-4">
                 <h4 class="mb-2 text-lg font-medium text-black">Subkategori</h4>
                 <ul class="flex flex-wrap gap-2">
-                    @foreach ($this->categories as $category)
-                        @foreach ($category->subcategories as $subcategory)
-                            <li wire:key="{{ $subcategory->id }}">
-                                <input
-                                    wire:model.lazy="subcategoriesFilter"
-                                    type="checkbox"
-                                    id="{{ $subcategory->name }}"
-                                    value="{{ $subcategory->slug }}"
-                                    class="peer hidden"
-                                />
-                                <label
-                                    for="{{ $subcategory->name }}"
-                                    class="flex cursor-pointer items-center justify-between rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-black hover:bg-neutral-100 peer-checked:border-primary peer-checked:bg-primary-50 peer-checked:text-primary"
-                                    wire:loading.class="!cursor-not-allowed opacity-50 hover:bg-white"
-                                >
-                                    {{ ucwords($subcategory->name) }}
-                                </label>
-                            </li>
-                        @endforeach
+                    @foreach ($this->subcategories as $subcategory)
+                        <li wire:key="{{ $subcategory->id }}">
+                            <input
+                                wire:model.lazy="subcategoriesFilter"
+                                type="checkbox"
+                                id="{{ $subcategory->name }}"
+                                value="{{ $subcategory->slug }}"
+                                class="peer hidden"
+                            />
+                            <label
+                                for="{{ $subcategory->name }}"
+                                class="flex cursor-pointer items-center justify-between rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-black hover:bg-neutral-100 peer-checked:border-primary peer-checked:bg-primary-50 peer-checked:text-primary"
+                                wire:loading.class="!cursor-not-allowed opacity-50 hover:bg-white"
+                            >
+                                {{ ucwords($subcategory->name) }}
+                            </label>
+                        </li>
                     @endforeach
                 </ul>
             </div>
@@ -368,15 +393,15 @@ new #[Layout('layouts.app')] class extends Component {
                             class="block w-full rounded-lg border border-neutral-300 p-2.5 text-sm font-medium text-black focus:border-primary focus:ring-primary disabled:cursor-not-allowed disabled:opacity-50"
                             wire:loading.attr="disabled"
                         >
-                            <option value="name_asc" @selected($sortBy === 'name_asc')>Nama: A ke Z</option>
-                            <option value="name_desc" @selected($sortBy === 'name_desc')>Nama: Z ke A</option>
+                            <option value="name_asc" @selected($sortBy === 'name_asc')>Nama A ke Z</option>
+                            <option value="name_desc" @selected($sortBy === 'name_desc')>Nama Z ke A</option>
                             <option value="price_asc" @selected($sortBy === 'price_asc')>
-                                Harga: Rendah ke Tinggi
+                                Harga Rendah ke Tinggi
                             </option>
                             <option value="price_desc" @selected($sortBy === 'price_desc')>
-                                Harga: Tinggi ke Rendah
+                                Harga Tinggi ke Rendah
                             </option>
-                            <option value="rating_desc" @selected($sortBy === 'rating_desc')>Rating: Tertinggi</option>
+                            <option value="rating_desc" @selected($sortBy === 'rating_desc')>Rating Tertinggi</option>
                             <option value="newest" @selected($sortBy === 'newest')>Produk Terbaru</option>
                             <option value="bestseller" @selected($sortBy === 'bestseller')>Penjualan Terbanyak</option>
                         </select>
@@ -407,25 +432,23 @@ new #[Layout('layouts.app')] class extends Component {
                     <div class="mb-4">
                         <h4 class="mb-2 text-lg font-medium text-black">Subkategori</h4>
                         <ul class="flex flex-wrap gap-2">
-                            @foreach ($this->categories as $category)
-                                @foreach ($category->subcategories as $subcategory)
-                                    <li wire:key="{{ $subcategory->id }}">
-                                        <input
-                                            wire:model.lazy="subcategoriesFilter"
-                                            type="checkbox"
-                                            id="{{ $subcategory->name }}"
-                                            value="{{ $subcategory->slug }}"
-                                            class="peer hidden"
-                                        />
-                                        <label
-                                            for="{{ $subcategory->name }}"
-                                            class="flex cursor-pointer items-center justify-between rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-black hover:bg-neutral-100 peer-checked:border-primary peer-checked:bg-primary-50 peer-checked:text-primary"
-                                            wire:loading.class="!cursor-not-allowed opacity-50 hover:bg-white"
-                                        >
-                                            {{ ucwords($subcategory->name) }}
-                                        </label>
-                                    </li>
-                                @endforeach
+                            @foreach ($this->subcategories as $subcategory)
+                                <li wire:key="{{ $subcategory->id }}">
+                                    <input
+                                        wire:model.lazy="subcategoriesFilter"
+                                        type="checkbox"
+                                        id="{{ $subcategory->name }}"
+                                        value="{{ $subcategory->slug }}"
+                                        class="peer hidden"
+                                    />
+                                    <label
+                                        for="{{ $subcategory->name }}"
+                                        class="flex cursor-pointer items-center justify-between rounded-full border border-neutral-300 bg-white px-4 py-2 text-sm font-medium text-black hover:bg-neutral-100 peer-checked:border-primary peer-checked:bg-primary-50 peer-checked:text-primary"
+                                        wire:loading.class="!cursor-not-allowed opacity-50 hover:bg-white"
+                                    >
+                                        {{ ucwords($subcategory->name) }}
+                                    </label>
+                                </li>
                             @endforeach
                         </ul>
                     </div>
