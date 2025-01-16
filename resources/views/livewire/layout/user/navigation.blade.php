@@ -1,10 +1,18 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Models\Product;
+use Illuminate\Support\Facades\DB;
 use Livewire\Volt\Component;
 
 new class extends Component {
     public int $cartItemsCount = 0;
+    public string $search = '';
+    public array $searchResults = [
+        'categories' => null,
+        'subcategories' => null,
+        'products' => null,
+    ];
 
     public function mount()
     {
@@ -22,6 +30,71 @@ new class extends Component {
             : 0;
     }
 
+    public function updatedSearch()
+    {
+        $validated = $this->validate(
+            rules: [
+                'search' => 'nullable|string|min:1|max:255',
+            ],
+        );
+
+        $this->search = strip_tags($validated['search']);
+
+        $this->searchResults = [
+            'categories' => DB::table('categories')
+                ->select('id', 'name', 'slug')
+                ->where('name', 'like', '%' . e($this->search) . '%')
+                ->orWhereIn('id', function ($query) {
+                    $query
+                        ->select('category_id')
+                        ->from('subcategories')
+                        ->where('name', 'like', '%' . e($this->search) . '%');
+                })
+                ->limit(3)
+                ->get(),
+            'subcategories' => DB::table('subcategories')
+                ->join('categories', 'subcategories.category_id', '=', 'categories.id')
+                ->select(
+                    'subcategories.id',
+                    'subcategories.name',
+                    'subcategories.slug',
+                    'categories.slug as category_slug',
+                )
+                ->where('subcategories.name', 'like', '%' . e($this->search) . '%')
+                ->orWhere('categories.slug', 'like', '%' . e($this->search) . '%')
+                ->limit(3)
+                ->get(),
+            'products' => Product::with(['images', 'subcategory', 'subcategory.category'])
+                ->where('name', 'like', '%' . $this->search . '%')
+                ->orWhereHas('subcategory', function ($query) {
+                    return $query->where('name', 'like', '%' . $this->search . '%');
+                })
+                ->orWhereHas('subcategory.category', function ($query) {
+                    return $query->where('name', 'like', '%' . $this->search . '%');
+                })
+                ->limit(3)
+                ->get(),
+        ];
+    }
+
+    public function redirectToProduct(?string $category = null, ?string $subcategory = null)
+    {
+        if (! $category && ! $subcategory) {
+            return;
+        }
+
+        if ($category && $subcategory === null) {
+            session()->put('category_filter', $category);
+        }
+
+        if ($category && $subcategory) {
+            session()->put('category_filter', $category);
+            session()->put('subcategory_filter', $subcategory);
+        }
+
+        return $this->redirectRoute('products', navigate: true);
+    }
+
     /**
      * Log the current user out of the application.
      */
@@ -33,7 +106,7 @@ new class extends Component {
     }
 }; ?>
 
-<header class="sticky top-0 z-10 border-b border-neutral-300 bg-white">
+<header x-data="{ searchBarOpen: false }" class="sticky top-0 z-10 border-b border-neutral-300 bg-white">
     <nav
         x-data="{
             open: false,
@@ -82,7 +155,11 @@ new class extends Component {
             </ul>
         </div>
         <div class="flex items-center space-x-2">
-            <button type="button" class="rounded-full p-2 text-black hover:bg-neutral-100">
+            <button
+                type="button"
+                class="rounded-full p-2 text-black hover:bg-neutral-100"
+                x-on:click="searchBarOpen = ! searchBarOpen"
+            >
                 <svg
                     class="size-5"
                     xmlns="http://www.w3.org/2000/svg"
@@ -426,4 +503,172 @@ new class extends Component {
             @endauth
         </div>
     </nav>
+    <div
+        class="absolute top-0 w-full"
+        x-show="searchBarOpen"
+        x-data="{ search: $wire.entangle('search').live }"
+        x-init="
+            $watch('searchBarOpen', (value) => {
+                if (value) $nextTick(() => $refs.productSearch.focus())
+            })
+
+            $watch('search', (value) => {
+                if (value.length > 0) {
+                    document.body.style.overflow = 'hidden'
+                    document.querySelector('main').style.overflow = 'hidden'
+                    document.getElementById('search-result-box').style.overflowY = 'scroll'
+                } else {
+                    document.body.style.overflow = ''
+                    document.querySelector('main').style.overflow = ''
+                }
+            })
+        "
+        x-transition:enter="transform transition duration-300 ease-out"
+        x-transition:enter-start="-translate-y-12"
+        x-transition:enter-end="translate-y-0"
+        x-transition:leave="transform transition duration-300 ease-in"
+        x-transition:leave-start="translate-y-0"
+        x-transition:leave-end="-translate-y-12"
+        x-cloak
+    >
+        <div
+            class="relative z-10 flex h-[57px] items-center justify-between gap-x-4 border-b border-neutral-300 bg-white px-4 md:px-6"
+        >
+            <svg
+                class="size-5"
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="2"
+                stroke-linecap="round"
+                stroke-linejoin="round"
+            >
+                <circle cx="11" cy="11" r="8" />
+                <path d="m21 21-4.3-4.3" />
+            </svg>
+            <form action="{{ route('products') }}" method="GET" class="w-full">
+                <input
+                    type="text"
+                    name="q"
+                    id="q"
+                    class="w-full border-transparent text-base font-medium tracking-tight focus:border-transparent focus:ring-0"
+                    placeholder="Cari produk atau kategori berdasarkan nama..."
+                    autocomplete="off"
+                    x-model="search"
+                    x-ref="productSearch"
+                    x-on:keydown.enter="$event.target.form.submit"
+                />
+            </form>
+            <button
+                type="button"
+                class="rounded-full p-2 text-black hover:bg-neutral-100"
+                x-on:click="searchBarOpen = ! searchBarOpen; search = ''"
+            >
+                <svg
+                    class="size-5"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                </svg>
+            </button>
+        </div>
+        <template x-if="search.length > 0">
+            <div
+                id="search-result-box"
+                class="relative z-0 flex h-[calc(100vh-57px)] w-full flex-col gap-4 overflow-y-auto bg-white p-4 md:flex-row md:gap-6 md:p-6"
+                x-data="{ searchResultOpen: false }"
+                x-init="
+                    $nextTick(() => {
+                        searchResultOpen = true
+                    })
+                "
+                x-show="searchResultOpen"
+                x-transition:enter="transform transition duration-300 ease-out"
+                x-transition:enter-start="-translate-y-12 opacity-0"
+                x-transition:enter-end="translate-y-0 opacity-100"
+                x-transition:leave="transform transition duration-300 ease-in"
+                x-transition:leave-start="translate-y-0 opacity-100"
+                x-transition:leave-end="-translate-y-12 opacity-0"
+                x-cloak
+            >
+                @if ($searchResults['categories'] || $searchResults['subcategories'])
+                    <section
+                        class="flex w-full flex-row justify-between gap-6 md:sticky md:top-0 md:w-1/4 md:flex-col md:justify-start"
+                    >
+                        <div class="w-full">
+                            <h2 class="mb-2 !text-lg text-black">Kategori</h2>
+                            <ul class="flex flex-col gap-1">
+                                @forelse ($searchResults['categories'] as $category)
+                                    <li wire:key="{{ $category->id }}">
+                                        <button
+                                            wire:click="redirectToProduct('{{ $category->slug }}')"
+                                            class="text-base font-medium tracking-tight text-black underline transition-colors hover:text-primary"
+                                            wire:loading.class="opacity-25 cursor-not-allowed"
+                                            wire:target="search"
+                                        >
+                                            {{ ucwords($category->name) }}
+                                        </button>
+                                    </li>
+                                @empty
+                                    <li>
+                                        <p class="text-base font-medium tracking-tight text-black">Tidak ditemukan</p>
+                                    </li>
+                                @endforelse
+                            </ul>
+                        </div>
+                        <div class="w-full">
+                            <h2 class="mb-2 !text-lg text-black">Subkategori</h2>
+                            <ul class="flex flex-col gap-1">
+                                @forelse ($searchResults['subcategories'] as $subcategory)
+                                    <li wire:key="{{ $subcategory->id }}">
+                                        <button
+                                            wire:click="redirectToProduct('{{ $subcategory->category_slug }}', '{{ $subcategory->slug }}')"
+                                            class="text-base font-medium tracking-tight text-black underline transition-colors hover:text-primary"
+                                            wire:loading.class="opacity-25 cursor-not-allowed"
+                                            wire:target="search"
+                                        >
+                                            {{ ucwords($subcategory->name) }}
+                                        </button>
+                                    </li>
+                                @empty
+                                    <li>
+                                        <p class="text-base font-medium tracking-tight text-black">Tidak ditemukan</p>
+                                    </li>
+                                @endforelse
+                            </ul>
+                        </div>
+                    </section>
+                @endif
+
+                @if ($searchResults['products'])
+                    <section class="w-full md:w-3/4">
+                        <div class="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
+                            @forelse ($searchResults['products'] as $product)
+                                <x-common.product-card
+                                    :product="$product"
+                                    wire:key="{{ $product->id }}"
+                                    wire:loading.class="opacity-25 cursor-not-allowed"
+                                    wire:target="search"
+                                />
+                            @empty
+                                <p class="col-span-2 text-base font-medium tracking-tight text-black md:col-span-3">
+                                    Produk dengan nama
+                                    <strong>"{{ $search }}"</strong>
+                                    tidak ditemukan
+                                </p>
+                            @endforelse
+                        </div>
+                    </section>
+                @endif
+            </div>
+        </template>
+    </div>
 </header>

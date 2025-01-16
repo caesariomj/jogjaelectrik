@@ -2,11 +2,15 @@
 
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Layout;
+use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 use Livewire\WithPagination;
 
 new #[Layout('layouts.app')] class extends Component {
     use WithPagination;
+
+    #[Url(as: 'q', except: '')]
+    public string $search = '';
 
     public string $sortBy = 'name_asc';
     public string $sortField = 'name';
@@ -93,6 +97,14 @@ new #[Layout('layouts.app')] class extends Component {
     #[Computed]
     public function products()
     {
+        $validated = $this->validate(
+            rules: [
+                'search' => 'nullable|string|min:1|max:255',
+            ],
+        );
+
+        $this->search = strip_tags($validated['search']);
+
         $categoriesFilter = $this->categoriesFilter;
 
         $subcategoriesFilter = $this->subcategoriesFilter;
@@ -107,6 +119,16 @@ new #[Layout('layouts.app')] class extends Component {
                 $query->whereHas('subcategory', function ($subquery) use ($subcategoriesFilter) {
                     $subquery->whereIn('slug', $subcategoriesFilter);
                 });
+            })
+            ->when($this->search !== '', function ($query) {
+                $query
+                    ->where('name', 'like', '%' . $this->search . '%')
+                    ->orWhereHas('subcategory', function ($query) {
+                        return $query->where('name', 'like', '%' . $this->search . '%');
+                    })
+                    ->orWhereHas('subcategory.category', function ($query) {
+                        return $query->where('name', 'like', '%' . $this->search . '%');
+                    });
             })
             ->active()
             ->orderBy($this->sortField, $this->sortDirection)
@@ -486,9 +508,19 @@ new #[Layout('layouts.app')] class extends Component {
         </x-common.offcanvas>
         <section class="w-full lg:w-3/4 lg:ps-6">
             <div class="relative grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-6">
-                @foreach ($this->products as $product)
+                @forelse ($this->products as $product)
                     <x-common.product-card :product="$product" wire:loading.class="opacity-25 cursor-not-allowed" />
-                @endforeach
+                @empty
+                    <p class="col-span-2 text-base font-medium tracking-tight text-black md:col-span-3">
+                        @if ($search !== '')
+                            Produk dengan nama
+                            <strong>"{{ $search }}"</strong>
+                            tidak ditemukan
+                        @else
+                            Produk tidak ditemukan
+                        @endif
+                    </p>
+                @endforelse
 
                 <div class="absolute flex h-full w-full items-center justify-center">
                     <div
