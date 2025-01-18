@@ -263,7 +263,7 @@ new class extends Component {
             );
             return $this->redirectIntended(route('orders.index'), navigate: true);
         } catch (\Exception $e) {
-            Log::error('Unexpected Order Cancellation Error', [
+            Log::error('Unexpected Order Completion Error', [
                 'error_message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
@@ -322,7 +322,7 @@ new class extends Component {
             session()->flash('error', $e->getMessage());
             return $this->redirectIntended(route('orders.index'), navigate: true);
         } catch (QueryException $e) {
-            Log::error('Database Error During Order Completion', [
+            Log::error('Database Error During Product Rating', [
                 'error_message' => $e->getMessage(),
                 'sql' => $e->getSql(),
                 'bindings' => $e->getBindings(),
@@ -331,7 +331,7 @@ new class extends Component {
             session()->flash('error', 'Terjadi kesalahan dalam menilai produk-produk dalam pesanan ini.');
             return $this->redirectIntended(route('orders.index'), navigate: true);
         } catch (\Exception $e) {
-            Log::error('Unexpected Order Cancellation Error', [
+            Log::error('Unexpected Product Rating Error', [
                 'error_message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
