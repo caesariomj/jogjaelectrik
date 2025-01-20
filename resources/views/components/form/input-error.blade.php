@@ -3,7 +3,7 @@
 ])
 
 @if ($messages)
-    <ul {{ $attributes->merge(['class' => 'text-sm text-red-500 space-y-1']) }}>
+    <ul {{ $attributes->merge(['class' => 'flex flex-col text-sm text-red-500 space-y-1']) }}>
         @foreach ((array) $messages as $message)
             <li class="inline-flex items-start gap-x-1">
                 <svg
