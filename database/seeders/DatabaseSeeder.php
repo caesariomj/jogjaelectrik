@@ -25,6 +25,7 @@ class DatabaseSeeder extends Seeder
             PaymentPermissionsSeeder::class,
             RefundPermissionsSeeder::class,
             ProductReviewPermissionsSeeder::class,
+            UserPermissionsSeeder::class,
         ]);
     }
 }
