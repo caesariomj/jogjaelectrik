@@ -10,6 +10,8 @@ use Livewire\Volt\Volt;
 Route::middleware(['auth', 'role:user'])->group(function () {
     Route::get('/profil-saya', [ProfileController::class, 'index'])->name('profile');
 
+    Route::get('/pengaturan-akun', [ProfileController::class, 'setting'])->name('setting');
+
     Route::get('/keranjang-belanja', [CartController::class, 'index'])->name('cart');
 
     Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
