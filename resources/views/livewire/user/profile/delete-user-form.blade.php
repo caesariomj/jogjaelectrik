@@ -1,74 +1,119 @@
 <?php
 
 use App\Livewire\Actions\Logout;
+use App\Livewire\Forms\DeleteUserForm;
+use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Livewire\Volt\Component;
 
 new class extends Component {
-    public string $password = '';
+    public DeleteUserForm $form;
 
-    /**
-     * Delete the currently authenticated user.
-     */
-    public function deleteUser(Logout $logout): void
+    public function mount()
     {
-        $this->validate([
-            'password' => ['required', 'string', 'current_password'],
-        ]);
+        $this->form->setUser(auth()->user());
+    }
 
-        tap(Auth::user(), $logout(...))->delete();
+    public function deleteUser(Logout $logout)
+    {
+        $this->form->validate();
 
-        $this->redirect('/', navigate: true);
+        try {
+            $this->authorize('delete', $this->form->user);
+
+            // tap(Auth::user(), $logout(...))->delete();
+
+            session()->flash('success', 'Akun anda berhasil dihapus.');
+            return $this->redirect('/', navigate: true);
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('setting'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('Unexpected User Deleteion Error', [
+                'error_message' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('setting'), navigate: true);
+        }
     }
 }; ?>
 
 <section class="space-y-6">
-    <header>
-        <h2 class="text-lg font-medium text-gray-900">
-            {{ __('Delete Account') }}
-        </h2>
-
-        <p class="mt-1 text-sm text-gray-600">
-            {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Before deleting your account, please download any data or information that you wish to retain.') }}
+    <header class="flex w-full flex-col pb-4">
+        <h2 class="mb-2 text-xl text-black">Hapus Akun</h2>
+        <p class="text-base tracking-tight text-black/70">
+            Setelah akun Anda dihapus, semua sumber daya dan datanya akan dihapus secara permanen. Sebelum menghapus
+            akun Anda, silakan unduh data atau informasi apa pun yang ingin Anda simpan.
         </p>
     </header>
-
-    <x-common.button variant="danger" x-data="" x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')">
-        {{ __('Delete Account') }}
+    <x-common.button
+        variant="danger"
+        class="w-full md:float-end md:w-fit"
+        x-data=""
+        x-on:click.prevent="$dispatch('open-modal', 'confirm-user-deletion')"
+    >
+        Hapus Akun
     </x-common.button>
-
     <x-common.modal name="confirm-user-deletion" :show="$errors->isNotEmpty()" focusable>
-        <form wire:submit="deleteUser" class="p-6">
-            <h2 class="text-lg font-medium text-gray-900">
-                {{ __('Are you sure you want to delete your account?') }}
-            </h2>
-
-            <p class="mt-1 text-sm text-gray-600">
-                {{ __('Once your account is deleted, all of its resources and data will be permanently deleted. Please enter your password to confirm you would like to permanently delete your account.') }}
+        <form wire:submit="deleteUser" class="flex flex-col items-center p-6">
+            <div class="mb-4 rounded-full bg-red-100 p-4" aria-hidden="true">
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="currentColor"
+                    class="size-16 text-red-500"
+                >
+                    <path
+                        fill-rule="evenodd"
+                        d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+                        clip-rule="evenodd"
+                    />
+                </svg>
+            </div>
+            <h2 class="mb-2 text-center text-black">Hapus Akun</h2>
+            <p class="mb-4 text-center text-base font-medium tracking-tight text-black/70">
+                Apakah anda yakin ingin menghapus akun Anda? Setelah akun Anda dihapus, semua sumber daya dan datanya
+                akan dihapus secara permanen. Masukkan kata sandi Anda untuk mengonfirmasi bahwa Anda ingin menghapus
+                akun Anda secara permanen.
             </p>
-
-            <div class="mt-6">
-                <x-form.input-label for="password" value="{{ __('Password') }}" class="sr-only" />
-
+            <div class="mb-8 flex w-full flex-col items-start">
+                <x-form.input-label for="password" value="Password" class="sr-only" />
                 <x-form.input
-                    wire:model="password"
+                    wire:model.lazy="form.password"
                     id="password"
                     name="password"
                     type="password"
                     class="mt-1 block w-full"
-                    placeholder="{{ __('Password') }}"
+                    placeholder="Password..."
+                    :hasError="$errors->has('form.password')"
                 />
-
-                <x-form.input-error :messages="$errors->get('password')" class="mt-2" />
+                <x-form.input-error :messages="$errors->get('form.password')" class="mt-2" />
             </div>
 
-            <div class="mt-6 flex justify-end">
-                <x-common.button variant="secondary" x-on:click="$dispatch('close')">
-                    {{ __('Cancel') }}
+            <div class="flex w-full flex-col justify-end gap-4 md:flex-row">
+                <x-common.button
+                    variant="secondary"
+                    class="w-full md:w-fit"
+                    wire:loading.class="opacity-50 !pointers-event-none !cursor-not-allowed hover:!bg-neutral-100"
+                    wire:target="deleteUser"
+                >
+                    Batal
                 </x-common.button>
-
-                <x-common.button variant="danger" class="ms-3">
-                    {{ __('Delete Account') }}
+                <x-common.button variant="danger" type="submit">
+                    <span wire:loading.remove wire:target="deleteUser">Hapus Akun</span>
+                    <div
+                        wire:loading
+                        wire:target="deleteUser"
+                        class="inline-block size-4 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
+                        role="status"
+                        aria-label="loading"
+                    >
+                        <span class="sr-only">Sedang diproses...</span>
+                    </div>
+                    <span wire:loading wire:target="deleteUser">Sedang diproses...</span>
                 </x-common.button>
             </div>
         </form>

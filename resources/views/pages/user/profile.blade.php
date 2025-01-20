@@ -1,29 +1,13 @@
-<x-app-layout>
-    <x-slot name="header">
-        <h2 class="text-xl font-semibold leading-tight text-gray-800">
-            {{ __('Profile') }}
-        </h2>
-    </x-slot>
+@extends('layouts.app')
 
-    <div class="py-12">
-        <div class="mx-auto max-w-7xl space-y-6 sm:px-6 lg:px-8">
-            <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                <div class="max-w-xl">
-                    <livewire:user.profile.update-profile-information-form />
-                </div>
-            </div>
+@section('title', 'Profil Saya')
 
-            <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                <div class="max-w-xl">
-                    <livewire:user.profile.update-password-form />
-                </div>
-            </div>
-
-            <div class="bg-white p-4 shadow sm:rounded-lg sm:p-8">
-                <div class="max-w-xl">
-                    <livewire:user.profile.delete-user-form />
-                </div>
-            </div>
-        </div>
-    </div>
-</x-app-layout>
+@section('content')
+    <section class="flex flex-row gap-6 p-4 md:p-6">
+        <x-user.sidebar />
+        <section class="w-full shrink">
+            <h1 class="mb-4 text-black">Profil Saya</h1>
+            <livewire:user.profile.update-profile-information-form />
+        </section>
+    </section>
+@endsection
