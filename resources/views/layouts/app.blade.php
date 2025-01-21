@@ -1,9 +1,18 @@
 @extends('layouts.base')
 
 @section('body')
-    <livewire:layout.user.navigation />
+    <div
+        x-data="{
+            hasSession:
+                {{ session()->has('success') || session()->has('error') ? 'true' : 'false' }},
+        }"
+        x-init="setTimeout(() => (hasSession = false), 3000)"
+        class="sticky top-0 z-10"
+    >
+        <x-common.alert />
 
-    <x-common.alert />
+        <livewire:layout.user.navigation />
+    </div>
 
     <x-common.breadcrumb class="px-4 pt-6 md:px-6" />
 

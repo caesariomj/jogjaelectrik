@@ -1,109 +1,70 @@
-<div aria-label="Notifikasi" role="region" class="pointer-events-none fixed inset-x-0 top-4 z-50 px-4 sm:px-6 lg:px-8">
-    <div class="pointer-events-auto mx-auto max-w-2xl">
-        @if (session()->has('success'))
-            <div
-                x-data="{ show: true }"
-                x-show="show"
-                x-transition:enter="transform transition duration-300"
-                x-transition:enter-start="translate-y-[-100%] opacity-0"
-                x-transition:enter-end="translate-y-0 opacity-100"
-                x-transition:leave="transform transition duration-300"
-                x-transition:leave-start="translate-y-0 opacity-100"
-                x-transition:leave-end="translate-y-[-100%] opacity-0"
-                x-init="setTimeout(() => (show = false), 3000)"
-                role="alert"
-                aria-live="polite"
-                aria-atomic="true"
-                class="mb-4 rounded-md border border-teal-400 bg-teal-50 p-4 shadow-md"
+<div
+    id="alert"
+    @class([
+        'px-4 py-2 text-white md:px-6',
+        'bg-teal-500' => session()->has('success'),
+        'bg-red-500' => session()->has('error'),
+    ])
+    role="alert"
+    aria-live="assertive"
+    aria-atomic="true"
+    x-show="hasSession"
+    x-transition:enter="transform transition duration-300 ease-out"
+    x-transition:enter-start="-translate-y-full opacity-0"
+    x-transition:enter-end="translate-y-0 opacity-100"
+    x-transition:leave="transform transition duration-300 ease-in"
+    x-transition:leave-start="translate-y-0 opacity-100"
+    x-transition:leave-end="-translate-y-full opacity-0"
+    x-cloak
+>
+    <div class="flex items-center justify-start gap-2">
+        <svg
+            xmlns="http://www.w3.org/2000/svg"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            class="size-5 shrink-0"
+            aria-hidden="true"
+        >
+            @if (session()->has('success'))
+                <title>Ikon sukses</title>
+                <path
+                    fill-rule="evenodd"
+                    d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z"
+                    clip-rule="evenodd"
+                />
+            @else
+                <title>Ikon gagal</title>
+                <path
+                    fill-rule="evenodd"
+                    d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+                    clip-rule="evenodd"
+                />
+            @endif
+        </svg>
+        <span class="text-sm font-medium tracking-tight">
+            {{ session()->has('success') ? 'Sukses' : 'Gagal' }}! {{ session('success') ?? session('error') }}
+        </span>
+        <div class="ml-auto">
+            <button
+                id="close-alert"
+                type="button"
+                @class([
+                    'inline-flex rounded-full p-1.5 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2',
+                    'hover:bg-teal-600 focus:ring-teal-700' => session()->has('success'),
+                    'hover:bg-red-600 focus:ring-red-700' => session()->has('error'),
+                ])
+                aria-label="Tutup pesan notifikasi"
+                x-on:click="hasSession = false"
             >
-                <div class="flex items-center">
-                    <div class="flex flex-grow items-center" role="presentation">
-                        <div class="flex-shrink-0" aria-hidden="true">
-                            <svg class="size-5 text-teal-400" viewBox="0 0 20 20" fill="currentColor">
-                                <title>Ikon notifikasi sukses</title>
-                                <path
-                                    fill-rule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
-                                    clip-rule="evenodd"
-                                />
-                            </svg>
-                        </div>
-                        <div role="heading" aria-level="2" class="ml-3 text-sm font-medium text-teal-800">
-                            {{ session('success') }}
-                        </div>
-                    </div>
-                    <div class="ml-auto pl-3" role="navigation">
-                        <button
-                            @click="show = false"
-                            type="button"
-                            class="inline-flex rounded-full p-1.5 text-teal-500 hover:bg-teal-100 focus:outline-none focus:ring-2 focus:ring-teal-600 focus:ring-offset-2"
-                            aria-label="Tutup pesan notifikasi sukses"
-                        >
-                            <svg class="size-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                <title>Tutup</title>
-                                <path
-                                    fill-rule="evenodd"
-                                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                    clip-rule="evenodd"
-                                />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        @endif
-
-        @if (session()->has('error'))
-            <div
-                x-data="{ show: true }"
-                x-show="show"
-                x-transition:enter="transform transition duration-300"
-                x-transition:enter-start="translate-y-[-100%] opacity-0"
-                x-transition:enter-end="translate-y-0 opacity-100"
-                x-transition:leave="transform transition duration-300"
-                x-transition:leave-start="translate-y-0 opacity-100"
-                x-transition:leave-end="translate-y-[-100%] opacity-0"
-                x-init="setTimeout(() => (show = false), 3000)"
-                role="alert"
-                aria-live="assertive"
-                aria-atomic="true"
-                class="mb-4 rounded-md border border-red-400 bg-red-50 p-4 shadow-md"
-            >
-                <div class="flex items-center">
-                    <div class="flex flex-grow items-center" role="presentation">
-                        <div class="flex-shrink-0" aria-hidden="true">
-                            <svg class="size-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                                <title>Ikon notifikasi gagal</title>
-                                <path
-                                    fill-rule="evenodd"
-                                    d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
-                                    clip-rule="evenodd"
-                                />
-                            </svg>
-                        </div>
-                        <div role="heading" aria-level="2" class="ml-3 text-sm font-medium text-red-800">
-                            {{ session('error') }}
-                        </div>
-                    </div>
-                    <div class="ml-auto pl-3" role="navigation">
-                        <button
-                            @click="show = false"
-                            type="button"
-                            class="inline-flex rounded-full p-1.5 text-red-500 hover:bg-red-100 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
-                            aria-label="Tutup pesan notifikasi gagal"
-                        >
-                            <svg class="size-5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                                <title>Tutup</title>
-                                <path
-                                    fill-rule="evenodd"
-                                    d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
-                                    clip-rule="evenodd"
-                                />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        @endif
+                <svg class="size-5 shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <title>Tutup pesan notifikasi</title>
+                    <path
+                        fill-rule="evenodd"
+                        d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                        clip-rule="evenodd"
+                    />
+                </svg>
+            </button>
+        </div>
     </div>
 </div>

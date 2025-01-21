@@ -106,7 +106,7 @@ new class extends Component {
     }
 }; ?>
 
-<header x-data="{ searchBarOpen: false }" class="sticky top-0 z-10 border-b border-neutral-300 bg-white">
+<header x-data="{ searchBarOpen: false }" class="border-b border-neutral-300 bg-white">
     <nav
         x-data="{
             open: false,
