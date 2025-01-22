@@ -9,8 +9,13 @@
 @endphp
 
 <aside
-    :class="{'-translate-x-full': !isOpen, 'translate-x-0': isOpen}"
-    class="fixed inset-y-0 start-0 z-[2] h-screen w-64 transform border-e border-neutral-300 bg-white text-black transition-transform duration-300 ease-in-out lg:translate-x-0"
+    class="fixed inset-y-0 start-0 z-[2] h-screen w-64 transform border-e border-neutral-300 bg-white text-black transition-all duration-300 ease-in lg:translate-x-0"
+    :class="{
+        '-translate-x-full': !isOpen,
+        'translate-x-0': isOpen,
+        'h-[calc(100vh-40px)] top-[40px]': hasSession,
+        'h-screen top-0': !hasSession
+    }"
     x-cloak
 >
     <div class="flex items-center justify-between p-4">
