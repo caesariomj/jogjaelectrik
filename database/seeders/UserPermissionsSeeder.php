@@ -16,9 +16,10 @@ class UserPermissionsSeeder extends Seeder
         $permissions = [
             'view all accounts',
             'view own account',
+            'view account details',
             'create accounts',
-            'update all accounts',
-            'update own account',
+            'edit all accounts',
+            'edit own account',
             'delete all accounts',
             'delete own account',
         ];
@@ -32,18 +33,20 @@ class UserPermissionsSeeder extends Seeder
         $superAdminRole = Role::findByName('super_admin');
 
         $userRole->givePermissionTo('view own account');
-        $userRole->givePermissionTo('update own account');
+        $userRole->givePermissionTo('edit own account');
         $userRole->givePermissionTo('delete own account');
 
         $adminRole->givePermissionTo('view own account');
         $adminRole->givePermissionTo('view all accounts');
-        $adminRole->givePermissionTo('update own account');
+        $adminRole->givePermissionTo('view account details');
+        $adminRole->givePermissionTo('edit own account');
 
         $superAdminRole->givePermissionTo('view all accounts');
         $superAdminRole->givePermissionTo('view own account');
+        $superAdminRole->givePermissionTo('view account details');
         $superAdminRole->givePermissionTo('create accounts');
-        $superAdminRole->givePermissionTo('update all accounts');
-        $superAdminRole->givePermissionTo('update own account');
+        $superAdminRole->givePermissionTo('edit all accounts');
+        $superAdminRole->givePermissionTo('edit own account');
         $superAdminRole->givePermissionTo('delete all accounts');
 
         $this->command->info('User permissions successfully seeded.');

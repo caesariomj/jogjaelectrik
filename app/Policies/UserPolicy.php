@@ -27,7 +27,7 @@ class UserPolicy
      */
     public function view(User $user, User $model): bool|Response
     {
-        if ($user->can('view all accounts')) {
+        if ($user->can('view account details')) {
             return true;
         }
 
@@ -59,11 +59,11 @@ class UserPolicy
      */
     public function update(User $user, User $model): bool|Response
     {
-        if ($user->can('update all accounts')) {
+        if ($user->can('edit all accounts')) {
             return true;
         }
 
-        if (! $user->can('update own account')) {
+        if (! $user->can('edit own account')) {
             return $this->deny('Anda tidak memiliki izin untuk mengubah profil akun Anda.', 403);
         }
 
@@ -79,11 +79,11 @@ class UserPolicy
      */
     public function delete(User $user, User $model): bool|Response
     {
-        if ($user->can('update all accounts')) {
+        if ($user->can('delete all accounts')) {
             return true;
         }
 
-        if (! $user->can('update own account')) {
+        if (! $user->can('delete own account')) {
             return $this->deny('Anda tidak memiliki izin untuk menghapus akun Anda.', 403);
         }
 
