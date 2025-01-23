@@ -398,6 +398,7 @@ new class extends Component {
                             x-on:input="$el.value = $el.value.replace(/^0+/, '')"
                             x-mask="999-9999-9999"
                             required
+                            :hasError="$errors->has('form.phone')"
                         />
                     </div>
                     <x-form.input-error :messages="$errors->get('form.phone')" class="mt-2" />
@@ -490,11 +491,12 @@ new class extends Component {
                         wire:model.lazy="form.postalCode"
                         id="postal-code"
                         class="block w-full"
-                        type="text"
+                        type="number"
                         name="postal-code"
                         placeholder="Isikan kode pos anda disini..."
                         minlength="5"
                         maxlength="5"
+                        inputmode="numeric"
                         autocomplete="shipping postal-code"
                         required
                         :hasError="$errors->has('form.postalCode')"
