@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\Admin\CategoryController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DiscountController;
@@ -7,6 +8,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Admin\SubcategoryController;
+use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware(['auth', 'admin_page_access'])->prefix('admin')->name('admin.')->group(function () {
@@ -52,5 +54,17 @@ Route::middleware(['auth', 'admin_page_access'])->prefix('admin')->name('admin.'
         Route::get('/tambah', [DiscountController::class, 'create'])->name('create');
         Route::get('/{code}/detail', [DiscountController::class, 'show'])->name('show');
         Route::get('/{code}/ubah', [DiscountController::class, 'edit'])->name('edit');
+    });
+
+    Route::prefix('manajemen-pelanggan')->name('users.')->group(function () {
+        Route::get('/', [UserController::class, 'index'])->name('index');
+        Route::get('/{id}/detail', [UserController::class, 'show'])->name('show');
+    });
+
+    Route::prefix('manajemen-admin')->name('admins.')->group(function () {
+        Route::get('/', [AdminController::class, 'index'])->name('index');
+        Route::get('/tambah', [AdminController::class, 'create'])->name('create');
+        Route::get('/{id}/detail', [AdminController::class, 'show'])->name('show');
+        Route::get('/{id}/ubah', [AdminController::class, 'edit'])->name('edit');
     });
 });
