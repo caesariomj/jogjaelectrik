@@ -17,7 +17,10 @@ new class extends Component {
 
         if ($validated['isPrimary']) {
             if (Category::countPrimary() >= 2) {
-                $this->addError('form.isPrimary', 'Maksimal kategori utama adalah 2.');
+                $this->addError(
+                    'form.isPrimary',
+                    'Anda sudah memiliki 2 kategori utama. Maksimal kategori utama adalah 2.',
+                );
                 return;
             }
         }
