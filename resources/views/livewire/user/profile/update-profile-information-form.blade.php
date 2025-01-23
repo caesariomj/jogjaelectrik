@@ -406,13 +406,14 @@ new class extends Component {
                             wire:model.lazy="form.postalCode"
                             id="postal-code"
                             class="block w-full"
-                            type="text"
+                            type="number"
                             name="postal-code"
                             placeholder="Isikan kode pos anda disini..."
                             minlength="5"
                             maxlength="5"
                             autocomplete="shipping postal-code"
                             required
+                            x-mask="99999"
                             :hasError="$errors->has('form.postalCode')"
                             x-bind:disabled="!isEditing"
                         />
