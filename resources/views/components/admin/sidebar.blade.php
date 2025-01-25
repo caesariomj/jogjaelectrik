@@ -262,6 +262,34 @@
                         Diskon
                     </x-admin.side-link>
                 </li>
+                @can('view reports')
+                    <li>
+                        <x-admin.side-link
+                            :href="route('admin.reports.sales')"
+                            :active="request()->routeIs('admin.reports.sales')"
+                            wire:navigate
+                        >
+                            <svg
+                                class="size-4"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                            >
+                                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                                <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                                <path d="M10 9H8" />
+                                <path d="M16 13H8" />
+                                <path d="M16 17H8" />
+                            </svg>
+                            Laporan Penjualan
+                        </x-admin.side-link>
+                    </li>
+                @endcan
+
                 <li class="border-t py-2">
                     <span class="text-xs font-semibold uppercase tracking-tight text-black/50">Pengguna</span>
                 </li>
