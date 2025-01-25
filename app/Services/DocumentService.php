@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Order;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Collection;
 
 class DocumentService
 {
@@ -28,6 +29,20 @@ class DocumentService
         return response()->streamDownload(
             fn () => print ($pdf),
             'Label Pengiriman-'.$order->order_number.'.pdf'
+        );
+    }
+
+    public function generateSalesReport(Collection $sales, string $year = '')
+    {
+        $pdf = Pdf::loadView('documents.sales-report', compact('sales', 'year'))
+            ->setPaper('A4', 'landscape')
+            ->output();
+
+        $year = $year !== '' ? $year : date('Y');
+
+        return response()->streamDownload(
+            fn () => print ($pdf),
+            'Laporan Penjualan-'.$year.'.pdf'
         );
     }
 }
