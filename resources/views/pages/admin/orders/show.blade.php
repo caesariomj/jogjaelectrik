@@ -83,7 +83,7 @@
                     </dd>
                 </div>
 
-                @if ($order->payment->paid_at && $order->status !== 'canceled')
+                @if ($order->payment()->exists() && $order->payment->paid_at && $order->status !== 'canceled')
                     <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                         <dt class="w-full tracking-tight text-black/70 md:w-1/3">Estimasi Pesanan Tiba</dt>
                         <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
@@ -232,7 +232,7 @@
             </section>
         @endif
 
-        @if ($order->payment->status === 'refunded' && $order->payment->refund()->exists())
+        @if ($order->payment()->exists() && $order->payment->status === 'refunded' && $order->payment->refund()->exists())
             <section class="mb-4">
                 <h2 class="mb-2 text-2xl text-black">Informasi Refund</h2>
                 <dl class="grid grid-cols-1">
