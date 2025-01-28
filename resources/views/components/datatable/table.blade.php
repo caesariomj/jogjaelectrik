@@ -26,7 +26,7 @@
                     id="search-input"
                     name="search-input"
                     wire:model.live.debounce.250ms="search"
-                    class="block w-full !border-neutral-100 !bg-neutral-100 px-12"
+                    class="block w-full !border-neutral-100 !bg-neutral-100 !px-12"
                     type="text"
                     placeholder="Cari {{ $searchable }} berdasarkan nama..."
                     autocomplete="off"
