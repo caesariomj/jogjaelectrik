@@ -16,12 +16,15 @@ new class extends Component {
         $this->form->setCategory($category);
     }
 
+    /**
+     * Update the category.
+     */
     public function save()
     {
         $validated = $this->form->validate();
 
         if ($validated['isPrimary'] && ! $this->form->category->is_primary) {
-            if (Category::countPrimary() >= 2) {
+            if (Category::queryPrimary()->count() >= 2) {
                 $this->addError(
                     'form.isPrimary',
                     'Anda sudah memiliki 2 kategori utama. Maksimal kategori utama adalah 2.',
@@ -46,7 +49,20 @@ new class extends Component {
             session()->flash('error', $e->getMessage());
             return $this->redirectIntended(route('admin.categories.index'), navigate: true);
         } catch (QueryException $e) {
-            Log::error('Database error during category alteration: ' . $e->getMessage());
+            Log::error('Database query error occurred', [
+                'error_type' => 'QueryException',
+                'message' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Updating category data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
 
             session()->flash(
                 'error',
@@ -54,7 +70,18 @@ new class extends Component {
             );
             return $this->redirectIntended(route('admin.categories.index'), navigate: true);
         } catch (\Exception $e) {
-            Log::error('Unexpected category alteration error: ' . $e->getMessage());
+            Log::error('An unexpected error occurred', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Updating category data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
 
             session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
             return $this->redirectIntended(route('admin.categories.index'), navigate: true);
@@ -72,9 +99,12 @@ new class extends Component {
             <x-form.input
                 wire:model.lazy="form.name"
                 id="name"
-                class="mt-1 block w-full"
+                class="mt-1 block w-full capitalize"
                 type="text"
                 name="name"
+                placeholder="Isikan nama kategori disini..."
+                minlength="3"
+                maxlength="100"
                 autocomplete="off"
                 required
                 autofocus
@@ -90,7 +120,6 @@ new class extends Component {
                         type="checkbox"
                         id="is-primary"
                         class="relative h-7 w-[3.25rem] cursor-pointer rounded-full border-transparent bg-neutral-200 p-px text-transparent transition-colors duration-200 ease-in-out before:inline-block before:size-6 before:translate-x-0 before:transform before:rounded-full before:bg-white before:shadow before:ring-0 before:transition before:duration-200 before:ease-in-out checked:border-primary checked:bg-none checked:text-primary checked:before:translate-x-full checked:before:bg-white focus:ring-primary focus:checked:border-primary disabled:pointer-events-none disabled:opacity-50"
-                        aria-describedby="is-primary-error"
                     />
                     <label for="is-primary" class="mx-3 text-sm font-medium tracking-tight text-black">
                         Kategori Utama

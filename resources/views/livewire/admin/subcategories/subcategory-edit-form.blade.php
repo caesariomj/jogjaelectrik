@@ -1,7 +1,6 @@
 <?php
 
 use App\Livewire\Forms\SubcategoryForm;
-use App\Models\Category;
 use App\Models\Subcategory;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
@@ -18,12 +17,20 @@ new class extends Component {
         $this->form->setSubcategory($subcategory);
     }
 
+    /**
+     * Get all categories with id as value, and name as label.
+     */
     #[Computed]
     public function categories()
     {
-        return Category::select('id as value', 'name as label')->get();
+        return DB::table('categories')
+            ->select('id as value', 'name as label')
+            ->get();
     }
 
+    /**
+     * Update the subcategory.
+     */
     public function save()
     {
         $validated = $this->form->validate();
@@ -44,21 +51,48 @@ new class extends Component {
             session()->flash('error', $e->getMessage());
             return $this->redirectIntended(route('admin.subcategories.index'), navigate: true);
         } catch (QueryException $e) {
-            Log::error('Database error during subcategory alteration: ' . $e->getMessage());
+            Log::error('Database query error occurred', [
+                'error_type' => 'QueryException',
+                'message' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Creating subcategory data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
 
             session()->flash(
                 'error',
-                'Terjadi kesalahan dalam mengubah subkategori baru, silakan coba beberapa saat lagi.',
+                'Terjadi kesalahan dalam mengubah subkategori ini, silakan coba beberapa saat lagi.',
             );
             return $this->redirectIntended(route('admin.subcategories.index'), navigate: true);
         } catch (\Exception $e) {
-            Log::error('Unexpected subcategory alteration error: ' . $e->getMessage());
+            Log::error('An unexpected error occurred', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Updating subcategory data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
 
             session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
             return $this->redirectIntended(route('admin.subcategories.index'), navigate: true);
         }
     }
 
+    /**
+     * Set categoryId value when the combobox component change.
+     */
     public function handleComboboxChange($value, $comboboxInstanceName)
     {
         if ($comboboxInstanceName == 'kategori') {
