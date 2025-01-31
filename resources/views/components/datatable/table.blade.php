@@ -2,7 +2,7 @@
     'searchable' => null,
 ])
 
-<section class="rounded-xl border border-neutral-300 bg-white shadow">
+<section class="rounded-xl bg-white shadow-sm">
     <div class="flex w-full flex-col justify-between gap-4 p-4 md:flex-row md:items-center">
         <div class="relative w-full shrink">
             <div class="pointer-events-none absolute inset-y-0 start-0 z-20 flex items-center ps-4">
