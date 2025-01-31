@@ -13,7 +13,7 @@ class SubcategoryController extends Controller
     /**
      * Display a listing of the subcategory.
      */
-    public function index(): View
+    public function index(): View|RedirectResponse
     {
         try {
             $this->authorize('viewAny', Subcategory::class);
@@ -47,7 +47,9 @@ class SubcategoryController extends Controller
      */
     public function show(string $slug): View|RedirectResponse
     {
-        $subcategory = Subcategory::with('category')->withCount('products')->findBySlug($slug)->first();
+        $subcategory = (new Subcategory)->newFromBuilder(
+            Subcategory::queryBySlugWithCategoryAndTotalProduct(slug: $slug)->first()
+        );
 
         if (! $subcategory) {
             session()->flash('error', 'Subkategori tidak ditemukan.');
@@ -71,7 +73,12 @@ class SubcategoryController extends Controller
      */
     public function edit(string $slug): View|RedirectResponse
     {
-        $subcategory = Subcategory::findBySlug($slug)->first();
+        $subcategory = (new Subcategory)->newFromBuilder(
+            Subcategory::queryBySlugWithCategory(slug: $slug, columns: [
+                'subcategories.id',
+                'subcategories.name',
+            ])->first()
+        );
 
         if (! $subcategory) {
             session()->flash('error', 'Subkategori tidak ditemukan.');

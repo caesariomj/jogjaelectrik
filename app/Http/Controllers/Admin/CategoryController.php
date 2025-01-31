@@ -13,7 +13,7 @@ class CategoryController extends Controller
     /**
      * Display a listing of the category.
      */
-    public function index(): View
+    public function index(): View|RedirectResponse
     {
         try {
             $this->authorize('viewAny', Category::class);
@@ -47,7 +47,9 @@ class CategoryController extends Controller
      */
     public function show(string $slug): View|RedirectResponse
     {
-        $category = Category::withCount(['subcategories', 'products'])->findBySlug($slug)->first();
+        $category = (new Category)->newFromBuilder(
+            Category::queryBySlugWithTotalSubcategoryAndProduct(slug: $slug)->first()
+        );
 
         if (! $category) {
             session()->flash('error', 'Kategori tidak ditemukan.');
@@ -71,7 +73,13 @@ class CategoryController extends Controller
      */
     public function edit(string $slug): View|RedirectResponse
     {
-        $category = Category::findBySlug($slug)->first();
+        $category = (new Category)->newFromBuilder(
+            Category::queryBySlug(slug: $slug, columns: [
+                'categories.id',
+                'categories.name',
+                'categories.is_primary',
+            ])->first()
+        );
 
         if (! $category) {
             session()->flash('error', 'Kategori tidak ditemukan.');
