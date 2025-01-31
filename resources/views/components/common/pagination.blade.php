@@ -71,7 +71,7 @@
                         rel="prev"
                         class="relative inline-flex cursor-pointer items-center rounded-l-md border border-neutral-300 bg-white p-2 text-sm font-medium tracking-tight text-black ring-primary-300 transition duration-150 ease-in-out hover:border-primary-300 hover:bg-primary-50 hover:text-primary focus:border-primary focus:outline-none focus:ring active:bg-neutral-50 active:text-primary"
                         aria-label="{{ __('pagination.previous') }}"
-                        wire:click="prevPage"
+                        wire:click="previousPage"
                     >
                         <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                             <path
