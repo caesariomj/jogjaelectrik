@@ -15,7 +15,7 @@ class SubcategoryForm extends Form
 
     public string $name = '';
 
-    public function rules()
+    protected function rules()
     {
         return [
             'categoryId' => [
@@ -32,7 +32,7 @@ class SubcategoryForm extends Form
         ];
     }
 
-    public function validationAttributes()
+    protected function validationAttributes()
     {
         return [
             'categoryId' => 'Kategori',

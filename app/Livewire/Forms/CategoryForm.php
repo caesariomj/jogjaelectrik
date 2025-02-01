@@ -15,7 +15,7 @@ class CategoryForm extends Form
 
     public bool $isPrimary = false;
 
-    public function rules()
+    protected function rules()
     {
         return [
             'name' => [
@@ -31,7 +31,7 @@ class CategoryForm extends Form
         ];
     }
 
-    public function validationAttributes()
+    protected function validationAttributes()
     {
         return [
             'name' => 'Nama kategori',
