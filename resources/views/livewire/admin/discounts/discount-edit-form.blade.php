@@ -16,6 +16,18 @@ new class extends Component {
         $this->form->setDiscount($discount);
     }
 
+    /**
+     * Reset discount value and max amount to empty after discount type updated.
+     */
+    public function updatedFormType()
+    {
+        $this->form->value = '';
+        $this->form->maxDiscountAmount = '';
+    }
+
+    /**
+     * Update the discount.
+     */
     public function save()
     {
         $validated = $this->form->validate();
@@ -55,7 +67,20 @@ new class extends Component {
             session()->flash('error', $e->getMessage());
             return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
         } catch (QueryException $e) {
-            Log::error('Database error during discount alteration: ' . $e->getMessage());
+            Log::error('Database query error occurred', [
+                'error_type' => 'QueryException',
+                'message' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Creating discount data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
 
             session()->flash(
                 'error',
@@ -65,7 +90,18 @@ new class extends Component {
             );
             return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
         } catch (\Exception $e) {
-            Log::error('Unexpected discount alteration error: ' . $e->getMessage());
+            Log::error('An unexpected error occurred', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Updating category data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
 
             session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
             return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
@@ -126,9 +162,11 @@ new class extends Component {
                         id="is-primary"
                         class="relative h-7 w-[3.25rem] cursor-pointer rounded-full border-transparent bg-neutral-200 p-px text-transparent transition-colors duration-200 ease-in-out before:inline-block before:size-6 before:translate-x-0 before:transform before:rounded-full before:bg-white before:shadow before:ring-0 before:transition before:duration-200 before:ease-in-out checked:border-primary checked:bg-none checked:text-primary checked:before:translate-x-full checked:before:bg-white focus:ring-primary focus:checked:border-primary disabled:pointer-events-none disabled:opacity-50"
                     />
-                    <p class="ms-3 inline-flex items-center text-sm font-medium tracking-tight text-black">
+                    <p
+                        class="ms-3 inline-flex flex-col items-start gap-1.5 text-sm font-medium tracking-tight text-black md:flex-row md:items-center"
+                    >
                         {{ $form->isActive ? 'Aktif' : 'Non-aktif' }}
-                        <span class="ms-1.5 text-xs text-black/70">
+                        <span class="text-xs text-black/70">
                             {{ $form->isActive ? '(Diskon dapat dilihat dan digunakan oleh pelanggan)' : '(Diskon tidak dapat dilihat dan digunakan oleh pelanggan)' }}
                         </span>
                     </p>
@@ -178,6 +216,8 @@ new class extends Component {
                             <label
                                 for="fixed-type"
                                 class="inline-flex w-full cursor-pointer items-center justify-start rounded-lg border border-neutral-300 bg-white px-4 py-3 text-sm tracking-tight text-black hover:border-primary hover:bg-primary-50 hover:text-primary peer-checked:border-primary peer-checked:bg-primary-50 peer-checked:text-primary"
+                                wire:loading.class="opacity-50 cursor-wait"
+                                wire:target="form.type"
                             >
                                 Nominal
                             </label>
@@ -194,6 +234,8 @@ new class extends Component {
                             <label
                                 for="percentage-type"
                                 class="inline-flex w-full cursor-pointer items-center justify-start rounded-lg border border-neutral-300 bg-white px-4 py-3 text-sm tracking-tight text-black hover:border-primary hover:bg-primary-50 hover:text-primary peer-checked:border-primary peer-checked:bg-primary-50 peer-checked:text-primary"
+                                wire:loading.class="opacity-50 cursor-wait"
+                                wire:target="form.type"
                             >
                                 Persentase
                             </label>
@@ -384,7 +426,7 @@ new class extends Component {
         <x-common.button
             :href="route('admin.discounts.index')"
             variant="secondary"
-            wire:loading.class="!pointers-event-none !cursor-wait opacity-50"
+            wire:loading.class="!pointers-event-none !cursor-not-allowed opacity-50"
             wire:target="save"
             wire:navigate
         >

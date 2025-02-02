@@ -13,7 +13,7 @@ class DiscountController extends Controller
     /**
      * Display a listing of the discount.
      */
-    public function index(): View
+    public function index(): View|RedirectResponse
     {
         try {
             $this->authorize('viewAny', Discount::class);
@@ -47,7 +47,9 @@ class DiscountController extends Controller
      */
     public function show(string $code): View|RedirectResponse
     {
-        $discount = Discount::findByCode($code)->first();
+        $discount = (new Discount)->newFromBuilder(
+            Discount::queryByCode(code: $code)->first()
+        );
 
         if (! $discount) {
             session()->flash('error', 'Diskon tidak ditemukan.');
@@ -71,7 +73,23 @@ class DiscountController extends Controller
      */
     public function edit(string $code): View|RedirectResponse
     {
-        $discount = Discount::findByCode($code)->first();
+        $discount = (new Discount)->newFromBuilder(
+            Discount::queryByCode(code: $code, columns: [
+                'discounts.id',
+                'discounts.name',
+                'discounts.description',
+                'discounts.code',
+                'discounts.type',
+                'discounts.value',
+                'discounts.start_date',
+                'discounts.end_date',
+                'discounts.usage_limit',
+                'discounts.used_count',
+                'discounts.max_discount_amount',
+                'discounts.minimum_purchase',
+                'discounts.is_active',
+            ])->first()
+        );
 
         if (! $discount) {
             session()->flash('error', 'Diskon tidak ditemukan.');

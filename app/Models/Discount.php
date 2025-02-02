@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Discount extends Model
 {
@@ -71,33 +72,44 @@ class Discount extends Model
     /**
      * Discount-related functions.
      */
-    public function scopeFindByCode($query, string $code)
+    public static function baseQuery(array $columns = ['*'])
     {
-        return $query->where('code', 'LIKE', "%{$code}%");
+        return DB::table('discounts')->select($columns);
     }
 
-    public function scopeActive($query)
+    public static function queryById(string $id, array $columns = ['*'])
     {
-        return $query->where('is_active', true);
+        return self::baseQuery(columns: $columns)->where('discounts.id', $id);
     }
 
-    public function scopeUsable($query, $userId = null)
+    public static function queryByCode(string $code, array $columns = ['*'])
     {
-        return $query->where(function ($query) {
-            $query->whereNull('start_date')->orWhere('start_date', '<=', now());
-        })
+        return self::baseQuery(columns: $columns)->where('discounts.code', 'LIKE', "%{$code}%");
+    }
+
+    public static function queryAllUsable(?string $userId = null, array $columns = ['discounts.name', 'discounts.description', 'discounts.code', 'discounts.type', 'discounts.value', 'discounts.max_discount_amount', 'discounts.start_date', 'discounts.end_date', 'discounts.usage_limit', 'discounts.used_count', 'discounts.minimum_purchase', 'discounts.is_active'])
+    {
+        return self::baseQuery(columns: $columns)
+            ->where('discounts.is_active', true)
             ->where(function ($query) {
-                $query->whereNull('end_date')->orWhere('end_date', '>=', now());
+                $query->whereNull('discounts.start_date')->orWhere('discounts.start_date', '<=', now());
             })
             ->where(function ($query) {
-                $query->whereNull('usage_limit')->orWhereColumn('usage_limit', '>', 'used_count');
+                $query->whereNull('discounts.end_date')->orWhere('discounts.end_date', '>=', now());
             })
-            ->whereDoesntHave('orderDiscounts', function ($query) use ($userId) {
-                $query->where('is_used', true)
-                    ->whereHas('order', function ($query) use ($userId) {
-                        $query->where('user_id', $userId)
-                            ->whereNotNull('id');
-                    });
+            ->where(function ($query) {
+                $query->whereNull('discounts.usage_limit')->orWhereColumn('discounts.usage_limit', '>', 'discounts.used_count');
+            })
+            ->when($userId, function ($query) use ($userId) {
+                $query->whereNotExists(function ($subquery) use ($userId) {
+                    $subquery->select(DB::raw(1))
+                        ->from('order_discounts')
+                        ->join('orders', 'orders.id', '=', 'order_discounts.order_id')
+                        ->where('order_discounts.is_used', true)
+                        ->where('orders.user_id', $userId)
+                        ->whereNotNull('orders.id')
+                        ->whereColumn('order_discounts.discount_id', 'discounts.id');
+                });
             });
     }
 

@@ -25,7 +25,7 @@
             </x-common.button>
             <h1 class="leading-none text-black">Detail Diskon &mdash; {{ ucwords($discount->name) }}</h1>
         </header>
-        <dl class="grid grid-cols-1">
+        <dl class="mb-8 grid grid-cols-1">
             <div class="flex flex-col items-center gap-1 border-b border-neutral-300 py-2 md:flex-row">
                 <dt class="w-full tracking-tight text-black/70 md:w-1/3">Nama Diskon</dt>
                 <dd class="w-full font-medium tracking-tight text-black md:w-2/3">{{ ucwords($discount->name) }}</dd>
@@ -128,5 +128,15 @@
                 </dd>
             </div>
         </dl>
+        <div class="flex flex-col items-center gap-4 md:flex-row md:justify-end">
+            <x-common.button
+                :href="route('admin.discounts.index')"
+                variant="secondary"
+                class="w-full md:w-fit"
+                wire:navigate
+            >
+                Kembali
+            </x-common.button>
+        </div>
     </section>
 @endsection
