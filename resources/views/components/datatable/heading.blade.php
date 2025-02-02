@@ -7,8 +7,11 @@
     @if ($sortable)
         <button
             type="button"
-            class="flex w-full items-center gap-x-2 p-4 text-sm font-semibold tracking-tight text-black underline-offset-1 hover:underline"
-            {{ $attributes->except('class') }}
+            @class([
+                'flex w-full items-center gap-x-2 p-4 text-sm font-semibold tracking-tight text-black underline-offset-1 hover:underline',
+                'justify-center' => $attributes->get('align') === 'center',
+            ])
+            {{ $attributes->except(['class', 'align']) }}
         >
             {{ $slot }}
             <svg class="w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256">
@@ -40,7 +43,12 @@
             </svg>
         </button>
     @else
-        <span class="flex items-center gap-x-2 p-4 text-sm font-semibold tracking-tight text-black">
+        <span
+            @class([
+                'flex items-center gap-x-2 p-4 text-sm font-semibold tracking-tight text-black',
+                'justify-center' => $attributes->get('align') === 'center',
+            ])
+        >
             {{ $slot }}
         </span>
     @endif
