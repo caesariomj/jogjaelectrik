@@ -18,7 +18,7 @@
     <div class="relative">
         <button
             type="button"
-            class="inline-flex w-full items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-tight text-black shadow-sm transition hover:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+            class="inline-flex w-full items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-tight text-black shadow-sm transition-colors focus:border-primary focus:outline-primary focus:ring-1 focus:ring-primary focus-visible:border-primary focus-visible:outline-primary focus-visible:ring-1 focus-visible:ring-primary"
             role="combobox"
             aria-controls="{{ $name }}-list"
             aria-haspopup="listbox"
@@ -30,7 +30,7 @@
             x-bind:aria-label="selectedOption ? selectedOption.label : 'Silakan pilih {{ $name }}'"
         >
             <span
-                class="text-sm font-normal capitalize text-black"
+                class="text-sm font-normal capitalize tracking-tight text-black"
                 x-text="selectedOption ? selectedOption.label : 'Silakan pilih {{ $name }}'"
             ></span>
             <svg
@@ -67,8 +67,8 @@
                     viewBox="0 0 24 24"
                     stroke="currentColor"
                     fill="none"
-                    stroke-width="1.5"
-                    class="absolute left-4 top-1/2 size-5 -translate-y-1/2 text-black opacity-75"
+                    stroke-width="1.8"
+                    class="absolute start-4 top-1/2 size-5 -translate-y-1/2 text-black opacity-75"
                     aria-hidden="true"
                 >
                     <path
@@ -79,8 +79,9 @@
                 </svg>
                 <input
                     type="text"
-                    class="w-full border-b border-transparent border-b-neutral-300 bg-white py-2.5 pl-11 pr-4 text-sm text-black focus:border-transparent focus:border-b-neutral-300 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-75"
+                    class="w-full border-b border-transparent border-b-neutral-300 bg-white py-2.5 pl-12 pr-4 text-sm text-black focus:border-transparent focus:border-b-neutral-300 focus:outline-none focus:ring-0 disabled:cursor-not-allowed disabled:opacity-75"
                     name="searchField"
+                    autocomplete="off"
                     x-ref="searchField"
                     aria-label="Cari {{ $name }}"
                     x-on:input="getFilteredOptions($el.value)"
@@ -93,7 +94,7 @@
                 </li>
                 <template x-for="(item, index) in options" x-bind:key="item.value">
                     <li
-                        class="combobox-option inline-flex cursor-pointer justify-between gap-6 rounded-md bg-white px-4 py-2 text-sm capitalize text-black hover:bg-neutral-900/5 focus-visible:bg-neutral-900/5 focus-visible:text-neutral-900 focus-visible:outline-none"
+                        class="combobox-option inline-flex cursor-pointer justify-between gap-6 rounded-md bg-white px-4 py-2 text-sm font-normal capitalize tracking-tight text-black transition-colors hover:bg-primary-50 hover:text-primary focus-visible:bg-primary-50 focus-visible:text-primary focus-visible:outline-none"
                         role="option"
                         x-on:click="setSelectedOption(item)"
                         x-on:keydown.enter="setSelectedOption(item)"
@@ -101,7 +102,7 @@
                         tabindex="0"
                     >
                         <span
-                            x-bind:class="selectedOption == item ? 'font-bold text-primary' : null"
+                            x-bind:class="selectedOption == item ? 'font-semibold text-primary' : null"
                             x-text="item.label"
                         ></span>
                         <span class="sr-only" x-text="selectedOption == item ? 'selected' : null"></span>
