@@ -4,12 +4,16 @@ namespace App\Livewire\Forms;
 
 use App\Models\User;
 use Illuminate\Support\Facades\Crypt;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
 use Livewire\Form;
 
 class UpdateProfileForm extends Form
 {
     public User $user;
+
+    #[Locked]
+    public string $role;
 
     #[Validate]
     public string $name = '';
@@ -26,7 +30,7 @@ class UpdateProfileForm extends Form
 
     public string $postalCode = '';
 
-    public function rules()
+    protected function rules()
     {
         return [
             'name' => [
@@ -44,34 +48,34 @@ class UpdateProfileForm extends Form
                 'unique:users,email,'.$this->user->id,
             ],
             'phone' => [
-                'required',
+                ! in_array($this->role, ['admin', 'super_admin']) ? 'required' : 'nullable',
                 'phone:ID',
             ],
             'province' => [
-                'required',
+                ! in_array($this->role, ['admin', 'super_admin']) ? 'required' : 'nullable',
                 'numeric',
                 'exists:provinces,id',
             ],
             'city' => [
-                'required',
+                ! in_array($this->role, ['admin', 'super_admin']) ? 'required' : 'nullable',
                 'numeric',
                 'exists:cities,id',
             ],
             'address' => [
-                'required',
+                ! in_array($this->role, ['admin', 'super_admin']) ? 'required' : 'nullable',
                 'string',
                 'min:10',
                 'max:1000',
             ],
             'postalCode' => [
-                'required',
+                ! in_array($this->role, ['admin', 'super_admin']) ? 'required' : 'nullable',
                 'numeric',
                 'digits:5',
             ],
         ];
     }
 
-    public function validationAttributes()
+    protected function validationAttributes()
     {
         return [
             'name' => 'Nama lengkap',
@@ -86,17 +90,21 @@ class UpdateProfileForm extends Form
 
     public function setUser(User $user)
     {
+        $this->role = $user->roles()->first()->name;
         $this->user = $user;
         $this->name = $user->name;
         $this->email = $user->email;
-        $this->phone = $this->safeDecrypt($user->phone_number);
-        $this->province = $user->city->province_id;
-        $this->city = $user->city_id;
-        $this->address = $this->safeDecrypt($user->address);
-        $this->postalCode = $this->safeDecrypt($user->postal_code);
+        $this->phone = $user->phone_number ? $this->safeDecrypt($user->phone_number) : '';
+
+        if (! in_array($this->role, ['admin', 'super_admin'])) {
+            $this->province = $user->city->province_id;
+            $this->city = $user->city_id;
+            $this->address = $this->safeDecrypt($user->address);
+            $this->postalCode = $this->safeDecrypt($user->postal_code);
+        }
     }
 
-    private function safeDecrypt($encryptedValue)
+    private function safeDecrypt(string $encryptedValue)
     {
         try {
             return $encryptedValue ? Crypt::decryptString($encryptedValue) : '';
