@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\DiscountController;
 use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
+use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\RefundController;
 use App\Http\Controllers\Admin\ReportController;
 use App\Http\Controllers\Admin\SubcategoryController;
@@ -72,4 +73,8 @@ Route::middleware(['auth', 'admin_page_access'])->prefix('admin')->name('admin.'
     Route::name('reports.')->group(function () {
         Route::get('/laporan-penjualan', [ReportController::class, 'sales'])->name('sales');
     });
+
+    Route::get('/profil-saya', [ProfileController::class, 'index'])->name('profile');
+
+    Route::get('/pengaturan-akun', [ProfileController::class, 'setting'])->name('setting');
 });
