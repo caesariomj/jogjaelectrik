@@ -13,7 +13,7 @@ class AdminController extends Controller
     /**
      * Display a listing of the admin.
      */
-    public function index(): View
+    public function index(): View|RedirectResponse
     {
         try {
             $this->authorize('viewAny', User::class);
@@ -47,10 +47,12 @@ class AdminController extends Controller
      */
     public function show(string $id): View|RedirectResponse
     {
-        $admin = User::find($id);
+        $admin = (new User)->newFromBuilder(
+            User::queryAdminById(id: $id)->first()
+        );
 
         if (! $admin) {
-            session()->flash('error', 'Pelanggan tidak ditemukan.');
+            session()->flash('error', 'Admin tidak ditemukan.');
 
             return redirect()->route('admin.admins.index');
         }
@@ -71,10 +73,12 @@ class AdminController extends Controller
      */
     public function edit(string $id): View|RedirectResponse
     {
-        $admin = User::find($id);
+        $admin = (new User)->newFromBuilder(
+            User::queryAdminById(id: $id, columns: ['users.id', 'users.name', 'users.email'])->first()
+        );
 
         if (! $admin) {
-            session()->flash('error', 'Pelanggan tidak ditemukan.');
+            session()->flash('error', 'Admin tidak ditemukan.');
 
             return redirect()->route('admin.admins.index');
         }

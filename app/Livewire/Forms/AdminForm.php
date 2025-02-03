@@ -16,6 +16,8 @@ class AdminForm extends Form
 
     public string $email = '';
 
+    public string $role = 'admin';
+
     public string $password = '';
 
     public string $passwordConfirmation = '';
@@ -37,6 +39,11 @@ class AdminForm extends Form
                 'max:255',
                 is_null($this->user) ? 'unique:users,email' : 'unique:users,email,'.$this->user->id,
             ],
+            'role' => [
+                'required',
+                'string',
+                'in:admin',
+            ],
             'password' => [
                 is_null($this->user) ? 'required' : 'nullable',
                 'string',
@@ -55,6 +62,7 @@ class AdminForm extends Form
         return [
             'name' => 'Nama',
             'email' => 'Alamat email',
+            'role' => 'Peran',
             'password' => 'Password admin',
             'passwordConfirmation' => 'Konfirmasi password admin',
         ];
@@ -64,6 +72,7 @@ class AdminForm extends Form
     {
         $this->user = $user;
         $this->name = $user->name;
+        $this->role = $user->role;
         $this->email = $user->email;
     }
 }
