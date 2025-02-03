@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\DB;
 use Livewire\Volt\Component;
 
 new class extends Component {
+    public ?string $role = null;
     public int $cartItemsCount = 0;
     public string $search = '';
     public array $searchResults = [
@@ -17,6 +18,10 @@ new class extends Component {
     public function mount()
     {
         if (auth()->check()) {
+            $this->role = auth()
+                ->user()
+                ->roles->first()->name;
+
             $this->updateCartItemsCount();
         }
     }
@@ -280,7 +285,10 @@ new class extends Component {
                                 </x-common.dropdown-link>
                             @endcan
 
-                            <x-common.dropdown-link :href="route('profile')" wire:navigate>
+                            <x-common.dropdown-link
+                                :href="in_array($role, ['admin', 'super_admin']) ? route('admin.profile') : route('profile')"
+                                wire:navigate
+                            >
                                 <svg
                                     class="size-4"
                                     xmlns="http://www.w3.org/2000/svg"
@@ -321,7 +329,10 @@ new class extends Component {
                             @endcan
 
                             @can('view own account')
-                                <x-common.dropdown-link :href="route('setting')" wire:navigate>
+                                <x-common.dropdown-link
+                                    :href="in_array($role, ['admin', 'super_admin']) ? route('admin.setting') : route('setting')"
+                                    wire:navigate
+                                >
                                     <svg
                                         class="size-4"
                                         xmlns="http://www.w3.org/2000/svg"
@@ -460,7 +471,10 @@ new class extends Component {
                             </x-user.responsive-nav-link>
                         @endcan
 
-                        <x-user.responsive-nav-link :href="route('profile')" wire:navigate>
+                        <x-user.responsive-nav-link
+                            :href="in_array($role, ['admin', 'super_admin']) ? route('admin.profile') : route('profile')"
+                            wire:navigate
+                        >
                             <svg
                                 class="size-4"
                                 xmlns="http://www.w3.org/2000/svg"
@@ -501,7 +515,10 @@ new class extends Component {
                         @endcan
 
                         @can('view own account')
-                            <x-user.responsive-nav-link :href="route('orders.index')" wire:navigate>
+                            <x-user.responsive-nav-link
+                                :href="in_array($role, ['admin', 'super_admin']) ? route('admin.setting') : route('setting')"
+                                wire:navigate
+                            >
                                 <svg
                                     class="size-4"
                                     xmlns="http://www.w3.org/2000/svg"
