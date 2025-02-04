@@ -19,4 +19,6 @@
     <main>
         @yield('content', $slot ?? '')
     </main>
+
+    <x-user.footer class="container mx-auto max-w-md px-6 py-12 md:max-w-[96rem] md:px-12 md:py-24" />
 @endsection
