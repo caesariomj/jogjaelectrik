@@ -84,10 +84,10 @@ class Discount extends Model
 
     public static function queryByCode(string $code, array $columns = ['*'])
     {
-        return self::baseQuery(columns: $columns)->where('discounts.code', 'LIKE', "%{$code}%");
+        return self::baseQuery(columns: $columns)->where('discounts.code', 'LIKE', '%'.$code.'%');
     }
 
-    public static function queryAllUsable(?string $userId = null, array $columns = ['discounts.name', 'discounts.description', 'discounts.code', 'discounts.type', 'discounts.value', 'discounts.max_discount_amount', 'discounts.start_date', 'discounts.end_date', 'discounts.usage_limit', 'discounts.used_count', 'discounts.minimum_purchase', 'discounts.is_active'])
+    public static function queryAllUsable(?string $userId = null, array $columns = ['*'])
     {
         return self::baseQuery(columns: $columns)
             ->where('discounts.is_active', true)

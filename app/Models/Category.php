@@ -78,9 +78,35 @@ class Category extends Model
         return self::baseQuery(columns: $columns)->where('categories.id', $id);
     }
 
-    public static function queryBySlug(string $slug, array $columns = ['*'])
+    public static function queryBySlug(string $slug, array $columns = ['*'], array|string|null $relations = null)
     {
-        return self::baseQuery(columns: $columns)->where('categories.slug', $slug);
+        $relations = is_array($relations) ? $relations : [$relations];
+
+        $category = self::baseQuery(columns: $columns)->where('categories.slug', $slug)->first();
+
+        if (! $category) {
+            return null;
+        }
+
+        foreach ($relations as $relation) {
+            switch ($relation) {
+                case 'subcategories':
+                    $category->subcategories = self::getSubcategories(categoryId: $category->id);
+                    break;
+
+                case 'aggregates':
+                    $aggregates = self::getAggregates(categoryId: $category->id);
+
+                    $category->total_subcategories = $aggregates->total_subcategories;
+                    $category->total_products = $aggregates->total_products;
+                    break;
+
+                default:
+                    break;
+            }
+        }
+
+        return $category;
     }
 
     public static function queryByName(string $name, array $columns = ['*'])
@@ -88,7 +114,7 @@ class Category extends Model
         return self::baseQuery(columns: $columns)->where('categories.name', $name);
     }
 
-    public static function queryAllWithTotalProduct(array $columns = ['categories.id', 'categories.name', 'categories.slug', 'categories.is_primary', 'categories.created_at', 'categories.updated_at'])
+    public static function queryAllWithTotalProduct(array $columns = ['*'])
     {
         return self::baseQuery(columns: $columns)
             ->leftJoinSub(
@@ -104,30 +130,47 @@ class Category extends Model
             ->addSelect(DB::raw('COALESCE(products.total_products, 0) as total_products'));
     }
 
-    public static function queryBySlugWithTotalSubcategoryAndProduct(string $slug, array $columns = ['categories.id', 'categories.name', 'categories.slug', 'categories.is_primary', 'categories.created_at', 'categories.updated_at'])
+    public static function queryPrimaryWithSubcategories(array $columns = ['*'])
     {
-        return self::queryBySlug(slug: $slug, columns: $columns)
-            ->leftJoinSub(
-                DB::table('subcategories')
-                    ->select('category_id', DB::raw('COUNT(*) as total_subcategories'))
-                    ->groupBy('category_id'),
-                'subcategories',
-                'subcategories.category_id',
-                '=',
-                'categories.id'
-            )
-            ->leftJoinSub(
-                DB::table('products')
-                    ->join('subcategories', 'subcategories.id', '=', 'products.subcategory_id')
-                    ->select('subcategories.category_id', DB::raw('COUNT(*) as total_products'))
-                    ->groupBy('subcategories.category_id'),
-                'products',
-                'products.category_id',
-                '=',
-                'categories.id'
-            )
-            ->addSelect(DB::raw('COALESCE(subcategories.total_subcategories, 0) as total_subcategories'))
-            ->addSelect(DB::raw('COALESCE(products.total_products, 0) as total_products'));
+        return self::queryPrimary($columns)
+            ->leftJoin('subcategories', 'categories.id', '=', 'subcategories.category_id')
+            ->addSelect([
+                'subcategories.id as subcategory_id',
+                'subcategories.name as subcategory_name',
+                'subcategories.slug as subcategory_slug',
+            ]);
+    }
+
+    public static function getSubcategories(string $categoryId): array
+    {
+        return DB::table('subcategories')
+            ->select('name')
+            ->where('subcategories.category_id', $categoryId)
+            ->get()
+            ->toArray();
+    }
+
+    public static function getAggregates(string $categoryId): object
+    {
+        $aggregates = DB::table('categories')
+            ->selectSub('
+                SELECT COUNT(subcategories.id)
+                FROM subcategories
+                WHERE subcategories.category_id = categories.id
+            ', 'total_subcategories')
+            ->selectSub('
+                SELECT COUNT(products.id)
+                FROM products
+                LEFT JOIN subcategories ON subcategories.id = products.subcategory_id
+                WHERE subcategories.category_id = categories.id OR products.subcategory_id IS NULL
+            ', 'total_products')
+            ->where('categories.id', $categoryId)
+            ->first();
+
+        return (object) [
+            'total_subcategories' => $aggregates->total_subcategories,
+            'total_products' => $aggregates->total_products,
+        ];
     }
 
     /**
