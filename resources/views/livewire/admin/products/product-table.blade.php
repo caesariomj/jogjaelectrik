@@ -575,7 +575,11 @@ new class extends Component {
                         {{ $product->main_sku }}
                     </x-datatable.cell>
                     <x-datatable.cell class="text-sm font-normal tracking-tight text-black/70" align="left">
-                        {{ ucwords($product->category_name) . ' / ' . ucwords($product->subcategory_name) }}
+                        @if ($product->category_name && $product->subcategory_name)
+                            {{ ucwords($product->category_name) . ' / ' . ucwords($product->subcategory_name) }}
+                        @else
+                            -
+                        @endif
                     </x-datatable.cell>
                     <x-datatable.cell class="h-full align-middle" align="center">
                         <div

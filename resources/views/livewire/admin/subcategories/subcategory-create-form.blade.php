@@ -24,7 +24,23 @@ new class extends Component {
     }
 
     /**
-     * Create a new subcategory.
+     * Set categoryId value when the combobox component change.
+     */
+    public function handleComboboxChange($value, $comboboxInstanceName)
+    {
+        if ($comboboxInstanceName == 'kategori') {
+            $this->form->categoryId = $value;
+        }
+    }
+
+    /**
+     * Create new subcategory.
+     *
+     * @return  void
+     *
+     * @throws  AuthorizationException if the user is not authorized to create new subcategory.
+     * @throws  QueryException if a database query error occurred.
+     * @throws  \Exception if an unexpected error occurred.
      */
     public function save()
     {
@@ -84,16 +100,6 @@ new class extends Component {
             return $this->redirectIntended(route('admin.subcategories.index'), navigate: true);
         }
     }
-
-    /**
-     * Set categoryId value when the combobox component change.
-     */
-    public function handleComboboxChange($value, $comboboxInstanceName)
-    {
-        if ($comboboxInstanceName == 'kategori') {
-            $this->form->categoryId = $value;
-        }
-    }
 }; ?>
 
 <form wire:submit.prevent="save" class="rounded-xl border border-neutral-300 bg-white shadow">
@@ -102,26 +108,28 @@ new class extends Component {
             <h2 class="text-lg text-black">Informasi Dasar Subkategori</h2>
         </legend>
         <div class="p-4">
-            <x-form.input-label for="select-category" value="Pilih Kategori" class="mb-1" />
-            <x-form.combobox :options="$this->categories" name="kategori" id="select-category" />
-            <x-form.input-error :messages="$errors->get('form.categoryId')" class="mt-2" />
-        </div>
-        <div class="p-4">
-            <x-form.input-label for="name" value="Nama Subkategori" />
-            <x-form.input
-                wire:model.lazy="form.name"
-                id="name"
-                class="mt-1 block w-full"
-                type="text"
-                name="name"
-                placeholder="Isikan nama subkategori disini..."
-                minlength="3"
-                maxlength="100"
-                autocomplete="off"
-                required
-                :hasError="$errors->has('form.name')"
-            />
-            <x-form.input-error :messages="$errors->get('form.name')" class="mt-2" />
+            <div>
+                <x-form.input-label for="select-category" value="Pilih Kategori" class="mb-1" />
+                <x-form.combobox :options="$this->categories" name="kategori" id="select-category" />
+                <x-form.input-error :messages="$errors->get('form.categoryId')" class="mt-2" />
+            </div>
+            <div class="mt-4">
+                <x-form.input-label for="name" value="Nama Subkategori" />
+                <x-form.input
+                    wire:model.lazy="form.name"
+                    id="name"
+                    class="mt-1 block w-full"
+                    type="text"
+                    name="name"
+                    placeholder="Isikan nama subkategori disini..."
+                    minlength="3"
+                    maxlength="100"
+                    autocomplete="off"
+                    required
+                    :hasError="$errors->has('form.name')"
+                />
+                <x-form.input-error :messages="$errors->get('form.name')" class="mt-2" />
+            </div>
         </div>
     </fieldset>
     <div class="flex flex-col justify-end gap-4 p-4 md:flex-row">

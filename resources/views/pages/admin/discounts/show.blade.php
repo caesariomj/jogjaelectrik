@@ -84,25 +84,25 @@
             <div class="flex flex-col items-center gap-1 border-b border-neutral-300 py-2 md:flex-row">
                 <dt class="w-full tracking-tight text-black/70 md:w-1/3">Status Diskon</dt>
                 <dd class="w-full md:w-2/3">
-                    @if ($discount->is_active)
+                    @if ($discount->is_active && (! $discount->end_date || $discount->end_date >= now()->toDateString()))
                         <span
                             class="inline-flex items-center gap-x-1.5 rounded-full bg-teal-100 px-3 py-1 text-xs font-medium tracking-tight text-teal-800"
                         >
-                            <span class="inline-block size-1.5 rounded-full bg-teal-800"></span>
+                            <span class="inline-block size-1 rounded-full bg-teal-800"></span>
                             Aktif
                         </span>
                     @elseif ($discount->end_date && $discount->end_date < now()->toDateString())
                         <span
                             class="inline-flex items-center gap-x-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-medium tracking-tight text-red-800"
                         >
-                            <span class="inline-block size-1.5 rounded-full bg-red-800"></span>
+                            <span class="inline-block size-1 rounded-full bg-red-800"></span>
                             Kadaluarsa
                         </span>
                     @else
                         <span
                             class="inline-flex items-center gap-x-1.5 rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium tracking-tight text-yellow-800"
                         >
-                            <span class="inline-block size-1.5 rounded-full bg-yellow-800"></span>
+                            <span class="inline-block size-1 rounded-full bg-yellow-800"></span>
                             Non-Aktif
                         </span>
                     @endif

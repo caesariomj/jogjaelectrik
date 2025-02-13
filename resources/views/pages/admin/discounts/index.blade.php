@@ -30,6 +30,6 @@
                 </x-common.button>
             @endcan
         </div>
-        <livewire:admin.discounts.discount-table />
+        <livewire:admin.discounts.discount-table lazy />
     </section>
 @endsection

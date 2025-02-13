@@ -2,9 +2,11 @@
 
 use App\Models\Subcategory;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
@@ -22,12 +24,30 @@ new class extends Component {
     public int $perPage = 10;
 
     /**
+     * Lazy loading that displays the table skeleton with dynamic table rows.
+     */
+    public function placeholder(): View
+    {
+        $totalRows = 8;
+
+        return view('components.skeleton.table', compact('totalRows'));
+    }
+
+    /**
      * Get a paginated list of subcategories with related category and total product counts.
      */
     #[Computed]
-    public function subcategories()
+    public function subcategories(): LengthAwarePaginator
     {
-        return Subcategory::queryAllWithCategoryAndTotalProduct()
+        return Subcategory::queryAllWithCategoryAndTotalProduct(
+            columns: [
+                'subcategories.id',
+                'subcategories.slug',
+                'subcategories.name',
+                'subcategories.created_at',
+                'subcategories.updated_at',
+            ],
+        )
             ->when($this->search !== '', function ($query) {
                 return $query->where('subcategories.name', 'like', '%' . $this->search . '%');
             })
@@ -38,7 +58,7 @@ new class extends Component {
     /**
      * Reset the search query.
      */
-    public function resetSearch()
+    public function resetSearch(): void
     {
         $this->reset('search');
     }
@@ -46,8 +66,12 @@ new class extends Component {
     /**
      * Sort the subcategories by the specified field.
      */
-    public function sortBy($field)
+    public function sortBy($field): void
     {
+        if (! in_array($field, ['name', 'category_name', 'total_products', 'created_at', 'updated_at'])) {
+            return;
+        }
+
         if ($this->sortField === $field) {
             $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
         } else {
@@ -58,7 +82,7 @@ new class extends Component {
     }
 
     /**
-     * Delete a subcategory from the system.
+     * Delete subcategory data.
      *
      * @param   string  $id - The ID of the subcategory to delete.
      *

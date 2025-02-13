@@ -22,7 +22,13 @@ new class extends Component {
     }
 
     /**
-     * Create a new discount.
+     * Create new discount.
+     *
+     * @return  void
+     *
+     * @throws  AuthorizationException if the user is not authorized to create new discount.
+     * @throws  QueryException if a database query error occurred.
+     * @throws  \Exception if an unexpected error occurred.
      */
     public function save()
     {
@@ -92,7 +98,7 @@ new class extends Component {
                 'url' => request()->fullUrl(),
                 'user_id' => auth()->id(),
                 'context' => [
-                    'operation' => 'Creating category data',
+                    'operation' => 'Creating discount data',
                     'component_name' => $this->getName(),
                 ],
             ]);

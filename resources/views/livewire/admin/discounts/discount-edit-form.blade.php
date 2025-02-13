@@ -6,6 +6,7 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -27,6 +28,12 @@ new class extends Component {
 
     /**
      * Update the discount.
+     *
+     * @return  void
+     *
+     * @throws  AuthorizationException if the user is not authorized to update the discount.
+     * @throws  QueryException if a database query error occurred.
+     * @throws  \Exception if an unexpected error occurred.
      */
     public function save()
     {
@@ -77,7 +84,7 @@ new class extends Component {
                 'url' => request()->fullUrl(),
                 'user_id' => auth()->id(),
                 'context' => [
-                    'operation' => 'Creating discount data',
+                    'operation' => 'Updating discount data',
                     'component_name' => $this->getName(),
                 ],
             ]);
@@ -98,7 +105,7 @@ new class extends Component {
                 'url' => request()->fullUrl(),
                 'user_id' => auth()->id(),
                 'context' => [
-                    'operation' => 'Updating category data',
+                    'operation' => 'Updating discount data',
                     'component_name' => $this->getName(),
                 ],
             ]);

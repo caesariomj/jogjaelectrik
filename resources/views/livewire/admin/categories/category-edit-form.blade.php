@@ -18,6 +18,12 @@ new class extends Component {
 
     /**
      * Update the category.
+     *
+     * @return  void
+     *
+     * @throws  AuthorizationException if the user is not authorized to update the category.
+     * @throws  QueryException if a database query error occurred.
+     * @throws  \Exception if an unexpected error occurred.
      */
     public function save()
     {
@@ -95,45 +101,47 @@ new class extends Component {
             <h2 class="text-lg text-black">Informasi Dasar Kategori</h2>
         </legend>
         <div class="p-4">
-            <x-form.input-label for="name" value="Nama Kategori" />
-            <x-form.input
-                wire:model.lazy="form.name"
-                id="name"
-                class="mt-1 block w-full capitalize"
-                type="text"
-                name="name"
-                placeholder="Isikan nama kategori disini..."
-                minlength="3"
-                maxlength="100"
-                autocomplete="off"
-                required
-                autofocus
-                :hasError="$errors->has('form.name')"
-            />
-            <x-form.input-error :messages="$errors->get('form.name')" class="mt-2" />
-        </div>
-        @can('set primary categories')
-            <div class="p-4">
-                <div class="flex items-center">
-                    <input
-                        wire:model.lazy="form.isPrimary"
-                        type="checkbox"
-                        id="is-primary"
-                        class="relative h-7 w-[3.25rem] cursor-pointer rounded-full border-transparent bg-neutral-200 p-px text-transparent transition-colors duration-200 ease-in-out before:inline-block before:size-6 before:translate-x-0 before:transform before:rounded-full before:bg-white before:shadow before:ring-0 before:transition before:duration-200 before:ease-in-out checked:border-primary checked:bg-none checked:text-primary checked:before:translate-x-full checked:before:bg-white focus:ring-primary focus:checked:border-primary disabled:pointer-events-none disabled:opacity-50"
-                    />
-                    <label for="is-primary" class="mx-3 text-sm font-medium tracking-tight text-black">
-                        Kategori Utama
-                        <span class="text-red-500">*</span>
-                    </label>
-                    <x-common.tooltip
-                        id="primary-category-information"
-                        class="z-[3] w-72"
-                        text="Kategori utama akan ditampilkan pada halaman utama. Anda hanya dapat menetapkan maksimal 2 kategori sebagai kategori utama."
-                    />
-                </div>
-                <x-form.input-error :messages="$errors->get('form.isPrimary')" class="mt-2" />
+            <div>
+                <x-form.input-label for="name" value="Nama Kategori" />
+                <x-form.input
+                    wire:model.lazy="form.name"
+                    id="name"
+                    class="mt-1 block w-full capitalize"
+                    type="text"
+                    name="name"
+                    placeholder="Isikan nama kategori disini..."
+                    minlength="3"
+                    maxlength="100"
+                    autocomplete="off"
+                    required
+                    autofocus
+                    :hasError="$errors->has('form.name')"
+                />
+                <x-form.input-error :messages="$errors->get('form.name')" class="mt-2" />
             </div>
-        @endcan
+            @can('set primary categories')
+                <div class="mt-4">
+                    <div class="flex items-center">
+                        <input
+                            wire:model.lazy="form.isPrimary"
+                            type="checkbox"
+                            id="is-primary"
+                            class="relative h-7 w-[3.25rem] cursor-pointer rounded-full border-transparent bg-neutral-200 p-px text-transparent transition-colors duration-200 ease-in-out before:inline-block before:size-6 before:translate-x-0 before:transform before:rounded-full before:bg-white before:shadow before:ring-0 before:transition before:duration-200 before:ease-in-out checked:border-primary checked:bg-none checked:text-primary checked:before:translate-x-full checked:before:bg-white focus:ring-primary focus:checked:border-primary disabled:pointer-events-none disabled:opacity-50"
+                        />
+                        <label for="is-primary" class="mx-3 text-sm font-medium tracking-tight text-black">
+                            Kategori Utama
+                            <span class="text-red-500">*</span>
+                        </label>
+                        <x-common.tooltip
+                            id="primary-category-information"
+                            class="z-[3] w-72"
+                            text="Kategori utama akan ditampilkan pada halaman utama. Anda hanya dapat menetapkan maksimal 2 kategori sebagai kategori utama."
+                        />
+                    </div>
+                    <x-form.input-error :messages="$errors->get('form.isPrimary')" class="mt-2" />
+                </div>
+            @endcan
+        </div>
     </fieldset>
     <div class="flex flex-col justify-end gap-4 p-4 md:flex-row">
         <x-common.button

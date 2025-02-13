@@ -2,9 +2,11 @@
 
 use App\Models\Discount;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
@@ -22,10 +24,20 @@ new class extends Component {
     public int $perPage = 10;
 
     /**
+     * Lazy loading that displays the table skeleton with dynamic table rows.
+     */
+    public function placeholder(): View
+    {
+        $totalRows = 9;
+
+        return view('components.skeleton.table', compact('totalRows'));
+    }
+
+    /**
      * Get a paginated list of discounts.
      */
     #[Computed]
-    public function discounts()
+    public function discounts(): LengthAwarePaginator
     {
         return Discount::baseQuery(
             columns: [
@@ -55,7 +67,7 @@ new class extends Component {
     /**
      * Reset the search query.
      */
-    public function resetSearch()
+    public function resetSearch(): void
     {
         $this->reset('search');
     }
@@ -63,8 +75,12 @@ new class extends Component {
     /**
      * Sort the discounts by the specified field.
      */
-    public function sortBy($field)
+    public function sortBy($field): void
     {
+        if (! in_array($field, ['name', 'code', 'type', 'value', 'is_active', 'start_date', 'used_count'])) {
+            return;
+        }
+
         if ($this->sortField === $field) {
             $this->sortDirection = $this->sortDirection === 'asc' ? 'desc' : 'asc';
         } else {
@@ -91,6 +107,11 @@ new class extends Component {
 
         if (! $discount) {
             session()->flash('error', 'Diskon tidak ditemukan.');
+            return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
+        }
+
+        if (($discount->end_date && $discount->end_date < now()->toDateString()) || $discount->used_count == 0) {
+            session()->flash('error', 'Diskon tidak dapat di-reset karena sudah kedaluarsa / belum digunakan.');
             return $this->redirectIntended(route('admin.discounts.index'), navigate: true);
         }
 
@@ -151,7 +172,7 @@ new class extends Component {
     }
 
     /**
-     * Delete a discount from the system.
+     * Delete discount data.
      *
      * @param   string  $id - The ID of the discount to delete.
      *
@@ -314,9 +335,9 @@ new class extends Component {
                     </x-datatable.cell>
                     <x-datatable.cell align="center">
                         <span
-                            class="inline-flex items-center gap-x-1.5 rounded-full bg-primary-100 px-3 py-1 text-xs font-medium tracking-tight text-primary-800"
+                            class="inline-flex items-center gap-x-1.5 rounded-full bg-blue-50 px-3 py-1 text-xs font-medium tracking-tight text-blue-800"
                         >
-                            <span class="inline-block size-1 rounded-full bg-primary-800"></span>
+                            <span class="inline-block size-1 rounded-full bg-blue-800"></span>
                             {{ $discount->type === 'fixed' ? 'Nominal' : 'Persentase' }}
                         </span>
                     </x-datatable.cell>
@@ -501,7 +522,7 @@ new class extends Component {
                                                         Reset Penggunaan Diskon {{ ucwords($discount->name) }}
                                                     </h2>
                                                     <p
-                                                        class="mb-8 text-center text-base font-medium tracking-tight text-black/70"
+                                                        class="mb-8 text-center text-base font-normal tracking-tight text-black/70"
                                                     >
                                                         Apakah anda yakin ingin me-reset penggunaan diskon
                                                         <strong>"{{ strtolower($discount->name) }}"</strong>
@@ -513,6 +534,7 @@ new class extends Component {
                                                     >
                                                         <x-common.button
                                                             variant="secondary"
+                                                            class="w-full md:w-fit"
                                                             x-on:click="$dispatch('close')"
                                                             wire:loading.class="!pointers-event-nonte !cursor-not-allowed opacity-50"
                                                             wire:target="resetUsage('{{ $discount->id }}')"
@@ -520,8 +542,9 @@ new class extends Component {
                                                             Batal
                                                         </x-common.button>
                                                         <x-common.button
-                                                            wire:click="resetUsage('{{ $discount->id }}')"
                                                             variant="danger"
+                                                            class="w-full md:w-fit"
+                                                            wire:click="resetUsage('{{ $discount->id }}')"
                                                             wire:loading.attr="disabled"
                                                             wire:target="resetUsage('{{ $discount->id }}')"
                                                         >
@@ -601,7 +624,7 @@ new class extends Component {
                                                     Hapus Diskon {{ ucwords($discount->name) }}
                                                 </h2>
                                                 <p
-                                                    class="mb-8 text-center text-base font-medium tracking-tight text-black/70"
+                                                    class="mb-8 text-center text-base font-normal tracking-tight text-black/70"
                                                 >
                                                     Apakah anda yakin ingin menghapus diskon
                                                     <strong>"{{ strtolower($discount->name) }}"</strong>
@@ -613,6 +636,7 @@ new class extends Component {
                                                 >
                                                     <x-common.button
                                                         variant="secondary"
+                                                        class="w-full md:w-fit"
                                                         x-on:click="$dispatch('close')"
                                                         wire:loading.class="!pointers-event-none !cursor-not-allowed opacity-50"
                                                         wire:target="delete('{{ $discount->id }}')"
@@ -620,8 +644,9 @@ new class extends Component {
                                                         Batal
                                                     </x-common.button>
                                                     <x-common.button
-                                                        wire:click="delete('{{ $discount->id }}')"
                                                         variant="danger"
+                                                        class="w-full md:w-fit"
+                                                        wire:click="delete('{{ $discount->id }}')"
                                                         wire:loading.attr="disabled"
                                                         wire:target="delete('{{ $discount->id }}')"
                                                     >

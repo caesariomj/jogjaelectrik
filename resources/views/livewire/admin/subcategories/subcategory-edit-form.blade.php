@@ -29,7 +29,23 @@ new class extends Component {
     }
 
     /**
+     * Set categoryId value when the combobox component change.
+     */
+    public function handleComboboxChange($value, $comboboxInstanceName)
+    {
+        if ($comboboxInstanceName == 'kategori') {
+            $this->form->categoryId = $value;
+        }
+    }
+
+    /**
      * Update the subcategory.
+     *
+     * @return  void
+     *
+     * @throws  AuthorizationException if the user is not authorized to update the subcategory.
+     * @throws  QueryException if a database query error occurred.
+     * @throws  \Exception if an unexpected error occurred.
      */
     public function save()
     {
@@ -87,16 +103,6 @@ new class extends Component {
 
             session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
             return $this->redirectIntended(route('admin.subcategories.index'), navigate: true);
-        }
-    }
-
-    /**
-     * Set categoryId value when the combobox component change.
-     */
-    public function handleComboboxChange($value, $comboboxInstanceName)
-    {
-        if ($comboboxInstanceName == 'kategori') {
-            $this->form->categoryId = $value;
         }
     }
 }; ?>

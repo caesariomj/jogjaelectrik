@@ -2,9 +2,11 @@
 
 use App\Models\Category;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
@@ -22,12 +24,31 @@ new class extends Component {
     public int $perPage = 10;
 
     /**
+     * Lazy loading that displays the table skeleton with dynamic table rows.
+     */
+    public function placeholder(): View
+    {
+        $totalRows = 7;
+
+        return view('components.skeleton.table', compact('totalRows'));
+    }
+
+    /**
      * Get a paginated list of categories with total product counts.
      */
     #[Computed]
-    public function categories()
+    public function categories(): LengthAwarePaginator
     {
-        return Category::queryAllWithTotalProduct()
+        return Category::queryAllWithTotalProduct(
+            columns: [
+                'categories.id',
+                'categories.name',
+                'categories.slug',
+                'categories.is_primary',
+                'categories.created_at',
+                'categories.updated_at',
+            ],
+        )
             ->when($this->search !== '', function ($query) {
                 return $query->where('categories.name', 'like', '%' . $this->search . '%');
             })
@@ -38,7 +59,7 @@ new class extends Component {
     /**
      * Reset the search query.
      */
-    public function resetSearch()
+    public function resetSearch(): void
     {
         $this->reset('search');
     }
@@ -46,7 +67,7 @@ new class extends Component {
     /**
      * Sort the categories by the specified field.
      */
-    public function sortBy(string $field)
+    public function sortBy(string $field): void
     {
         if (! in_array($field, ['name', 'is_primary', 'total_products', 'created_at', 'updated_at'])) {
             return;
@@ -62,7 +83,7 @@ new class extends Component {
     }
 
     /**
-     * Delete a category from the system.
+     * Delete category data.
      *
      * @param   string  $id - The ID of the category to delete.
      *
@@ -74,7 +95,7 @@ new class extends Component {
      */
     public function delete(string $id)
     {
-        $category = (new Category())->newFromBuilder(Category::queryById(id: $id)->first());
+        $category = (new Category())->newFromBuilder(Category::queryById(id: $id, columns: ['id', 'name'])->first());
 
         if (! $category) {
             session()->flash('error', 'Kategori tidak ditemukan.');

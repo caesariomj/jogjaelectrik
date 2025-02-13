@@ -30,6 +30,6 @@
                 </x-common.button>
             @endcan
         </div>
-        <livewire:admin.categories.category-table />
+        <livewire:admin.categories.category-table lazy />
     </section>
 @endsection
