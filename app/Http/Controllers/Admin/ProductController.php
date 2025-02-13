@@ -13,7 +13,7 @@ class ProductController extends Controller
     /**
      * Display a listing of the product.
      */
-    public function index(): View
+    public function index(): View|RedirectResponse
     {
         try {
             $this->authorize('viewAny', Product::class);
@@ -47,19 +47,31 @@ class ProductController extends Controller
      */
     public function show(string $slug): View|RedirectResponse
     {
-        $product = Product::with(['images', 'subcategory.category'])
-            ->withSum(
-                [
-                    'orderDetails as total_sold' => function ($query) {
-                        $query->whereHas('order', function ($q) {
-                            $q->where('status', 'completed');
-                        });
-                    },
-                ],
-                'quantity',
-            )
-            ->findBySlug($slug)
-            ->first();
+        $product = (new Product)->newFromBuilder(
+            Product::queryBySlug(slug: $slug, columns: [
+                'products.id',
+                'products.subcategory_id',
+                'products.name',
+                'products.slug',
+                'products.description',
+                'products.main_sku',
+                'products.base_price',
+                'products.base_price_discount',
+                'products.is_active',
+                'products.warranty',
+                'products.material',
+                'products.dimension',
+                'products.package',
+                'products.weight',
+                'products.power',
+                'products.voltage',
+            ], relations: [
+                'category',
+                'images',
+                'variation',
+                'aggregates',
+            ])
+        );
 
         if (! $product) {
             session()->flash('error', 'Produk tidak ditemukan.');
@@ -83,7 +95,31 @@ class ProductController extends Controller
      */
     public function edit(string $slug)
     {
-        $product = Product::with(['images', 'variants.combinations.variationVariant.variation'])->findBySlug($slug)->first();
+        $product = (new Product)->newFromBuilder(
+            Product::queryBySlug(slug: $slug, columns: [
+                'products.id',
+                'products.subcategory_id',
+                'products.name',
+                'products.slug',
+                'products.description',
+                'products.main_sku',
+                'products.base_price',
+                'products.base_price_discount',
+                'products.is_active',
+                'products.warranty',
+                'products.material',
+                'products.dimension',
+                'products.package',
+                'products.weight',
+                'products.power',
+                'products.voltage',
+            ], relations: [
+                'category',
+                'images',
+                'variation',
+                'aggregates',
+            ])
+        );
 
         if (! $product) {
             session()->flash('error', 'Produk tidak ditemukan.');
@@ -105,10 +141,16 @@ class ProductController extends Controller
     /**
      * Display a listing of the archived product.
      */
-    public function archive(): View
+    public function archive(): View|RedirectResponse
     {
-        $this->authorize('viewAny', Product::class);
+        try {
+            $this->authorize('viewAny', Product::class);
 
-        return view('pages.admin.products.archive');
+            return view('pages.admin.products.archive');
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return redirect()->route('admin.dashboard');
+        }
     }
 }

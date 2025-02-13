@@ -27,14 +27,11 @@
         </header>
         <ul class="mb-2 grid grid-cols-2 gap-4 md:grid-cols-5">
             @php
-                $thumbnailImage = $product
-                    ->images()
-                    ->thumbnail()
-                    ->first();
-                $nonThumbnailImages = $product
-                    ->images()
-                    ->nonThumbnail()
-                    ->get();
+                $images = $product->images;
+
+                $thumbnailImage = array_shift($images);
+
+                $nonThumbnailImages = $images;
             @endphp
 
             <li>
@@ -66,13 +63,13 @@
                             loading="lazy"
                         />
                         <figcaption class="text-center text-sm font-medium tracking-tight text-black">
-                            Gambar produk {{ $product->name . ' - ' . $loop->index + 2 }}
+                            Gambar produk {{ $product->name . ' - ' . $loop->iteration + 1 }}
                         </figcaption>
                     </figure>
                 </li>
             @endforeach
         </ul>
-        <dl class="grid grid-cols-1">
+        <dl class="mb-8 grid grid-cols-1">
             <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                 <dt class="w-full tracking-tight text-black/70 md:w-1/3">Nama Produk</dt>
                 <dd class="w-full font-medium tracking-tight text-black md:w-2/3">{{ ucwords($product->name) }}</dd>
@@ -80,7 +77,7 @@
             <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                 <dt class="w-full tracking-tight text-black/70 md:w-1/3">Kategori Terkait</dt>
                 <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
-                    {{ $product->subcategory ? ucwords($product->subcategory->category->name) : 'Produk belum terkait dengan kategori' }}
+                    {{ $product->category ? ucwords($product->category->name) : 'Produk belum terkait dengan kategori' }}
                 </dd>
             </div>
             <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
@@ -98,7 +95,7 @@
             <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                 <dt class="w-full tracking-tight text-black/70 md:w-1/3">Harga Produk</dt>
                 <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
-                    @if ($product->variants->count() > 1)
+                    @if ($product->variation)
                         <span class="me-1">Mulai dari</span>
                     @endif
 
@@ -114,7 +111,7 @@
             </div>
             <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                 <dt class="w-full tracking-tight text-black/70 md:w-1/3">Total Stok Produk</dt>
-                <dd class="w-full font-medium tracking-tight text-black md:w-2/3">{{ $product->totalStock() }}</dd>
+                <dd class="w-full font-medium tracking-tight text-black md:w-2/3">{{ $product->total_stock }}</dd>
             </div>
             <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                 <dt class="w-full tracking-tight text-black/70 md:w-1/3">Total Produk Terjual</dt>
@@ -124,7 +121,27 @@
             </div>
             <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                 <dt class="w-full tracking-tight text-black/70 md:w-1/3">Total Penilaian Produk</dt>
-                <dd class="w-full font-medium tracking-tight text-black md:w-2/3">0</dd>
+                <dd class="inline-flex w-full items-center gap-x-2 font-medium tracking-tight text-black md:w-2/3">
+                    <svg
+                        class="size-4 text-yellow-500"
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="24"
+                        height="24"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path
+                            d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"
+                        />
+                    </svg>
+
+                    {{ $product->average_rating }}
+                </dd>
             </div>
             <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                 <dt class="w-full tracking-tight text-black/70 md:w-1/3">Status Produk</dt>
@@ -203,52 +220,69 @@
                     {{ $product->description }}
                 </dd>
             </div>
-            @if ($product->variants->count() > 1)
+            @if ($product->variation)
                 <div class="flex flex-col items-center gap-2 border-b border-neutral-300 py-2">
                     <dt class="w-full tracking-tight text-black/70">Tabel Variasi Produk</dt>
                     <dd class="w-full overflow-x-auto rounded-lg border border-neutral-300">
                         <table class="min-w-full border-collapse border text-left">
                             <thead class="bg-neutral-100">
                                 <tr>
-                                    <th class="w-36 border px-4 py-2 text-sm font-medium tracking-tight text-black/70">
+                                    <th
+                                        class="min-w-36 border px-4 py-2 text-sm font-medium tracking-tight text-black/70"
+                                    >
                                         Nama Variasi
                                     </th>
-                                    <th class="w-40 border px-4 py-2 text-sm font-medium tracking-tight text-black/70">
+                                    <th
+                                        class="min-w-40 border px-4 py-2 text-sm font-medium tracking-tight text-black/70"
+                                    >
                                         Varian
                                     </th>
-                                    <th class="w-56 border px-4 py-2 text-sm font-medium tracking-tight text-black/70">
+                                    <th
+                                        class="min-w-56 border px-4 py-2 text-sm font-medium tracking-tight text-black/70"
+                                    >
                                         Harga
                                     </th>
-                                    <th class="w-28 border px-4 py-2 text-sm font-medium tracking-tight text-black/70">
+                                    <th
+                                        class="min-w-16 border px-4 py-2 text-sm font-medium tracking-tight text-black/70"
+                                        align="center"
+                                    >
                                         Stok
                                     </th>
-                                    <th class="w-28 border px-4 py-2 text-sm font-medium tracking-tight text-black/70">
+                                    <th
+                                        class="min-w-28 border px-4 py-2 text-sm font-medium tracking-tight text-black/70"
+                                        align="center"
+                                    >
                                         Total Terjual
                                     </th>
-                                    <th class="w-56 border px-4 py-2 text-sm font-medium tracking-tight text-black/70">
-                                        Kode Varian
+                                    <th
+                                        class="min-w-56 border px-4 py-2 text-sm font-medium tracking-tight text-black/70"
+                                    >
+                                        SKU Varian
                                     </th>
-                                    <th class="w-28 border px-4 py-2 text-sm font-medium tracking-tight text-black/70">
+                                    <th
+                                        class="min-w-28 border px-4 py-2 text-sm font-medium tracking-tight text-black/70"
+                                        align="center"
+                                    >
                                         Status
                                     </th>
                                 </tr>
                             </thead>
                             <tbody>
-                                @foreach ($product->variants as $variant)
+                                @foreach ($product->variation->variants as $variant)
                                     <tr>
                                         @if ($loop->first)
                                             <td
-                                                class="w-36 whitespace-nowrap border px-4 py-2 tracking-tight text-black"
-                                                rowspan="{{ $product->variants->count() }}"
+                                                class="whitespace-nowrap border px-4 py-2 tracking-tight text-black"
+                                                rowspan="{{ count($product->variation->variants) }}"
                                             >
-                                                {{ ucwords($variant->combinations->first()->variationVariant->variation->name) }}
+                                                {{ ucwords($product->variation->name) }}
                                             </td>
                                         @endif
 
-                                        <td class="w-40 whitespace-nowrap border px-4 py-2 tracking-tight text-black">
-                                            {{ ucwords($variant->combinations->first()->variationVariant->name) }}
+                                        <td class="whitespace-nowrap border px-4 py-2 tracking-tight text-black">
+                                            {{ ucwords($variant->name) }}
                                         </td>
-                                        <td class="w-56 whitespace-nowrap border px-4 py-2 tracking-tight text-black">
+                                        <td class="whitespace-nowrap border px-4 py-2 tracking-tight text-black">
                                             @if ($variant->price_discount)
                                                 Rp {{ formatPrice($variant->price_discount) }}
                                                 <del class="ms-2 text-xs text-black/50">
@@ -258,16 +292,22 @@
                                                 Rp {{ formatPrice($variant->price) }}
                                             @endif
                                         </td>
-                                        <td class="w-28 whitespace-nowrap border px-4 py-2 tracking-tight text-black">
+                                        <td
+                                            class="whitespace-nowrap border px-4 py-2 tracking-tight text-black"
+                                            align="center"
+                                        >
                                             {{ $variant->stock }}
                                         </td>
-                                        <td class="w-28 whitespace-nowrap border px-4 py-2 tracking-tight text-black">
-                                            0
+                                        <td
+                                            class="whitespace-nowrap border px-4 py-2 tracking-tight text-black"
+                                            align="center"
+                                        >
+                                            {{ $variant->total_sold }}
                                         </td>
-                                        <td class="w-56 whitespace-nowrap border px-4 py-2 tracking-tight text-black">
-                                            {{ $variant->variant_sku }}
+                                        <td class="whitespace-nowrap border px-4 py-2 tracking-tight text-black">
+                                            {{ $variant->sku }}
                                         </td>
-                                        <td class="w-28 whitespace-nowrap border px-4 py-2">
+                                        <td class="whitespace-nowrap border px-4 py-2" align="center">
                                             @if ($variant->is_active)
                                                 <span
                                                     class="inline-flex items-center gap-x-1.5 rounded-full bg-teal-100 px-3 py-1 text-xs font-medium tracking-tight text-teal-800"
@@ -294,5 +334,15 @@
                 </div>
             @endif
         </dl>
+        <div class="flex flex-col items-center gap-4 md:flex-row md:justify-end">
+            <x-common.button
+                :href="route('admin.products.index')"
+                variant="secondary"
+                class="w-full md:w-fit"
+                wire:navigate
+            >
+                Kembali
+            </x-common.button>
+        </div>
     </section>
 @endsection

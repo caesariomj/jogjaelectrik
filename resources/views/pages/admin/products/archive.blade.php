@@ -5,7 +5,7 @@
 @section('content')
     <section>
         <header class="mb-4 flex flex-col gap-4">
-            <h1 class="leading-none text-black">Manajemen Arsip Produk</h1>
+            <h1 class="text-black">Manajemen Arsip Produk</h1>
             <div class="pointer-events-auto">
                 <div
                     class="rounded-md border border-yellow-400 bg-yellow-50 p-4 shadow-md"
@@ -30,6 +30,6 @@
                 </div>
             </div>
         </header>
-        <livewire:admin.products.product-table archived />
+        <livewire:admin.products.product-table archived lazy />
     </section>
 @endsection

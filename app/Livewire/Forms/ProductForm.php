@@ -75,7 +75,7 @@ class ProductForm extends Form
         $attributes['width'] = (int) str_replace('.', '', $attributes['width']);
         $attributes['height'] = (int) str_replace('.', '', $attributes['height']);
         $attributes['weight'] = (int) str_replace('.', '', $attributes['weight']);
-        $attributes['power'] = (int) str_replace('.', '', $attributes['power']);
+        $attributes['power'] = ($attributes['power'] !== null && $attributes['power'] !== '') ? (int) str_replace('.', '', $attributes['power']) : null;
 
         if ($this->variation['name'] !== '') {
             foreach ($attributes['variation']['variants'] as $key => $variant) {
@@ -181,7 +181,6 @@ class ProductForm extends Form
             'voltage' => [
                 'nullable',
                 'string',
-                'min:3',
                 new Voltage,
             ],
             'price' => [
@@ -363,48 +362,51 @@ class ProductForm extends Form
         $this->power = $product->power ? $product->power : null;
         $this->voltage = $product->voltage ? $product->voltage : null;
 
-        $this->setImages($product);
-        $this->setDimension($product);
-        $this->setVariation($product);
+        $this->setImages($product->images);
+        $this->setDimension($product->dimension);
+        $this->setVariation($product->variation);
     }
 
-    private function setImages($product)
+    private function setImages(array $images)
     {
-        $this->thumbnail = $product->images()->thumbnail()->first();
-        $this->images = $product->images()->nonThumbnail()->get();
+        foreach ($images as $image) {
+            if ($image->is_thumbnail) {
+                $this->thumbnail = $image;
+            } else {
+                $this->images[] = $image;
+            }
+        }
     }
 
-    private function setDimension($product)
+    private function setDimension(string $dimension)
     {
-        $dimension = $product->dimension;
-        $cleanDimension = str_replace(['cm', ' '], '', $dimension);
-        [$length, $width, $height] = explode('x', $cleanDimension);
+        [$length, $width, $height] = explode('x', $dimension);
+
         $this->length = $length;
         $this->width = $width;
         $this->height = $height;
     }
 
-    private function setVariation($product)
+    private function setVariation(?object $variation)
     {
-        if ($product->variants->count() === 1) {
-            $baseVariant = $product->variants->first();
-            $this->price = number_format($baseVariant->price, 0, '.', '');
-            $this->priceDiscount = $baseVariant->price_discount ? number_format($baseVariant->price_discount, 0, '.', '') : null;
-            $this->stock = $baseVariant->stock;
-        } else {
+        if ($variation) {
             $this->variation = [
-                'name' => $this->product->variants->first()->combinations->first()->variationVariant->variation->name,
-                'variants' => $this->product->variants->map(function ($variant) {
+                'name' => $variation->name,
+                'variants' => array_map(function ($variant) {
                     return [
-                        'name' => $variant->combinations->first()->variationVariant->name,
+                        'name' => $variant->name,
                         'price' => number_format($variant->price, 0, '.', ''),
-                        'priceDiscount' => $variant->price_discount ? number_format($variant->price_discount ?? 0, 0, '.', '') : null,
+                        'priceDiscount' => $variant->price_discount ? number_format($variant->price_discount, 0, '.', '') : null,
                         'stock' => (int) $variant->stock,
-                        'variantSku' => $variant->variant_sku,
+                        'variantSku' => $variant->sku,
                         'isVariantActive' => (bool) $variant->is_active,
                     ];
-                })->toArray(),
+                }, $variation->variants),
             ];
+        } else {
+            $this->price = number_format($this->product->base_price, 0, ',', '');
+            $this->priceDiscount = $this->product->base_price_discount ? number_format($this->product->base_price_discount, 0, ',', '') : null;
+            $this->stock = $this->product->total_stock;
         }
     }
 }

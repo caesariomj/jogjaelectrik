@@ -5,7 +5,7 @@
 @section('content')
     <section>
         <div class="mb-4 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-            <h1 class="leading-none text-black">Manajemen Produk</h1>
+            <h1 class="text-black">Manajemen Produk</h1>
             @can('create products')
                 <x-common.button
                     :href="route('admin.products.create')"
@@ -14,7 +14,7 @@
                     wire:navigate
                 >
                     <svg
-                        class="size-5 opacity-75"
+                        class="size-5"
                         xmlns="http://www.w3.org/2000/svg"
                         viewBox="0 0 24 24"
                         fill="none"
@@ -30,6 +30,6 @@
                 </x-common.button>
             @endcan
         </div>
-        <livewire:admin.products.product-table />
+        <livewire:admin.products.product-table lazy />
     </section>
 @endsection

@@ -57,7 +57,7 @@ class ProductImage extends Model
     }
 
     /**
-     * Product-related functions.
+     * Product image-related functions.
      */
     public function scopeThumbnail($query)
     {
