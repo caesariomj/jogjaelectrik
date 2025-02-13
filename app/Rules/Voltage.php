@@ -14,7 +14,9 @@ class Voltage implements ValidationRule
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
-        if (strlen($value) > 3) {
+        if (strlen($value) < 3) {
+            $fail('Tegangan listrik produk harus valid. (contoh: 220 atau 220-240).');
+        } elseif (strlen($value) > 3) {
             if (! preg_match('/^\d{3}-\d{3}$/', $value)) {
                 $fail('Tegangan listrik produk harus valid. (contoh: 220 atau 220-240).');
             }
