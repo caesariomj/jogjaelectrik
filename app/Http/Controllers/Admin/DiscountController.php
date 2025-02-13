@@ -48,7 +48,7 @@ class DiscountController extends Controller
     public function show(string $code): View|RedirectResponse
     {
         $discount = (new Discount)->newFromBuilder(
-            Discount::queryByCode(code: $code)->first()
+            Discount::queryByCode(code: $code, columns: ['*'])->first()
         );
 
         if (! $discount) {

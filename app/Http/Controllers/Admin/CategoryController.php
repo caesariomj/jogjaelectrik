@@ -48,7 +48,15 @@ class CategoryController extends Controller
     public function show(string $slug): View|RedirectResponse
     {
         $category = (new Category)->newFromBuilder(
-            Category::queryBySlugWithTotalSubcategoryAndProduct(slug: $slug)->first()
+            Category::queryBySlug(slug: $slug, columns: [
+                'id',
+                'name',
+                'is_primary',
+                'created_at',
+                'updated_at',
+            ], relations: [
+                'aggregates',
+            ])
         );
 
         if (! $category) {
@@ -75,10 +83,10 @@ class CategoryController extends Controller
     {
         $category = (new Category)->newFromBuilder(
             Category::queryBySlug(slug: $slug, columns: [
-                'categories.id',
-                'categories.name',
-                'categories.is_primary',
-            ])->first()
+                'id',
+                'name',
+                'is_primary',
+            ])
         );
 
         if (! $category) {

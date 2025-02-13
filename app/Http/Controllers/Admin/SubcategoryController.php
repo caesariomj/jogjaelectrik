@@ -48,7 +48,16 @@ class SubcategoryController extends Controller
     public function show(string $slug): View|RedirectResponse
     {
         $subcategory = (new Subcategory)->newFromBuilder(
-            Subcategory::queryBySlugWithCategoryAndTotalProduct(slug: $slug)->first()
+            Subcategory::queryBySlug(slug: $slug, columns: [
+                'id',
+                'category_id',
+                'name',
+                'created_at',
+                'updated_at',
+            ], relations: [
+                'category',
+                'aggregates',
+            ])
         );
 
         if (! $subcategory) {
@@ -74,10 +83,11 @@ class SubcategoryController extends Controller
     public function edit(string $slug): View|RedirectResponse
     {
         $subcategory = (new Subcategory)->newFromBuilder(
-            Subcategory::queryBySlugWithCategory(slug: $slug, columns: [
-                'subcategories.id',
-                'subcategories.name',
-            ])->first()
+            Subcategory::queryBySlug(slug: $slug, columns: [
+                'id',
+                'category_id',
+                'name',
+            ])
         );
 
         if (! $subcategory) {
