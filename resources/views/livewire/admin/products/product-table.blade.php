@@ -598,7 +598,7 @@ new class extends Component {
                         </div>
                     </x-datatable.cell>
                     <x-datatable.cell class="text-sm font-normal tracking-tight text-black/70" align="center">
-                        {{ formatPrice($product->total_stock) }}
+                        {{ $product->total_stock ? formatPrice($product->total_stock) : 0 }}
                     </x-datatable.cell>
                     <x-datatable.cell align="center">
                         @if ($product->deleted_at)
@@ -625,7 +625,7 @@ new class extends Component {
                         @endif
                     </x-datatable.cell>
                     <x-datatable.cell class="text-sm font-normal tracking-tight text-black/70" align="center">
-                        {{ formatPrice($product->total_sold) }}
+                        {{ $product->total_sold ? formatPrice($product->total_sold) : 0 }}
                     </x-datatable.cell>
                     <x-datatable.cell class="text-sm font-normal tracking-tight text-black/70" align="left">
                         {{ formatTimestamp($product->updated_at) }}

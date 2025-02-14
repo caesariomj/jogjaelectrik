@@ -172,17 +172,34 @@ class Product extends Model
             })
             ->leftJoin('subcategories', 'subcategories.id', '=', 'products.subcategory_id')
             ->leftJoin('categories', 'categories.id', '=', 'subcategories.category_id')
-            ->leftJoin('product_variants', 'product_variants.product_id', '=', 'products.id')
-            ->leftJoin('order_details', 'order_details.product_variant_id', '=', 'product_variants.id')
+            ->leftJoinSub(
+                DB::table('product_variants')
+                    ->select('product_id', DB::raw('COUNT(id) as total_variants'), DB::raw('COALESCE(SUM(stock), 0) as total_stock'))
+                    ->groupBy('product_id'),
+                'product_variants',
+                'product_variants.product_id',
+                '=',
+                'products.id'
+            )
+            ->leftJoinSub(
+                DB::table('order_details')
+                    ->join('product_variants', 'product_variants.id', '=', 'order_details.product_variant_id')
+                    ->select('product_variants.product_id', DB::raw('COALESCE(SUM(order_details.quantity), 0) as total_sold'))
+                    ->groupBy('product_variants.product_id'),
+                'order_details',
+                'order_details.product_id',
+                '=',
+                'products.id'
+            )
             ->addSelect([
                 'product_images.file_name as thumbnail',
                 'subcategories.name as subcategory_name',
                 'categories.name as category_name',
-                DB::raw('COUNT(product_variants.id) as total_variants'),
-                DB::raw('COALESCE(SUM(product_variants.stock), 0) as total_stock'),
-                DB::raw('COALESCE(SUM(order_details.quantity), 0) as total_sold'),
+                'product_variants.total_variants',
+                'product_variants.total_stock',
+                'order_details.total_sold',
             ])
-            ->groupBy(array_merge($columns, ['product_images.file_name', 'subcategories.name', 'categories.name']));
+            ->groupBy(array_merge($columns, ['product_images.file_name', 'subcategories.name', 'categories.name', 'product_variants.total_variants', 'product_variants.total_stock', 'order_details.total_sold']));
     }
 
     public static function getCategoryDetails(?string $subcategoryId): object
