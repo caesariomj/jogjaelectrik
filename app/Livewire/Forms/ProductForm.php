@@ -93,7 +93,7 @@ class ProductForm extends Form
             }
         } else {
             $attributes['price'] = (int) str_replace('.', '', $attributes['price']);
-            $attributes['priceDiscount'] = (int) str_replace('.', '', $attributes['priceDiscount']);
+            $attributes['priceDiscount'] = ($attributes['priceDiscount'] !== null && $attributes['priceDiscount'] !== '') ? (int) str_replace('.', '', $attributes['priceDiscount']) : null;
             $attributes['stock'] = (int) str_replace('.', '', $attributes['stock']);
         }
 
