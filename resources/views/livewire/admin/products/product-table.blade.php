@@ -49,7 +49,7 @@ new class extends Component {
     #[Computed]
     public function products(): LengthAwarePaginator
     {
-        return Product::queryAllWithThumbnailCategoryAndSubcategory(
+        return Product::queryAllWithRelations(
             columns: [
                 'products.id',
                 'products.name',
@@ -61,6 +61,7 @@ new class extends Component {
                 'products.updated_at',
                 'products.deleted_at',
             ],
+            relations: ['thumbnail', 'category', 'aggregates'],
         )
             ->when(! $this->archived, function ($query) {
                 return $query->whereNull('products.deleted_at');
