@@ -163,43 +163,78 @@ class Product extends Model
             ->addSelect('product_images.file_name as thumbnail');
     }
 
-    public static function queryAllWithThumbnailCategoryAndSubcategory(array $columns = ['*'])
+    public static function queryAllWithRelations(array $columns = ['*'], array|string|null $relations = null)
     {
+        $relations = is_array($relations) ? $relations : [$relations];
+
+        $groupByFields = $columns;
+
         return self::baseQuery(columns: $columns)
-            ->leftJoin('product_images', function ($join) {
-                $join->on('product_images.product_id', '=', 'products.id')
-                    ->where('product_images.is_thumbnail', true);
+            ->when(in_array('thumbnail', $relations), function ($query) use (&$groupByFields) {
+                $query->leftJoin('product_images', function ($join) {
+                    $join->on('product_images.product_id', '=', 'products.id')
+                        ->where('product_images.is_thumbnail', true);
+                });
+                $query->addSelect('product_images.file_name as thumbnail');
+
+                $groupByFields[] = 'product_images.file_name';
             })
-            ->leftJoin('subcategories', 'subcategories.id', '=', 'products.subcategory_id')
-            ->leftJoin('categories', 'categories.id', '=', 'subcategories.category_id')
-            ->leftJoinSub(
-                DB::table('product_variants')
-                    ->select('product_id', DB::raw('COUNT(id) as total_variants'), DB::raw('COALESCE(SUM(stock), 0) as total_stock'))
-                    ->groupBy('product_id'),
-                'product_variants',
-                'product_variants.product_id',
-                '=',
-                'products.id'
-            )
-            ->leftJoinSub(
-                DB::table('order_details')
-                    ->join('product_variants', 'product_variants.id', '=', 'order_details.product_variant_id')
-                    ->select('product_variants.product_id', DB::raw('COALESCE(SUM(order_details.quantity), 0) as total_sold'))
-                    ->groupBy('product_variants.product_id'),
-                'order_details',
-                'order_details.product_id',
-                '=',
-                'products.id'
-            )
-            ->addSelect([
-                'product_images.file_name as thumbnail',
-                'subcategories.name as subcategory_name',
-                'categories.name as category_name',
-                'product_variants.total_variants',
-                'product_variants.total_stock',
-                'order_details.total_sold',
-            ])
-            ->groupBy(array_merge($columns, ['product_images.file_name', 'subcategories.name', 'categories.name', 'product_variants.total_variants', 'product_variants.total_stock', 'order_details.total_sold']));
+            ->when(in_array('category', $relations), function ($query) use (&$groupByFields) {
+                $query->leftJoin('subcategories', 'subcategories.id', '=', 'products.subcategory_id');
+                $query->leftJoin('categories', 'categories.id', '=', 'subcategories.category_id');
+                $query->addSelect([
+                    'subcategories.name as subcategory_name',
+                    'subcategories.slug as subcategory_slug',
+                    'categories.name as category_name',
+                    'categories.slug as category_slug',
+                ]);
+
+                $groupByFields = array_merge($groupByFields, [
+                    'subcategories.name',
+                    'subcategories.slug',
+                    'categories.name',
+                    'categories.slug',
+                ]);
+            })
+            ->when(in_array('rating', $relations), function ($query) {
+                $query->leftJoin('product_variants', 'product_variants.product_id', '=', 'products.id');
+                $query->leftJoin('product_reviews', 'product_reviews.product_variant_id', '=', 'product_variants.id');
+
+                $query->addSelect(DB::raw('COALESCE(AVG(product_reviews.rating), 0.0) as average_rating'));
+            })
+            ->when(in_array('aggregates', $relations), function ($query) use (&$groupByFields) {
+                $query->leftJoinSub(
+                    DB::table('product_variants')
+                        ->select('product_id', DB::raw('COUNT(id) as total_variants'), DB::raw('COALESCE(SUM(stock), 0) as total_stock'))
+                        ->groupBy('product_id'),
+                    'product_variants',
+                    'product_variants.product_id',
+                    '=',
+                    'products.id'
+                );
+                $query->leftJoinSub(
+                    DB::table('order_details')
+                        ->join('product_variants', 'product_variants.id', '=', 'order_details.product_variant_id')
+                        ->select('product_variants.product_id', DB::raw('COALESCE(SUM(order_details.quantity), 0) as total_sold'))
+                        ->groupBy('product_variants.product_id'),
+                    'order_details',
+                    'order_details.product_id',
+                    '=',
+                    'products.id'
+                );
+                $query->addSelect([
+                    'product_variants.total_variants',
+                    'product_variants.total_stock',
+                    'order_details.total_sold',
+                ]);
+
+                $groupByFields = array_merge($groupByFields, [
+                    'product_variants.total_variants',
+                    'product_variants.total_stock',
+                    'order_details.total_sold',
+                ]);
+            })
+            ->groupBy($groupByFields);
     }
 
     public static function getCategoryDetails(?string $subcategoryId): object
