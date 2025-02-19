@@ -58,23 +58,61 @@ class Cart extends Model
     /**
      * Cart-related functions.
      */
-    public function scopeFindBySlug($query, string $slug)
+    public static function baseQuery(array $columns = ['*'])
     {
-        return $query->where('slug', $slug);
+        return DB::table('carts')->select($columns);
     }
 
-    public function calculateTotalPrice()
+    public static function queryByUserIdWithRelations(string $userId, array $columns = ['*'], array|string|null $relations = null)
     {
-        return $this->items()
-            ->join('product_variants', 'cart_items.product_variant_id', '=', 'product_variants.id')
-            ->sum(DB::raw('cart_items.quantity * COALESCE(product_variants.price_discount, product_variants.price)'));
-    }
+        $relations = is_array($relations) ? $relations : [$relations];
 
-    public function calculateTotalWeight()
-    {
-        return $this->items()
-            ->join('product_variants', 'cart_items.product_variant_id', '=', 'product_variants.id')
-            ->join('products', 'product_variants.product_id', '=', 'products.id')
-            ->sum(DB::raw('cart_items.quantity * products.weight'));
+        return self::baseQuery($columns)->where('carts.user_id', $userId)
+            ->when(in_array('items', $relations), function ($query) {
+                $query->leftJoin('cart_items', 'cart_items.cart_id', '=', 'carts.id');
+                $query->leftJoin('product_variants', 'product_variants.id', '=', 'cart_items.product_variant_id');
+                $query->leftJoin('variant_combinations', function ($join) {
+                    $join
+                        ->on('variant_combinations.product_variant_id', '=', 'product_variants.id')
+                        ->whereNotNull('product_variants.variant_sku');
+                });
+                $query->leftJoin('variation_variants', function ($join) {
+                    $join
+                        ->on('variation_variants.id', '=', 'variant_combinations.variation_variant_id')
+                        ->whereNotNull('product_variants.variant_sku');
+                });
+                $query->leftJoin('variations', function ($join) {
+                    $join
+                        ->on('variations.id', '=', 'variation_variants.variation_id')
+                        ->whereNotNull('product_variants.variant_sku');
+                });
+                $query->leftJoin('products', 'products.id', '=', 'product_variants.product_id');
+                $query->leftJoinSub(
+                    DB::table('subcategories')->select('id', 'slug', 'category_id'),
+                    'subcategories',
+                    'subcategories.id',
+                    '=',
+                    'products.subcategory_id',
+                );
+                $query->leftJoinSub(
+                    DB::table('categories')->select('id', 'slug'),
+                    'categories',
+                    'categories.id',
+                    '=',
+                    'subcategories.category_id',
+                );
+                $query->leftJoinSub(
+                    DB::table('product_images')
+                        ->select('product_id', 'file_name')
+                        ->where('is_thumbnail', true),
+                    'product_images',
+                    'product_images.product_id',
+                    '=',
+                    'products.id',
+                );
+            })
+            ->when(in_array('discount', $relations), function ($query) {
+                $query->leftJoin('discounts', 'discounts.id', '=', 'carts.discount_id');
+            });
     }
 }

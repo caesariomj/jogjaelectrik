@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\DB;
 
 class CartItem extends Model
 {
@@ -53,8 +54,13 @@ class CartItem extends Model
     /**
      * Cart item-related functions.
      */
-    public function scopeFindBySlug($query, string $slug)
+    public static function baseQuery(array $columns = ['*'])
     {
-        return $query->where('slug', $slug);
+        return DB::table('cart_items')->select($columns);
+    }
+
+    public static function queryById(string $id, array $columns = ['*'])
+    {
+        return self::baseQuery($columns)->where('id', $id);
     }
 }
