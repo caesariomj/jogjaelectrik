@@ -11,7 +11,7 @@
     <button
         id="controls-{{ $id }}-accordion"
         type="button"
-        class="flex w-full items-center justify-between gap-4 py-4 text-left text-lg tracking-tight text-black underline-offset-2 focus-visible:underline focus-visible:outline-none lg:text-xl"
+        {{ $attributes->merge(['class' => 'flex w-full items-center justify-between gap-4 py-4 text-left text-lg tracking-tight text-black underline-offset-2 focus-visible:underline focus-visible:outline-none lg:text-xl']) }}
         :class="isExpanded ? 'font-semibold'  : 'font-medium'"
         aria-controls="{{ $id }}-accordion"
         :aria-expanded="isExpanded ? 'true' : 'false'"
@@ -19,7 +19,7 @@
     >
         {{ $title ?? 'Accordion' }}
         <svg
-            class="size-5 shrink-0 transition"
+            class="size-5 shrink-0 transition-transform"
             :class="isExpanded  ?  'rotate-180'  :  ''"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 24 24"

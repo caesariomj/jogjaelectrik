@@ -9,6 +9,7 @@
     $width = match ($width) {
         '48' => 'w-48',
         '56' => 'w-56',
+        '72' => 'w-72',
         default => 'w-48',
     };
 
@@ -21,16 +22,22 @@
     $placement = $placement ?? $defaultPlacement;
 @endphp
 
-<div x-data="dropdown()" class="relative inline-block" @click.outside="close" @close.stop="close" wire:ignore>
-    <div @click="toggle" x-ref="button" class="inline-flex items-center">
+<div
+    x-data="dropdown()"
+    class="relative inline-block"
+    x-on:click.outside="close"
+    x-on:close.stop="close"
+    wire:ignore
+>
+    <div x-on:click="toggle" x-ref="button" class="inline-flex items-center">
         {{ $trigger }}
     </div>
     <div
         x-show="open"
         x-ref="panel"
         x-transition.opacity.duration.200ms
-        @click="close"
-        class="{{ $width }} absolute z-10 rounded-md shadow-lg"
+        x-on:click="close"
+        class="{{ $width }} absolute z-10 overflow-hidden rounded-md border border-neutral-300 shadow-lg"
         x-cloak
     >
         <div class="{{ $contentClasses }} rounded-md ring-1 ring-black ring-opacity-5">
