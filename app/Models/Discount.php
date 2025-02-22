@@ -112,30 +112,4 @@ class Discount extends Model
                 });
             });
     }
-
-    public function isValid(float $cartTotal)
-    {
-        if (! is_null($this->minimum_purchase) && $cartTotal < $this->minimum_purchase) {
-            return 'Diskon hanya berlaku untuk pembelian minimal Rp '.formatPrice($this->minimum_purchase).'.';
-        }
-
-        return true;
-    }
-
-    public function calculateDiscount(float $cartTotal): float
-    {
-        if ($this->type === 'fixed') {
-            return min($this->value, $cartTotal);
-        } elseif ($this->type === 'percentage') {
-            $discountAmount = $cartTotal * ($this->value / 100);
-
-            if ($this->max_discount_amount && $discountAmount > $this->max_discount_amount) {
-                return $this->max_discount_amount;
-            }
-
-            return $discountAmount;
-        }
-
-        return 0;
-    }
 }
