@@ -71,7 +71,7 @@
             @if ($index + 1 < count($breadcrumbs))
                 <li class="inline-flex items-center">
                     <a
-                        class="flex items-center text-sm font-medium tracking-tight text-black/70 transition-colors hover:text-black"
+                        class="flex items-center text-sm font-medium leading-none tracking-tight text-black/70 underline transition-colors hover:text-black"
                         href="{{ $breadcrumb['url'] }}"
                         wire:navigate
                     >
@@ -93,7 +93,10 @@
                     </svg>
                 </li>
             @else
-                <li class="inline-flex items-center text-sm font-medium tracking-tight text-black" aria-current="page">
+                <li
+                    class="inline-flex items-center text-sm font-semibold leading-none tracking-tight text-black"
+                    aria-current="page"
+                >
                     {{ $breadcrumb['name'] }}
                 </li>
             @endif

@@ -14,7 +14,7 @@
         <livewire:layout.user.navigation />
     </div>
 
-    <x-common.breadcrumb class="px-4 pt-6 md:px-6" />
+    <x-common.breadcrumb class="container mx-auto max-w-md px-6 pt-6 md:max-w-[96rem] md:px-12" />
 
     <main>
         @yield('content', $slot ?? '')
