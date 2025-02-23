@@ -15,11 +15,11 @@
 
     $transitionClasses = [
         'enter' => 'transform transition duration-300 ease-in-out',
-        'enter-start' => ($position === 'bottom' ? 'translate-y-full' : $position === 'left') ? '-translate-x-full' : 'translate-x-full',
-        'enter-end' => ($position === 'bottom' ? 'translate-y-0' : $position === 'left') ? '-translate-x-0' : 'translate-x-0',
+        'enter-start' => $position === 'bottom' ? 'translate-y-full' : ($position === 'left' ? '-translate-x-full' : 'translate-x-full'),
+        'enter-end' => $position === 'bottom' ? 'translate-y-0' : ($position === 'left' ? 'translate-x-0' : 'translate-x-0'),
         'leave' => 'transform transition duration-300 ease-in-out',
-        'leave-start' => ($position === 'bottom' ? 'translate-y-0' : $position === 'left') ? '-translate-x-0' : 'translate-x-0',
-        'leave-end' => ($position === 'bottom' ? 'translate-y-full' : $position === 'left') ? '-translate-x-full' : 'translate-x-full',
+        'leave-start' => $position === 'bottom' ? 'translate-y-0' : ($position === 'left' ? 'translate-x-0' : 'translate-x-0'),
+        'leave-end' => $position === 'bottom' ? 'translate-y-full' : ($position === 'left' ? '-translate-x-full' : 'translate-x-full'),
     ];
 @endphp
 
