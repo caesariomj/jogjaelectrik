@@ -133,9 +133,9 @@ new class extends Component {
      * @return  float
      */
     private function calculateDiscount(
-        ?string $type = null,
-        ?float $value = null,
-        ?float $maxDiscountAmount = null,
+        ?string $type,
+        ?float $value,
+        ?float $maxDiscountAmount,
         float $totalPrice,
     ): float {
         if (! $type && ! $value) {
