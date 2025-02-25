@@ -73,7 +73,7 @@ class HomeController extends Controller
                 'max_discount_amount',
                 'end_date',
             ])
-            ->when(auth()->check() && auth()->user()->cart->exists(), function ($query) {
+            ->when(auth()->check() && auth()->user()->cart()->exists(), function ($query) {
                 $query->where('id', '!=', auth()->user()->cart->discount_id);
             })
             ->first();
