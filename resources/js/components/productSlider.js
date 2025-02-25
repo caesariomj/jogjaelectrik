@@ -5,75 +5,34 @@ export default (
 ) => ({
     products: data.products,
     currentIndex: 0,
-    productsPerSlide: 3,
-    showControls: false,
+
+    productsPerSlide: window.innerWidth >= 768 ? 4 : 2,
     touchStartX: null,
     touchEndX: null,
     swipeThreshold: 50,
-    breakpoints: {
-        md: 2,
-        lg: 3,
-    },
 
     init() {
+        window.addEventListener('resize', () => this.updateProductsPerSlide());
+
         this.updateProductsPerSlide();
-
-        this.updateShowControls();
-
-        window.matchMedia('(max-width: 768px)').addEventListener('change', () => {
-            this.updateProductsPerSlide();
-            this.updateShowControls();
-        });
     },
 
     updateProductsPerSlide() {
-        const screenWidth = window.innerWidth;
+        this.productsPerSlide = window.innerWidth >= 768 ? 4 : 2;
 
-        if (screenWidth < 1024) {
-            this.productsPerSlide = this.breakpoints.md;
-        } else {
-            this.productsPerSlide = this.breakpoints.lg;
-        }
-    },
+        const maxIndex = Math.ceil(this.products.length / this.productsPerSlide) - 1;
 
-    updateShowControls() {
-        this.showControls = this.products.length > (window.matchMedia('(max-width: 1024px)').matches ? 2 : 3);
-    },
-
-    get chunkedProducts() {
-        const paddedProducts = [...this.products];
-        const remainder = this.products.length % this.productsPerSlide;
-
-        if (remainder > 0) {
-            const placeholdersNeeded = this.productsPerSlide - remainder;
-            for (let i = 0; i < placeholdersNeeded; i++) {
-                paddedProducts.push({ id: `placeholder-${i}`, isPlaceholder: true });
-            }
-        }
-
-        return paddedProducts.reduce((resultArray, item, index) => {
-            const chunkIndex = Math.floor(index / this.productsPerSlide);
-
-            if (!resultArray[chunkIndex]) {
-                resultArray[chunkIndex] = [];
-            }
-
-            resultArray[chunkIndex].push(item);
-
-            return resultArray;
-        }, []);
-    },
-
-    get totalSlides() {
-        return this.chunkedProducts.length;
+        this.currentIndex = Math.min(this.currentIndex, maxIndex);
     },
 
     previous() {
-        this.currentIndex = this.currentIndex > 0 ? this.currentIndex - 1 : this.totalSlides - 1;
+        this.currentIndex = Math.max(this.currentIndex - 1, 0);
     },
 
     next() {
-        this.currentIndex = this.currentIndex < this.totalSlides - 1 ? this.currentIndex + 1 : 0;
+        const maxIndex = Math.ceil(this.products.length / this.productsPerSlide) - 1;
+
+        this.currentIndex = Math.min(this.currentIndex + 1, maxIndex);
     },
 
     handleTouchStart(event) {
@@ -95,6 +54,10 @@ export default (
             this.touchStartX = null;
             this.touchEndX = null;
         }
+    },
+
+    transformX() {
+        return `translateX(-${this.currentIndex * 100}%)`;
     },
 
     formatPrice(price) {

@@ -18,67 +18,83 @@
     >
         <template x-for="(slide, index) in slides">
             <figure
+                class="absolute inset-0 overflow-hidden"
                 x-show="currentSlideIndex == index + 1"
-                class="absolute inset-0 overflow-hidden rounded-3xl"
                 x-transition.opacity.duration.1000ms
                 x-cloak
             >
                 <img
+                    class="absolute inset-0 h-full w-full object-cover text-neutral-600"
                     x-bind:src="slide.imgSrc"
                     x-bind:alt="slide.imgAlt"
-                    class="absolute inset-0 h-full w-full object-cover text-neutral-600"
                 />
                 <div class="absolute inset-0 z-[1] bg-gradient-to-t from-black/90 to-transparent"></div>
                 <figcaption
-                    class="absolute left-0 top-1/2 z-[2] flex -translate-y-1/2 flex-col items-center justify-end p-8 text-center md:bottom-0 md:-translate-y-0 md:items-start md:p-20 md:text-start"
+                    class="absolute left-0 top-1/2 z-[2] flex -translate-y-1/2 flex-col items-center justify-end p-8 text-center md:bottom-0 md:-translate-y-12 md:items-start md:p-20 md:text-start"
                 >
                     <template x-if="index === 0">
                         <h1
+                            class="mb-4 text-white md:mb-8 md:!text-6xl"
                             x-text="slide.title"
                             x-bind:aria-describedby="'slide' + (index + 1) + 'Description'"
-                            class="mb-4 text-white md:mb-8 md:!text-6xl"
                         ></h1>
                     </template>
                     <template x-if="index !== 0">
                         <p
+                            class="mb-4 text-[2.5rem] font-bold tracking-tight text-white md:mb-8 md:!text-6xl"
                             x-text="slide.title"
                             x-bind:aria-describedby="'slide' + (index + 1) + 'Description'"
-                            class="mb-4 text-[2.5rem] font-bold tracking-tight text-white md:mb-8 md:!text-6xl"
                         ></p>
                     </template>
                     <p
+                        class="mb-8 w-full text-pretty text-lg text-white/80 md:mb-16 md:w-1/2 md:text-xl"
                         x-bind:id="'slide' + (index + 1) + 'Description'"
                         x-text="slide.description"
-                        class="mb-8 w-full text-pretty text-lg text-neutral-200 md:mb-16 md:w-1/2 md:text-xl"
                     ></p>
                     <a
+                        class="inline-flex items-center justify-center gap-x-2 rounded-full bg-primary px-8 py-3 text-sm font-semibold text-white transition-colors hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2"
                         x-bind:href="slide.ctaUrl"
-                        x-text="slide.ctaText"
-                        class="inline-flex items-center justify-center gap-x-2 rounded-full bg-primary px-8 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2"
-                    ></a>
+                        wire:navigate
+                    >
+                        <span x-text="slide.ctaText"></span>
+                        <svg
+                            class="size-5 shrink-0"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            stroke-width="2"
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            aria-hidden="true"
+                        >
+                            <path d="M18 8L22 12L18 16" />
+                            <path d="M2 12H22" />
+                        </svg>
+                    </a>
                 </figcaption>
             </figure>
         </template>
     </div>
     <div
-        class="absolute bottom-3 left-1/2 z-[2] flex -translate-x-1/2 gap-4 md:bottom-5 md:gap-3 md:px-2"
+        class="absolute bottom-4 left-1/2 z-[2] flex -translate-x-1/2 gap-4 md:gap-3 md:px-2"
         role="group"
         aria-label="slides"
     >
         <template x-for="(slide, index) in slides">
             <button
-                class="size-2 cursor-pointer rounded-full transition"
+                class="size-2 cursor-pointer rounded-full transition-colors"
                 x-on:click="currentSlideIndex = index + 1"
                 x-bind:class="[currentSlideIndex === index + 1 ? 'bg-white' : 'bg-white/50']"
                 x-bind:aria-label="'slide ' + (index + 1)"
             ></button>
         </template>
     </div>
-    <nav class="absolute -bottom-1 right-0 z-[2] flex gap-x-4 rounded-br-3xl rounded-tl-3xl p-4">
+    <nav class="absolute bottom-4 end-24 z-[2] hidden gap-x-4 md:flex">
         <button
             type="button"
-            class="relative rounded-full bg-white p-2 text-black hover:bg-neutral-100"
-            aria-label="previous slide"
+            class="relative rounded-full bg-white p-2 text-black transition-colors hover:bg-neutral-100"
+            aria-label="Slide sebelumnya"
             x-on:click="previous()"
         >
             <svg
@@ -95,8 +111,8 @@
         </button>
         <button
             type="button"
-            class="relative rounded-full bg-white p-2 text-black hover:bg-neutral-100"
-            aria-label="next slide"
+            class="relative rounded-full bg-white p-2 text-black transition-colors hover:bg-neutral-100"
+            aria-label="Slide selanjutnya"
             x-on:click="next()"
         >
             <svg
