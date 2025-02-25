@@ -84,16 +84,12 @@
         class="container mx-auto flex max-w-md flex-col items-center justify-between gap-12 p-6 md:max-w-[96rem] md:p-12 lg:flex-row"
     >
         @if ($activeDiscount)
-            <livewire:discount-card :discount="$activeDiscount" />
+            @if (! auth()->check() ||(auth()->check() &&auth()->user()->roles->first()->name === 'user'))
+                <livewire:discount-card :discount="$activeDiscount" />
+            @endif
         @endif
 
-        <figure
-            @class([
-                'group relative h-96 w-full overflow-hidden rounded-xl shadow-xl lg:h-[36rem]',
-                'lg:w-2/3' => $activeDiscount,
-                'lg:w-3/3' => ! $activeDiscount,
-            ])
-        >
+        <figure class="group relative h-96 w-full overflow-hidden rounded-xl shadow-xl lg:h-[36rem]">
             <a href="{{ route('products') }}" wire:navigate>
                 <div class="absolute inset-0 z-[1] bg-gradient-to-t from-black to-transparent"></div>
                 <img
