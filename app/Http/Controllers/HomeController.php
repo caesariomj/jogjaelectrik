@@ -6,6 +6,8 @@ use App\Http\Resources\ProductResource;
 use App\Models\Category;
 use App\Models\Discount;
 use App\Models\Product;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
@@ -108,6 +110,40 @@ class HomeController extends Controller
             });
 
         return view('pages.home', compact('bannerSlides', 'bestSellingProducts', 'activeDiscount', 'latestProducts'));
+    }
+
+    /**
+     * Displays the products page.
+     */
+    public function products(Request $request, string $category = '', string $subcategory = ''): View|RedirectResponse
+    {
+        $validatedSearch = $request->validate([
+            'q' => ['sometimes', 'string', 'max:255'],
+        ]);
+
+        $search = isset($validatedSearch['q']) ? $validatedSearch['q'] : '';
+
+        $categoryAndSubcategoryValidator = validator([
+            'category' => $category,
+            'subcategory' => $subcategory,
+        ], [
+            'category' => ['sometimes', 'string', 'lowercase', 'max:255', 'exists:categories,slug'],
+            'subcategory' => ['sometimes', 'string', 'lowercase', 'max:255', 'exists:subcategories,slug'],
+        ]);
+
+        if ($categoryAndSubcategoryValidator->fails()) {
+            session()->flash('error', $subcategory ? 'Produk dengan subkategori '.str_replace('-', ' ', $subcategory).' tidak ditemukan' : ($category ? 'Produk dengan kategori '.str_replace('-', ' ', $category).' tidak ditemukan' : 'Produk tidak ditemukan'));
+
+            return redirect()->route('home');
+        }
+
+        $validatedCategoryAndSubcategory = $categoryAndSubcategoryValidator->validated();
+
+        $category = $validatedCategoryAndSubcategory['category'] ?? '';
+
+        $subcategory = $validatedCategoryAndSubcategory['subcategory'] ?? '';
+
+        return view('pages.products', compact('category', 'subcategory', 'search'));
     }
 
     /**
