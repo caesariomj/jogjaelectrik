@@ -14,13 +14,17 @@ Route::get('/', [HomeController::class, 'index'])->name('home');
 
 Route::get('/produk', [HomeController::class, 'products'])->name('products');
 
-Route::get('/produk/cari', [HomeController::class, 'products'])->name('products.search');
+Route::get('/produk/pencarian', [HomeController::class, 'products'])->name('products.search');
 
-Route::get('/produk/{category}', [HomeController::class, 'products'])->where('category', '^(?!cari$)[a-zA-Z0-9-_]+$')->name('products.category');
+Route::get('/produk/detail/{slug}', function ($slug) {
+    return app(HomeController::class)->productDetail(category: null, subcategory: null, slug: $slug);
+})->name('products.detail.without.category.subcategory');
+
+Route::get('/produk/detail/{category?}/{subcategory?}/{slug}', [HomeController::class, 'productDetail'])->name('products.detail');
+
+Route::get('/produk/{category}', [HomeController::class, 'products'])->where('category', '^(?!pencarian|detail$)[a-zA-Z0-9-_]+$')->name('products.category');
 
 Route::get('/produk/{category}/{subcategory}', [HomeController::class, 'products'])->name('products.subcategory');
-
-Route::get('/produk/{category?}/{subcategory?}/{slug}', [HomeController::class, 'productDetail'])->name('products.detail');
 
 Route::post('/api/xendit/webhook', XenditWebhookController::class)->middleware(['validate_xendit_webhook_token', 'throttle:10,1']);
 
