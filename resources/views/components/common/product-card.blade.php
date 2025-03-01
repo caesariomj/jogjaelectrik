@@ -5,7 +5,7 @@
 <article {{ $attributes->merge(['class' => 'group']) }}>
     <div class="relative mb-4 h-auto w-full overflow-hidden rounded-lg">
         <a
-            href="{{ route('products.detail', ['category' => $product->category_slug, 'subcategory' => $product->subcategory_slug, 'slug' => $product->slug]) }}"
+            href="{{ $product->category_slug && $product->subcategory_slug ? route('products.detail', ['category' => $product->category_slug, 'subcategory' => $product->subcategory_slug, 'slug' => $product->slug]) : route('products.detail.without.category.subcategory', ['slug' => $product->slug]) }}"
             wire:navigate
         >
             <img
@@ -20,7 +20,7 @@
     <div class="flex flex-row items-start gap-2">
         <div class="flex-grow">
             <a
-                href="{{ route('products.detail', ['category' => $product->category_slug, 'subcategory' => $product->subcategory_slug, 'slug' => $product->slug]) }}"
+                href="{{ $product->category_slug && $product->subcategory_slug ? route('products.detail', ['category' => $product->category_slug, 'subcategory' => $product->subcategory_slug, 'slug' => $product->slug]) : route('products.detail.without.category.subcategory', ['slug' => $product->slug]) }}"
                 wire:navigate
             >
                 <h3
