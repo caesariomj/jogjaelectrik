@@ -148,21 +148,73 @@ class HomeController extends Controller
     /**
      * Displays the product detail page.
      */
-    public function productDetail(string $slug): View
+    public function productDetail(?string $category, ?string $subcategory, string $slug): View|RedirectResponse
     {
-        $product = Product::with(['subcategory.category', 'images', 'variants.combinations.variationVariant.variation', 'reviews'])->findBySlug($slug)->firstOrFail();
+        $product = Product::queryBySlug(slug: $slug, columns: [
+            'products.id',
+            'products.subcategory_id',
+            'products.name',
+            'products.slug',
+            'products.description',
+            'products.main_sku',
+            'products.base_price',
+            'products.base_price_discount',
+            'products.is_active',
+            'products.warranty',
+            'products.material',
+            'products.dimension',
+            'products.package',
+            'products.weight',
+            'products.power',
+            'products.voltage',
+        ], relations: [
+            'category',
+            'images',
+            'variation',
+            'reviews',
+            'aggregates',
+        ]);
 
-        $productRecommendations = Product::whereHas('subcategory', function ($query) use ($product) {
-            if ($product->subcategory) {
-                return $query->where('category_id', $product->subcategory->category->id);
-            }
-        })
-            ->where('id', '!=', $product->id)
-            ->active()
-            ->limit(6)
-            ->get();
+        if (! $product) {
+            session()->flash('error', 'Produk dengan nama '.str_replace('-', ' ', $slug).' tidak ditemukan.');
 
-        $productRecommendations = ProductResource::collection($productRecommendations)->toArray(request());
+            return redirect()->route('products');
+        }
+
+        $product->images = collect($product->images);
+
+        $productRecommendations = Product::queryAllWithRelations(columns: [
+            'products.id',
+            'products.name',
+            'products.slug',
+            'products.base_price',
+            'products.base_price_discount',
+        ], relations: [
+            'thumbnail',
+            'category',
+            'rating',
+        ])
+            ->where('products.is_active', true)
+            ->when($product->category, function ($query) use ($product) {
+                return $query->where('categories.id', $product->category->id);
+            })
+            ->whereNot('products.id', $product->id)
+            ->limit(8)
+            ->orderByDesc('products.created_at')
+            ->get()
+            ->map(function ($product) {
+                return (object) [
+                    'id' => $product->id,
+                    'name' => $product->name,
+                    'link' => $product->category_slug && $product->subcategory_slug ? route('products.detail', ['category' => $product->category_slug, 'subcategory' => $product->subcategory_slug, 'slug' => $product->slug]) : route('products.detail.without.category.subcategory', ['slug' => $product->slug]),
+                    'price' => $product->base_price,
+                    'price_discount' => $product->base_price_discount,
+                    'thumbnail' => asset('storage/uploads/product-images/'.$product->thumbnail),
+                    'rating' => number_format($product->average_rating, 1),
+                ];
+            });
+
+        $product = (new Product)->newFromBuilder($product);
 
         return view('pages.product-detail', compact('product', 'productRecommendations'));
     }
