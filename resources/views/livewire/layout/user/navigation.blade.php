@@ -18,7 +18,7 @@ new class extends Component {
 
     public $searchResults = null;
 
-    public function mount()
+    public function mount(): void
     {
         $this->role = auth()->check()
             ? auth()
@@ -138,21 +138,26 @@ new class extends Component {
         ?float $maxDiscountAmount,
         float $totalPrice,
     ): float {
-        if (! $type && ! $value) {
-            return (float) 0.0;
+        if (! $type || ! $value) {
+            return 0.0;
         }
 
         if ($type === 'fixed') {
             return (float) min($value, $totalPrice);
-        } elseif ($type === 'percentage') {
+        }
+
+        if ($type === 'percentage') {
             $discountAmount = $totalPrice * ($value / 100);
 
             if ($maxDiscountAmount && $discountAmount > $maxDiscountAmount) {
                 return (float) $maxDiscountAmount;
-            } else {
-                return (float) $discountAmount;
             }
+
+            return (float) $discountAmount;
         }
+
+        // Default return for any other cases
+        return 0.0;
     }
 
     /**
@@ -253,7 +258,7 @@ new class extends Component {
     /**
      * Search product.
      */
-    public function updatedSearch()
+    public function updatedSearch(): void
     {
         $validated = $this->validate(
             rules: [
@@ -1448,7 +1453,7 @@ new class extends Component {
                 <circle cx="11" cy="11" r="8" />
                 <path d="m21 21-4.3-4.3" />
             </svg>
-            <form action="{{ route('products') }}" method="GET" class="w-full">
+            <form action="{{ route('products.search') }}" method="GET" class="w-full">
                 <label for="product-search" class="sr-only">Cari produk</label>
                 <input
                     type="text"
