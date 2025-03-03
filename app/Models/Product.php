@@ -131,6 +131,11 @@ class Product extends Model
 
                 case 'variation':
                     $product->variation = self::getVariation(productId: $product->id)[0] ?? null;
+
+                    if ($product->variation === null) {
+                        $product->variant_id = self::getSingleVariant(productId: $product->id);
+                    }
+
                     break;
 
                 case 'reviews':
@@ -140,9 +145,10 @@ class Product extends Model
                 case 'aggregates':
                     $aggregates = self::getAggregates(productId: $product->id);
 
-                    $product->total_sold = $aggregates->total_sold;
-                    $product->total_stock = $aggregates->total_stock;
-                    $product->average_rating = number_format($aggregates->average_rating, 1);
+                    $product->total_sold = (int) $aggregates->total_sold;
+                    $product->total_stock = (int) $aggregates->total_stock;
+                    $product->total_reviews = (int) $aggregates->total_reviews;
+                    $product->average_rating = (float) number_format($aggregates->average_rating, 1);
                     break;
 
                 default:
@@ -248,8 +254,12 @@ class Product extends Model
 
         $result = DB::table('subcategories')
             ->select([
+                'subcategories.id as subcategory_id',
                 'subcategories.name as subcategory_name',
+                'subcategories.slug as subcategory_slug',
+                'categories.id as category_id',
                 'categories.name as category_name',
+                'categories.slug as category_slug',
             ])
             ->join('categories', 'categories.id', '=', 'subcategories.category_id')
             ->where('subcategories.id', $subcategoryId)
@@ -257,10 +267,14 @@ class Product extends Model
 
         return (object) [
             'subcategory' => (object) [
+                'id' => $result->subcategory_id,
                 'name' => $result->subcategory_name,
+                'slug' => $result->subcategory_slug,
             ],
             'category' => (object) [
+                'id' => $result->category_id,
                 'name' => $result->category_name,
+                'slug' => $result->category_slug,
             ],
         ];
     }
@@ -280,6 +294,13 @@ class Product extends Model
             ->orderBy('is_thumbnail', 'desc')
             ->get()
             ->toArray();
+    }
+
+    public static function getSingleVariant(string $productId): string
+    {
+        $variant = DB::table('product_variants')->where('product_id', $productId)->first();
+
+        return $variant->id;
     }
 
     public static function getVariation(string $productId): array
@@ -318,6 +339,7 @@ class Product extends Model
                     'name' => $variants[0]->name,
                     'variants' => $variants->map(function ($variant) use ($variantSales) {
                         return (object) [
+                            'id' => $variant->variant_id,
                             'name' => $variant->variant_name,
                             'sku' => $variant->variant_sku,
                             'price' => $variant->price,
@@ -337,7 +359,8 @@ class Product extends Model
     {
         return DB::table('product_reviews')
             ->select([
-                'users.name as user',
+                'product_reviews.id',
+                'users.name as user_name',
                 'product_reviews.rating',
                 'product_reviews.review',
                 'product_reviews.created_at',
@@ -345,6 +368,7 @@ class Product extends Model
             ->join('users', 'users.id', '=', 'product_reviews.user_id')
             ->join('product_variants', 'product_variants.id', '=', 'product_reviews.product_variant_id')
             ->where('product_variants.product_id', $productId)
+            ->limit(5)
             ->get()
             ->toArray();
     }
@@ -365,6 +389,12 @@ class Product extends Model
                 )
             ', 'total_sold')
             ->selectSub('
+                SELECT COALESCE(COUNT(product_reviews.id), 0)
+                FROM product_reviews
+                JOIN product_variants ON product_variants.id = product_reviews.product_variant_id
+                WHERE product_variants.product_id = products.id
+            ', 'total_reviews')
+            ->selectSub('
                 SELECT COALESCE(AVG(product_reviews.rating), 0.0)
                 FROM product_reviews
                 JOIN product_variants ON product_variants.id = product_reviews.product_variant_id
@@ -374,9 +404,10 @@ class Product extends Model
             ->first();
 
         return (object) [
-            'total_stock' => $aggregates->total_stock,
-            'total_sold' => $aggregates->total_sold,
-            'average_rating' => $aggregates->average_rating,
+            'total_stock' => (int) $aggregates->total_stock,
+            'total_sold' => (int) $aggregates->total_sold,
+            'total_reviews' => (int) $aggregates->total_reviews,
+            'average_rating' => (float) $aggregates->average_rating,
         ];
     }
 
