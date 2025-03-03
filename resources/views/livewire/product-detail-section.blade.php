@@ -5,160 +5,187 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Locked;
-use Livewire\Attributes\On;
 use Livewire\Volt\Component;
 
 new class extends Component {
     public Product $product;
 
-    public ProductVariant $productVariant;
+    // public ProductVariant $productVariant;
 
-    public ?string $selectedVariantSku = null;
     public int $quantity = 1;
 
     #[Locked]
-    public int $stock = 0;
-    public string $price = '';
-    public ?string $priceDiscount = null;
-    public $reviews;
-    public int $totalReviewCount = 0;
-    public int $averageRating = 0;
-    public $reviewCountByRating = [];
-    public $reviewPercentageByRating = [];
+    public ?object $category = null;
 
-    public function mount(Product $product)
+    public ?object $subcategory = null;
+
+    public ?object $variation = null;
+
+    public ?string $selectedVariantId = null;
+
+    public int $stock = 0;
+
+    public string $price = '';
+
+    public ?string $priceDiscount = null;
+
+    public Collection $reviews;
+
+    public int $totalReviews = 0;
+
+    public float $averageRating = 0.0;
+
+    public Collection $reviewCountByRating;
+
+    public Collection $reviewPercentageByRating;
+
+    public function mount(Product $product): void
     {
         $this->product = $product;
-        $this->setProductVariant($this->product);
-        $this->setProductReview($this->product);
+
+        $this->category = $product->category;
+        $this->subcategory = $product->subcategory;
+
+        $this->setProductVariation();
+
+        $this->setProductReviews();
     }
 
-    private function setProductVariant($product)
+    /**
+     * Set product price, priceDiscount, stock, selectedVariantId, and variation.
+     */
+    private function setProductVariation(): void
     {
-        if ($product->variants->count() > 1) {
-            $minPriceDiscountVariant = $product->variants
-                ->filter(function ($variant) {
-                    return isset($variant['price_discount'], $variant['price'], $variant['is_active']) &&
-                        is_numeric($variant['price_discount']) &&
-                        $variant['price_discount'] > 0 &&
-                        $variant['is_active'];
-                })
-                ->sortBy('price_discount')
-                ->first();
-
-            $minPriceVariant =
-                $minPriceDiscountVariant ?:
-                $product->variants
-                    ->filter(function ($variant) {
-                        return isset($variant['price'], $variant['is_active']) &&
-                            is_numeric($variant['price']) &&
-                            $variant['is_active'];
-                    })
-                    ->sortBy('price')
-                    ->first();
-
-            $this->productVariant = $minPriceVariant;
-            $this->selectedVariantSku = $this->productVariant->variant_sku;
+        if (! $this->product->variation) {
+            $this->price = $this->product->base_price;
+            $this->priceDiscount = $this->product->base_price_discount;
+            $this->stock = $this->product->total_stock;
+            $this->selectedVariantId = $this->product->variant_id;
+            $this->variation = null;
         } else {
-            $this->productVariant = $product->variants->first();
-            $this->selectedVariantSku = null;
-        }
+            $this->variation = (object) [
+                'id' => $this->product->variation->id,
+                'name' => $this->product->variation->name,
+                'variants' => collect($this->product->variation->variants),
+            ];
 
-        $this->price = $this->productVariant->price;
-        $this->priceDiscount = $this->productVariant->price_discount ?? null;
-        $this->stock = $this->productVariant->stock;
+            $this->setMinPriceProductVariant();
+        }
     }
 
-    private function setProductReview($product)
+    /**
+     * Set product price, priceDiscount, stock, selectedVariantId, and variation by the most minimum product variant price.
+     */
+    private function setMinPriceProductVariant(): void
     {
-        $this->reviews = $product->reviews->sortByDesc('created_at');
+        $minPriceVariant = $this->variation->variants
+            ->filter(function ($variant) {
+                return $variant->price === $this->product->base_price ||
+                    ($variant->price_discount &&
+                        $this->product->base_price_discount &&
+                        $variant->price_discount === $this->product->base_price_discount);
+            })
+            ->first();
 
-        $this->totalReviewCount = $this->reviews->count();
-        $this->averageRating = number_format($this->reviews->avg('rating'), 0);
+        $this->selectedVariantId = $minPriceVariant->id;
+        $this->price = $minPriceVariant->price;
+        $this->priceDiscount = $minPriceVariant->price_discount;
+        $this->stock = $minPriceVariant->stock;
+    }
+
+    /**
+     * Set product totalReviews, averageRating, reviews, reviewCountByRating, and reviewPercentageByRating.
+     */
+    private function setProductReviews(): void
+    {
+        $this->totalReviews = $this->product->total_reviews;
+        $this->averageRating = $this->product->average_rating;
+
+        $this->reviews = collect($this->product->reviews)
+            ->sortByDesc('created_at')
+            ->values();
+
+        $this->reviews = $this->reviews->map(function ($review) {
+            $review->created_at = Carbon::parse($review->created_at);
+
+            return $review;
+        });
 
         $this->reviewCountByRating = $this->reviews->groupBy('rating')->map->count();
 
-        $this->reviewCountByRating = collect([5, 4, 3, 2, 1])
-            ->mapWithKeys(function ($rating) {
-                return [$rating => $this->reviewCountByRating->get($rating, 0)];
-            })
-            ->toArray();
+        $this->reviewCountByRating = collect([5, 4, 3, 2, 1])->mapWithKeys(function ($rating) {
+            return [$rating => $this->reviewCountByRating->get($rating, 0)];
+        });
 
-        $this->reviewPercentageByRating = collect($this->reviewCountByRating)
-            ->map(function ($count) {
-                return $this->totalReviewCount > 0 ? ($count / $this->totalReviewCount) * 100 : 0;
-            })
-            ->toArray();
+        $this->reviewPercentageByRating = $this->reviewCountByRating->map(function ($count) {
+            return $this->totalReviews > 0 ? ($count / $this->totalReviews) * 100 : 0;
+        });
     }
 
-    public function redirectToProduct(?string $category = null, ?string $subcategory = null)
+    /**
+     * Validate and set selectedVariantId on input change.
+     */
+    public function updatedSelectedVariantId(string $id): void
     {
-        if (! $category && ! $subcategory) {
+        if ($this->variation === null) {
             return;
         }
 
-        if ($category && $subcategory === null) {
-            session()->put('category_filter', $category);
-        }
-
-        if ($category && $subcategory) {
-            session()->put('category_filter', $category);
-            session()->put('subcategory_filter', $subcategory);
-        }
-
-        return $this->redirectRoute('products', navigate: true);
-    }
-
-    public function updatedSelectedVariantSku($value)
-    {
-        if ($this->product->variants->count() === 1) {
-            return;
-        }
-
-        $selectedVariant = $this->product
-            ->variants()
-            ->where('variant_sku', $value)
+        $selectedVariant = $this->variation->variants
+            ->filter(function ($variant) use ($id) {
+                return $variant->id === $id;
+            })
             ->first();
 
-        if (! $selectedVariant || ! $selectedVariant->is_active) {
+        if (! $selectedVariant || ! $selectedVariant->is_active || $selectedVariant->stock <= 0) {
             $this->addError(
-                'selectedVariantSku',
+                'selectedVariantId',
                 'Varian produk yang dipilih tidak tersedia. Silakan pilih varian produk lain.',
             );
 
-            $this->selectedVariantSku = $this->productVariant->variant_sku;
+            $this->setMinPriceProductVariant();
+
             return;
         }
 
-        $this->productVariant = $selectedVariant;
         $this->price = $selectedVariant->price;
         $this->priceDiscount = $selectedVariant->price_discount;
         $this->stock = $selectedVariant->stock;
-
         $this->quantity = $this->quantity > $this->stock ? $this->stock : $this->quantity;
     }
 
-    public function increment()
+    /**
+     * Increment product quantity before adding to cart.
+     */
+    public function increment(): void
     {
         if ($this->quantity < $this->stock) {
             $this->quantity++;
         }
     }
 
-    #[On('update-quantity')]
-    public function updateItemQuantity(int $quantity)
+    /**
+     * Update product quantity on input change before adding to cart.
+     */
+    public function updateItemQuantity(int $quantity): void
     {
         if ($quantity < 1) {
             $this->addError('quantity', 'Jumlah produk tidak bisa kurang dari 1.');
+
+            $this->quantity = 1;
 
             return;
         }
 
         if ($quantity > $this->stock) {
-            $this->addError('quantity', 'Jumlah produk melebihi stok yang tersedia. Stok tersedia:' . $this->stock);
+            $this->addError('quantity', 'Jumlah produk melebihi stok yang tersedia. Stok tersedia: ' . $this->stock);
+
+            $this->quantity = $this->stock;
 
             return;
         }
@@ -166,13 +193,25 @@ new class extends Component {
         $this->quantity = $quantity;
     }
 
-    public function decrement()
+    /**
+     * Decrement product quantity before adding to cart.
+     */
+    public function decrement(): void
     {
         if ($this->quantity > 1) {
             $this->quantity--;
         }
     }
 
+    /**
+     * Add to cart.
+     *
+     * @return  void
+     *
+     * @throws  AuthorizationException if the user is not authorized to delete the cart item.
+     * @throws  QueryException if a database query error occurred.
+     * @throws  \Exception if an unexpected error occurred.
+     */
     public function addToCart()
     {
         if (! auth()->check()) {
@@ -184,11 +223,23 @@ new class extends Component {
             return $this->redirectRoute('login', navigate: true);
         }
 
+        if (
+            auth()
+                ->user()
+                ->roles->first()->name !== 'user'
+        ) {
+            session()->flash('error', 'Admin tidak dapat menambahkan produk di dalam keranjang belanja.');
+
+            return $this->redirectIntended(url()->previous(), navigate: true);
+        }
+
         $validated = $this->validate(
             rules: [
-                'quantity' => 'required|integer|min:1|max:' . $this->productVariant->stock,
+                'selectedVariantId' => 'required|string|uuid|exists:product_variants,id',
+                'quantity' => 'required|integer|min:1|max:' . $this->stock,
             ],
             attributes: [
+                'selectedVariantId' => 'Varian produk',
                 'quantity' => 'Jumlah produk',
             ],
         );
@@ -196,45 +247,46 @@ new class extends Component {
         $cart = auth()
             ->user()
             ->cart()
-            ->firstOrCreate(['user_id' => auth()->id()]);
+            ->firstOrCreate();
 
         $existingCartItem = $cart
             ->items()
-            ->where('product_variant_id', $this->productVariant->id)
+            ->where('product_variant_id', $validated['selectedVariantId'])
             ->first();
 
         $newQuantity = $existingCartItem
             ? $existingCartItem->quantity + $validated['quantity']
             : $validated['quantity'];
 
-        if ($newQuantity > $this->productVariant->stock) {
+        if ($newQuantity > $this->stock) {
             $this->addError(
                 'quantity',
                 'Anda hanya bisa menambah ' .
-                    $this->productVariant->stock -
+                    $this->stock -
                     $existingCartItem->quantity .
                     ' produk ini lagi, karena sudah ada ' .
                     $existingCartItem->quantity .
                     ' produk ini di keranjang belanja anda. Maksimal stok: ' .
-                    $this->productVariant->stock,
+                    $this->stock,
             );
+
             return;
         }
 
-        if ($this->product->variants->count() > 1) {
-            if (! $this->selectedVariantSku) {
-                $this->addError('selectedVariantSku', 'Silakan pilih salah satu dari varian produk di atas ini.');
+        if ($this->variation && $this->variation->variants->count() > 1) {
+            $selectedVariant = $this->variation->variants
+                ->filter(function ($variant) use ($validated) {
+                    return $variant->id === $validated['selectedVariantId'];
+                })
+                ->first();
 
-                return;
-            }
-
-            if (! $this->productVariant->is_active) {
+            if (! $selectedVariant || ! $selectedVariant->is_active || $selectedVariant->stock <= 0) {
                 $this->addError(
-                    'selectedVariantSku',
+                    'selectedVariantId',
                     'Varian produk yang dipilih tidak tersedia. Silakan pilih varian lain yang tersedia.',
                 );
 
-                $this->selectedVariantSku = $this->productVariant->variant_sku;
+                $this->setMinPriceProductVariant();
 
                 return;
             }
@@ -250,127 +302,99 @@ new class extends Component {
                     ]);
                 } else {
                     $cart->items()->create([
-                        'product_variant_id' => $this->productVariant->id,
+                        'product_variant_id' => $validated['selectedVariantId'],
                         'quantity' => $validated['quantity'],
-                        'price' => $this->productVariant->price_discount
-                            ? $this->productVariant->price_discount
-                            : $this->productVariant->price,
+                        'price' => $this->priceDiscount ? $this->priceDiscount : $this->price,
                     ]);
                 }
             });
 
-            session()->flash('success', 'Produk berhasil ditambahkan ke dalam keranjang belanja.');
-            return $this->redirectIntended(route('products.detail', ['slug' => $this->product->slug]), navigate: true);
+            session()->flash(
+                'success',
+                'Produk ' . ucwords($this->product->name) . ' berhasil ditambahkan ke dalam keranjang belanja.',
+            );
+            return $this->redirectIntended(url()->previous(), navigate: true);
         } catch (AuthorizationException $e) {
-            $errorMessage = $e->getMessage();
-
-            if ($e->getCode() === 401) {
-                session()->flash('error', $errorMessage);
-
-                return $this->redirectRoute('login', navigate: true);
-            }
-
-            session()->flash('error', $errorMessage);
-            return $this->redirect(request()->header('Referer'), true);
+            session()->flash('error', $e->getMessage());
+            return $this->redirect(url()->previous(), true);
         } catch (QueryException $e) {
-            Log::error('Database error during cart item creation: ' . $e->getMessage());
+            Log::error('Database query error occurred', [
+                'error_type' => 'QueryException',
+                'message' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Adding product inside cart item data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
 
             session(
                 'error',
-                'Terjadi kesalahan dalam menambahkan produk ke dalam keranjang belanja, silakan coba beberapa saat lagi.',
+                'Terjadi kesalahan dalam menambahkan produk ' .
+                    ucwords($this->product->name) .
+                    ' ke dalam keranjang belanja, silakan coba beberapa saat lagi.',
             );
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirect(url()->previous(), true);
         } catch (\Exception $e) {
-            Log::error('Unexpected cart item creation error: ' . $e->getMessage());
+            Log::error('An unexpected error occurred', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Adding product inside cart item data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
 
             session('error', 'Terjadi kesalahan tak terduga, silakan coba beberapa saat lagi.');
-            return $this->redirect(request()->header('Referer'), true);
+            return $this->redirect(url()->previous(), true);
         }
     }
 }; ?>
 
 <section class="p-4 md:p-6">
     <section class="flex flex-col gap-6 lg:flex-row">
-        <x-common.product-image-gallery :images="$product->images" />
+        <x-common.product-image-gallery :images="$product->images" :productName="$product->name" />
         <section class="w-full lg:w-1/2">
-            @if ($product->subcategory)
-                <nav class="mb-2">
+            @if ($category && $subcategory)
+                <nav>
                     <ol class="flex items-center">
-                        <li class="text-sm font-medium tracking-tight text-black/70 transition-colors hover:text-black">
-                            <button wire:click="redirectToProduct('{{ $product->subcategory->category->slug }}')">
-                                {{ ucwords($product->subcategory->category->name) }}
-                            </button>
-                        </li>
-                        <li aria-hidden="true" class="mx-2 text-black/40">
-                            <svg
-                                class="size-4 shrink-0"
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
+                        <li>
+                            <a
+                                href="{{ route('products.category', ['category' => $category->slug]) }}"
+                                class="text-sm font-medium tracking-tight text-black/70 transition-colors hover:text-black"
+                                wire:navigate
                             >
-                                <path d="m9 18 6-6-6-6" />
-                            </svg>
+                                {{ ucwords($category->name) }}
+                            </a>
                         </li>
-                        <li class="text-sm font-medium tracking-tight text-black/70 transition-colors hover:text-black">
-                            <button
-                                wire:click="redirectToProduct('{{ $product->subcategory->category->slug }}', '{{ $product->subcategory->slug }}')"
+                        <li aria-hidden="true" class="mx-2 text-black/40">/</li>
+                        <li>
+                            <a
+                                href="{{ route('products.subcategory', ['category' => $category->slug, 'subcategory' => $subcategory->slug]) }}"
+                                class="text-sm font-medium tracking-tight text-black/70 transition-colors hover:text-black"
+                                wire:navigate
                             >
-                                {{ ucwords($product->subcategory->name) }}
-                            </button>
+                                {{ ucwords($subcategory->name) }}
+                            </a>
                         </li>
                     </ol>
                 </nav>
             @endif
 
             <h1 class="mb-2 leading-tight text-black">{{ $product->name }}</h1>
-            <div class="mb-4 flex items-center gap-x-1">
-                @for ($i = 0; $i < $averageRating; $i++)
-                    <svg
-                        class="size-4 text-yellow-500"
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                    >
-                        <path
-                            d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"
-                        />
-                    </svg>
-                @endfor
-
-                @for ($i = 0 + $averageRating; $i < 5; $i++)
-                    <svg
-                        class="size-4 text-black opacity-20"
-                        xmlns="http://www.w3.org/2000/svg"
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        stroke="currentColor"
-                        stroke-width="2"
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        aria-hidden="true"
-                    >
-                        <path
-                            d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"
-                        />
-                    </svg>
-                @endfor
-
+            <div class="mb-4 flex items-center gap-x-2">
+                <x-common.product-rating :averageRating="$averageRating" />
                 <p class="ml-2 text-sm font-medium tracking-tighter text-black/70">
-                    <span class="mr-1">{{ $totalReviewCount }}</span>
+                    <span class="mr-1">{{ $totalReviews }}</span>
                     penilaian
                 </p>
             </div>
@@ -379,7 +403,7 @@ new class extends Component {
                     <data value="{{ $priceDiscount }}" class="text-3xl font-bold tracking-tighter text-primary">
                         Rp {{ formatPrice($priceDiscount) }}
                     </data>
-                    <del class="text-base tracking-tighter text-black/60">Rp {{ formatPrice($price) }}</del>
+                    <del class="text-base tracking-tighter text-black/70">Rp {{ formatPrice($price) }}</del>
                 @else
                     <data value="{{ $price }}" class="text-3xl font-bold tracking-tighter text-primary">
                         Rp {{ formatPrice($price) }}
@@ -387,38 +411,38 @@ new class extends Component {
                 @endif
             </p>
 
-            @if ($product->variants->count() > 1)
+            @if ($variation && $variation->variants->count() > 1)
                 <hr class="my-4 border-neutral-300" />
                 <div class="mb-4">
                     <p class="mb-4 text-base font-medium tracking-tight text-black">
                         Pilih Variasi
-                        {{ ucwords($product->variants->first()->combinations->first()->variationVariant->variation->name) . ' :' }}
+                        {{ ucwords($variation->name) . ' :' }}
                     </p>
                     <ul class="flex flex-wrap gap-2">
-                        @foreach ($product->variants as $variant)
+                        @foreach ($variation->variants as $variant)
                             <li wire:key="{{ $variant->id }}">
                                 <input
-                                    wire:model.lazy="selectedVariantSku"
+                                    wire:model.lazy="selectedVariantId"
                                     type="radio"
-                                    id="variant-{{ strtolower($variant->combinations->first()->variationVariant->name) }}"
+                                    id="variant-{{ strtolower($variant->name) }}"
                                     name="product-variant"
                                     class="peer hidden"
-                                    value="{{ $variant->variant_sku }}"
-                                    @checked(! empty($this->selectedVariantSku) && $this->selectedVariantSku == $variant->variant_sku)
-                                    @disabled(! $variant->is_active)
+                                    value="{{ $variant->id }}"
+                                    @checked(! empty($this->selectedVariantId) && $this->selectedVariantId == $variant->id)
+                                    @disabled(! $variant->is_active || $variant->stock <= 0)
                                 />
                                 <label
-                                    for="variant-{{ strtolower($variant->combinations->first()->variationVariant->name) }}"
+                                    for="variant-{{ strtolower($variant->name) }}"
                                     class="inline-flex min-w-28 cursor-pointer items-center justify-center gap-x-2 rounded-full border border-black bg-white px-4 py-3 text-sm font-semibold tracking-tight text-black transition-colors hover:bg-neutral-200 focus:bg-neutral-200 focus:outline-none disabled:pointer-events-none disabled:opacity-50 peer-checked:border-black peer-checked:bg-black peer-checked:text-white peer-disabled:cursor-not-allowed peer-disabled:border-black peer-disabled:bg-white peer-disabled:text-black peer-disabled:opacity-50"
                                     wire:loading.class="opacity-50 !cursor-wait"
-                                    wire:target="selectedVariantSku"
+                                    wire:target="selectedVariantId"
                                 >
-                                    {{ ucwords($variant->combinations->first()->variationVariant->name) }}
+                                    {{ ucwords($variant->name) }}
                                 </label>
                             </li>
                         @endforeach
                     </ul>
-                    <x-form.input-error :messages="$errors->get('selectedVariantSku')" class="mt-2" />
+                    <x-form.input-error :messages="$errors->get('selectedVariantId')" class="mt-2" />
                 </div>
             @endif
 
@@ -429,11 +453,11 @@ new class extends Component {
                         <h3 class="text-lg tracking-tight text-black lg:text-xl">Spesifikasi Produk</h3>
                     </x-slot>
                     <dl class="grid grid-cols-2 gap-2 pb-4">
-                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">Stok:</dt>
+                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/70 lg:text-base">Stok:</dt>
                         <dl
-                            wire:loading.remove
-                            wire:target="selectedVariantSku"
                             class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base"
+                            wire:loading.remove
+                            wire:target="selectedVariantId"
                         >
                             @if ($this->stock > 0)
                                 <span class="text-teal-600">• Masih Tersedia</span>
@@ -443,45 +467,46 @@ new class extends Component {
                             @endif
                         </dl>
                         <dl
-                            wire:loading
-                            wire:target="selectedVariantSku"
                             class="text-pretty text-sm font-medium tracking-tight text-black/70 lg:text-base"
+                            wire:loading
+                            wire:target="selectedVariantId"
                         >
                             Sedang dimuat...
                         </dl>
-                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">
+                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/70 lg:text-base">
                             Garansi:
                         </dt>
                         <dl class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base">
                             {{ $product->warranty }}
                         </dl>
-                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">
+                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/70 lg:text-base">
                             Bahan Material:
                         </dt>
                         <dl class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base">
                             {{ $product->material }}
                         </dl>
-                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">
+                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/70 lg:text-base">
                             Dimensi (panjang x lebar x tinggi):
                         </dt>
                         <dl class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base">
                             {{ $product->dimension }} (dalam satuan centimeter)
                         </dl>
-                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">
+                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/70 lg:text-base">
                             Berat Paket:
                         </dt>
                         <dl class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base">
-                            {{ $product->weight }} gram
+                            {{ formatPrice($product->weight) }} gram
+                            {{ '(' . number_format($product->weight / 1000, 2) . ' kg)' }}
                         </dl>
 
                         @if ($product->power && $product->voltage)
-                            <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">
+                            <dt class="text-pretty text-sm font-medium tracking-tight text-black/70 lg:text-base">
                                 Daya Listrik:
                             </dt>
                             <dl class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base">
                                 {{ $product->power }} W
                             </dl>
-                            <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">
+                            <dt class="text-pretty text-sm font-medium tracking-tight text-black/70 lg:text-base">
                                 Tegangan Listrik:
                             </dt>
                             <dl class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base">
@@ -489,7 +514,7 @@ new class extends Component {
                             </dl>
                         @endif
 
-                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/60 lg:text-base">
+                        <dt class="text-pretty text-sm font-medium tracking-tight text-black/70 lg:text-base">
                             Apa Yang Ada Di dalam Paket:
                         </dt>
                         <dl class="text-pretty text-sm font-medium tracking-tight text-black lg:text-base">
@@ -508,9 +533,9 @@ new class extends Component {
                     </p>
                 </x-common.accordion>
             </div>
-            @if ($this->stock > 0)
+            @if ($this->stock > 0 &&(! auth()->check() ||(auth()->check() &&auth()->user()->roles->first()->name === 'user')))
                 <div
-                    class="sticky bottom-0 flex flex-col gap-y-4 border-b border-t border-b-neutral-300 border-t-neutral-300 bg-white py-4 lg:border-b-0 lg:border-b-transparent"
+                    class="sticky bottom-0 flex flex-col gap-y-4 border-y border-y-neutral-300 bg-white py-4 lg:border-b-0 lg:border-b-transparent"
                 >
                     <div class="flex flex-col">
                         <div class="flex flex-row items-center justify-between">
@@ -522,12 +547,10 @@ new class extends Component {
                                     aria-label="Kurangi jumlah produk"
                                     wire:click="decrement"
                                     wire:loading.class="!cursor-wait pointers-event-none opacity-50 hover:!bg-white"
-                                    wire:target="selectedVariantSku, increment, decrement,addToCart"
+                                    wire:target="selectedVariantId,increment,decrement,addToCart"
                                     @disabled($quantity <= 1)
                                 >
                                     <svg
-                                        wire:loading.remove
-                                        wire:target="decrement"
                                         class="size-4 shrink-0"
                                         xmlns="http://www.w3.org/2000/svg"
                                         viewBox="0 0 24 24"
@@ -537,15 +560,17 @@ new class extends Component {
                                         stroke-linecap="round"
                                         stroke-linejoin="round"
                                         aria-hidden="true"
+                                        wire:loading.remove
+                                        wire:target="decrement"
                                     >
                                         <path d="M5 12h14" />
                                     </svg>
                                     <div
-                                        wire:loading
-                                        wire:target="decrement"
                                         class="inline-block size-4 animate-spin rounded-full border-[2px] border-current border-t-transparent align-middle"
                                         role="status"
                                         aria-label="loading"
+                                        wire:loading
+                                        wire:target="decrement"
                                     >
                                         <span class="sr-only">Sedang diproses...</span>
                                     </div>
@@ -560,10 +585,10 @@ new class extends Component {
                                     min="1"
                                     max="{{ $stock }}"
                                     autofocus
-                                    x-on:change="$dispatch('update-quantity', { quantity: $event.target.value })"
-                                    wire:loading.class="!cursor-wait pointers-event-none opacity-50 hover:!bg-white"
-                                    wire:target="selectedVariantSku, increment, decrement, addToCart"
                                     :hasError="$errors->has('quantity')"
+                                    wire:loading.class="!cursor-wait pointers-event-none opacity-50 hover:!bg-white"
+                                    wire:target="selectedVariantId,increment,decrement,addToCart"
+                                    x-on:change="$wire.updateItemQuantity($event.target.value)"
                                 />
                                 <button
                                     type="button"
@@ -571,12 +596,10 @@ new class extends Component {
                                     aria-label="Tambah jumlah produk"
                                     wire:click="increment"
                                     wire:loading.class="disabled"
-                                    wire:target="selectedVariantSku, increment, decrement, addToCart"
+                                    wire:target="selectedVariantId,increment,decrement,addToCart"
                                     @disabled($quantity >= $stock)
                                 >
                                     <svg
-                                        wire:loading.remove
-                                        wire:target="increment"
                                         class="size-4 shrink-0"
                                         xmlns="http://www.w3.org/2000/svg"
                                         viewBox="0 0 24 24"
@@ -586,16 +609,18 @@ new class extends Component {
                                         stroke-linecap="round"
                                         stroke-linejoin="round"
                                         aria-hidden="true"
+                                        wire:loading.remove
+                                        wire:target="increment"
                                     >
                                         <path d="M5 12h14" />
                                         <path d="M12 5v14" />
                                     </svg>
                                     <div
-                                        wire:loading
-                                        wire:target="increment"
                                         class="inline-block size-4 animate-spin rounded-full border-[2px] border-current border-t-transparent align-middle"
                                         role="status"
                                         aria-label="loading"
+                                        wire:loading
+                                        wire:target="increment"
                                     >
                                         <span class="sr-only">Sedang diproses...</span>
                                     </div>
@@ -604,43 +629,63 @@ new class extends Component {
                         </div>
                         <x-form.input-error :messages="$errors->get('quantity')" class="mt-2" />
                     </div>
-                    <x-common.button
-                        wire:click="addToCart"
-                        class="w-full !text-base lg:!py-4"
-                        wire:loading.attr="disabled"
-                        wire:target="selectedVariantSku, increment, decrement,addToCart"
-                    >
-                        <svg
-                            wire:loading.remove
-                            wire:target="addToCart"
-                            class="size-6"
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            aria-hidden="true"
+                    @auth
+                        <x-common.button
+                            type="button"
+                            class="w-full !text-base lg:!py-4"
+                            wire:click="addToCart"
+                            wire:loading.attr="disabled"
+                            wire:target="selectedVariantId,increment,decrement,addToCart"
                         >
-                            <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
-                            <path d="M3 6h18" />
-                            <path d="M16 10a4 4 0 0 1-8 0" />
-                        </svg>
-                        <span wire:loading.remove wire:target="addToCart">Tambah ke Keranjang</span>
-                        <div
-                            wire:loading
-                            wire:target="addToCart"
-                            class="inline-block size-6 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
-                            role="status"
-                            aria-label="loading"
-                        >
-                            <span class="sr-only">Sedang diproses...</span>
-                        </div>
-                        <span wire:loading wire:target="addToCart">Sedang diproses...</span>
-                    </x-common.button>
+                            <svg
+                                class="size-6 shrink-0"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                                wire:loading.remove
+                                wire:target="addToCart"
+                            >
+                                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                                <path d="M3 6h18" />
+                                <path d="M16 10a4 4 0 0 1-8 0" />
+                            </svg>
+                            <span wire:loading.remove wire:target="addToCart">Tambah ke Keranjang</span>
+                            <div
+                                class="inline-block size-6 animate-spin rounded-full border-[4px] border-current border-t-transparent align-middle"
+                                role="status"
+                                aria-label="loading"
+                                wire:loading
+                                wire:target="addToCart"
+                            >
+                                <span class="sr-only">Sedang diproses...</span>
+                            </div>
+                            <span wire:loading wire:target="addToCart">Sedang diproses...</span>
+                        </x-common.button>
+                    @else
+                        <x-common.button :href="route('login')" class="w-full !text-base lg:!py-4" wire:navigate>
+                            <svg
+                                class="size-6 shrink-0"
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                stroke-width="2"
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                aria-hidden="true"
+                            >
+                                <path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z" />
+                                <path d="M3 6h18" />
+                                <path d="M16 10a4 4 0 0 1-8 0" />
+                            </svg>
+                            Tambah ke Keranjang
+                        </x-common.button>
+                    @endauth
                 </div>
             @endif
         </section>
@@ -649,13 +694,13 @@ new class extends Component {
         <h3 class="mb-4 text-lg font-semibold tracking-tight text-black lg:text-xl">Penilaian dan Ulasan Produk</h3>
         <section class="flex flex-col-reverse gap-6 lg:flex-row">
             <section class="w-full lg:w-3/4">
-                @forelse ($reviews->take(5) as $review)
+                @forelse ($reviews as $review)
                     <article
                         wire:key="{{ $review->id }}"
                         class="flex flex-row items-start gap-x-2 border-b border-neutral-300 py-4"
                     >
                         <svg
-                            class="size-10 text-black opacity-20"
+                            class="size-10 shrink-0 text-black opacity-20"
                             xmlns="http://www.w3.org/2000/svg"
                             viewBox="0 0 24 24"
                             fill="currentColor"
@@ -669,9 +714,9 @@ new class extends Component {
                         </svg>
                         <div class="w-full">
                             <div class="flex flex-row items-center justify-between gap-x-2">
-                                <p class="text-sm font-medium tracking-tight text-black">{{ $review->user->name }}</p>
+                                <p class="text-sm font-medium tracking-tight text-black">{{ $review->user_name }}</p>
                                 <time
-                                    class="text-sm font-medium tracking-tight text-black/50"
+                                    class="text-sm font-medium tracking-tight text-black/70"
                                     datetime="2024-11-24 20:00"
                                 >
                                     {{ $review->created_at->diffForHumans() }}
@@ -718,15 +763,7 @@ new class extends Component {
                                     </svg>
                                 @endfor
 
-                                <p class="ml-2 text-sm tracking-tighter text-black/50">({{ $review->rating }})</p>
-
-                                @if ($review->productVariant->variant_sku)
-                                    <p class="ml-4 text-sm tracking-tight text-black/50">
-                                        Variasi
-                                        {{ ucwords($item->productVariant->combinations->first()->variationVariant->name) }}
-                                    </p>
-                                @endif
-
+                                <p class="ml-2 text-sm tracking-tighter text-black/70">({{ $review->rating }})</p>
                                 <span class="sr-only">Penilaian: {{ $review->rating }} dari 5 bintang</span>
                             </div>
 
@@ -744,82 +781,20 @@ new class extends Component {
                         Belum ada penilaian dan ulasan untuk produk ini.
                     </p>
                 @endforelse
-
-                @if ($reviews->count() > 5)
-                    <a
-                        href="#"
-                        class="flex items-center justify-center gap-x-4 border-b border-neutral-300 py-4 text-sm font-medium tracking-tight text-black transition-colors hover:bg-neutral-100"
-                        wire:navigate
-                    >
-                        Lihat Seluruh Penilaian dan Ulasan Produk Ini
-                        <svg
-                            class="size-5"
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            aria-hidden="true"
-                        >
-                            <path d="m9 18 6-6-6-6" />
-                        </svg>
-                    </a>
-                @endif
             </section>
             <aside class="relative h-full w-full lg:sticky lg:top-20 lg:w-1/4">
                 <div class="flex items-center gap-x-1">
-                    @for ($i = 0; $i < $averageRating; $i++)
-                        <svg
-                            class="size-6 text-yellow-500"
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            aria-hidden="true"
-                        >
-                            <path
-                                d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"
-                            />
-                        </svg>
-                    @endfor
-
-                    @for ($i = 0 + $averageRating; $i < 5; $i++)
-                        <svg
-                            class="size-6 text-black opacity-20"
-                            xmlns="http://www.w3.org/2000/svg"
-                            width="24"
-                            height="24"
-                            viewBox="0 0 24 24"
-                            fill="currentColor"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            aria-hidden="true"
-                        >
-                            <path
-                                d="M11.525 2.295a.53.53 0 0 1 .95 0l2.31 4.679a2.123 2.123 0 0 0 1.595 1.16l5.166.756a.53.53 0 0 1 .294.904l-3.736 3.638a2.123 2.123 0 0 0-.611 1.878l.882 5.14a.53.53 0 0 1-.771.56l-4.618-2.428a2.122 2.122 0 0 0-1.973 0L6.396 21.01a.53.53 0 0 1-.77-.56l.881-5.139a2.122 2.122 0 0 0-.611-1.879L2.16 9.795a.53.53 0 0 1 .294-.906l5.165-.755a2.122 2.122 0 0 0 1.597-1.16z"
-                            />
-                        </svg>
-                    @endfor
-
+                    <x-common.product-rating :averageRating="$averageRating" />
                     <p class="ml-auto text-xl font-semibold tracking-tighter text-black">
-                        {{ $averageRating . '.0' }}
+                        {{ $averageRating }}
                     </p>
-                    <span class="sr-only">Penilaian: {{ $averageRating . '.0' }} dari 5 bintang</span>
+                    <span class="sr-only">Penilaian: {{ $averageRating }} dari 5 bintang</span>
                 </div>
                 <hr class="my-4 border-neutral-300" />
                 <div class="flex flex-col gap-y-1">
                     @foreach ($reviewCountByRating as $rating => $count)
                         <div class="flex items-center gap-x-2">
-                            <span class="w-4 text-center text-base font-medium tracking-tighter text-black/50">
+                            <span class="w-8 text-center text-base font-medium tracking-tighter text-black/70">
                                 {{ $rating }}
                             </span>
                             <div
