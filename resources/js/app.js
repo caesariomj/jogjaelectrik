@@ -7,6 +7,7 @@ import dropdownComponent from './components/dropdown';
 import faqAccordionComponent from './components/faqAccordion';
 import fileInputComponent from './components/fileInput';
 import modalComponent from './components/modal';
+import productImageGalleryComponent from './components/productImageGallery';
 import productSliderComponent from './components/productSlider';
 
 document.addEventListener('alpine:init', () => {
@@ -17,5 +18,6 @@ document.addEventListener('alpine:init', () => {
     Alpine.data('fileInput', fileInputComponent);
     Alpine.data('flatpickr', datepickerComponent);
     Alpine.data('modal', modalComponent);
+    Alpine.data('productImageGallery', productImageGalleryComponent);
     Alpine.data('productSlider', productSliderComponent);
 });
