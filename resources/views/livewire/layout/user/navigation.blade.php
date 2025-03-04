@@ -9,13 +9,16 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Volt\Component;
 
 new class extends Component {
-    public ?string $role = null;
-
     public string $search = '';
 
+    #[Locked]
+    public ?string $role = null;
+
+    #[Locked]
     public $searchResults = null;
 
     public function mount(): void
