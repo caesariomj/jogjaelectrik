@@ -45,7 +45,14 @@
                             ])
                             role="status"
                         >
-                            <span class="mb-0.5">•</span>
+                            <span
+                                @class([
+                                    'inline-block size-1.5 rounded-full',
+                                    'bg-yellow-800' => $order->status === 'payment_received',
+                                    'bg-teal-800' => in_array($order->status, ['processing', 'shipping', 'completed']),
+                                    'bg-red-800' => in_array($order->status, ['failed', 'canceled']),
+                                ])
+                            ></span>
                             @if ($order->status === 'all')
                                 Semua
                             @elseif ($order->status === 'waiting_payment')
@@ -83,7 +90,7 @@
                     </dd>
                 </div>
 
-                @if ($order->payment()->exists() && $order->payment->paid_at && $order->status !== 'canceled')
+                @if ($order->payment && $order->payment->paid_at && $order->status !== 'canceled')
                     <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                         <dt class="w-full tracking-tight text-black/70 md:w-1/3">Estimasi Pesanan Tiba</dt>
                         <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
@@ -120,7 +127,7 @@
                             <span>Rp {{ formatPrice($order->subtotal_amount) }}</span>
                         </p>
 
-                        @if ($order->discount_amount > 0)
+                        @if ($order->discount_amount)
                             <p
                                 class="inline-flex items-center justify-between font-medium tracking-tight text-black/70"
                             >
@@ -154,7 +161,7 @@
             </dl>
         </section>
 
-        @if ($order->payment()->exists())
+        @if ($order->payment)
             <section class="mb-4">
                 <h2 class="mb-2 text-2xl text-black">Informasi Pembayaran</h2>
                 <dl class="grid grid-cols-1">
@@ -197,7 +204,15 @@
                                 ])
                                 role="status"
                             >
-                                <span class="mb-0.5">•</span>
+                                <span
+                                    @class([
+                                        'inline-block size-1.5 rounded-full',
+                                        'bg-yellow-800' => $order->payment->status === 'unpaid',
+                                        'bg-teal-800' => in_array($order->payment->status, ['paid', 'settled']),
+                                        'bg-red-800' => $order->payment->status === 'expired',
+                                        'bg-blue-800' => $order->payment->status === 'refunded',
+                                    ])
+                                ></span>
                                 @if ($order->payment->status === 'unpaid')
                                     Belum Dibayar
                                 @elseif (in_array($order->payment->status, ['paid', 'settled']))
@@ -232,7 +247,7 @@
             </section>
         @endif
 
-        @if ($order->payment()->exists() && $order->payment->status === 'refunded' && $order->payment->refund()->exists())
+        @if ($order->payment && $order->payment->status === 'refunded' && $order->refund)
             <section class="mb-4">
                 <h2 class="mb-2 text-2xl text-black">Informasi Refund</h2>
                 <dl class="grid grid-cols-1">
@@ -242,22 +257,29 @@
                             <span
                                 @class([
                                     'inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium tracking-tight',
-                                    'bg-yellow-100 text-yellow-800' => $order->payment->refund->status === 'pending',
-                                    'bg-teal-100 text-teal-800' => in_array($order->payment->refund->status, ['approved', 'succeeded']),
-                                    'bg-red-100 text-red-800' => in_array($order->payment->refund->status, ['failed', 'rejected']),
+                                    'bg-yellow-100 text-yellow-800' => $order->refund->status === 'pending',
+                                    'bg-teal-100 text-teal-800' => in_array($order->refund->status, ['approved', 'succeeded']),
+                                    'bg-red-100 text-red-800' => in_array($order->refund->status, ['failed', 'rejected']),
                                 ])
                                 role="status"
                             >
-                                <span class="mb-0.5">•</span>
-                                @if ($order->payment->refund->status === 'pending')
+                                <span
+                                    @class([
+                                        'inline-block size-1.5 rounded-full',
+                                        'bg-yellow-800' => $order->refund->status === 'pending',
+                                        'bg-teal-800' => in_array($order->refund->status, ['approved', 'succeeded']),
+                                        'bg-red-800' => in_array($order->refund->status, ['failed', 'rejected']),
+                                    ])
+                                ></span>
+                                @if ($order->refund->status === 'pending')
                                     Menunggu Diproses
-                                @elseif ($order->payment->refund->status === 'approved')
+                                @elseif ($order->refund->status === 'approved')
                                     Disetujui
-                                @elseif ($order->payment->refund->status === 'succeeded')
+                                @elseif ($order->refund->status === 'succeeded')
                                     Berhasil
-                                @elseif ($order->payment->refund->status === 'failed')
+                                @elseif ($order->refund->status === 'failed')
                                     Gagal
-                                @elseif ($order->payment->refund->status === 'rejected')
+                                @elseif ($order->refund->status === 'rejected')
                                     Ditolak
                                 @endif
                             </span>
@@ -266,15 +288,15 @@
                     <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                         <dt class="w-full tracking-tight text-black/70 md:w-1/3">Refund Diajukan Pada</dt>
                         <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
-                            {{ formatTimestamp($order->payment->refund->created_at) }}
+                            {{ formatTimestamp($order->refund->created_at) }}
                         </dd>
                     </div>
 
-                    @if ($order->payment->refund->succeeded_at)
+                    @if ($order->refund->succeeded_at)
                         <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                             <dt class="w-full tracking-tight text-black/70 md:w-1/3">Direfund Pada</dt>
                             <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
-                                {{ formatTimestamp($order->payment->refund->succeeded_at) }}
+                                {{ formatTimestamp($order->refund->succeeded_at) }}
                             </dd>
                         </div>
                     @endif
@@ -321,7 +343,7 @@
                 <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                     <dt class="w-full tracking-tight text-black/70 md:w-1/3">Alamat Pengiriman</dt>
                     <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
-                        {{ \Illuminate\Support\Facades\Crypt::decryptString($order->shipping_address) }}
+                        {{ $order->shipping_address }}
                     </dd>
                 </div>
             </dl>
@@ -338,7 +360,7 @@
                 <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                     <dt class="w-full tracking-tight text-black/70 md:w-1/3">Nomor Telefon</dt>
                     <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
-                        {{ '0' . \Illuminate\Support\Facades\Crypt::decryptString($order->user->phone_number) }}
+                        {{ $order->user->phone_number }}
                     </dd>
                 </div>
             </dl>
@@ -358,31 +380,31 @@
                         class="flex items-start gap-x-4 rounded-md border border-neutral-300 p-2 shadow-sm"
                     >
                         <a
-                            href="{{ route('products.detail', ['slug' => $item->productVariant->product->slug]) }}"
+                            href="{{ route('products.detail', ['slug' => $item->slug]) }}"
                             class="size-20 shrink-0 overflow-hidden rounded-lg bg-neutral-100"
                             wire:navigate
                         >
                             <img
-                                src="{{ asset('storage/uploads/product-images/' .$item->productVariant->product->images()->thumbnail()->first()->file_name,) }}"
-                                alt="Gambar produk {{ strtolower($item->productVariant->product->name) }}"
+                                src="{{ asset('storage/uploads/product-images/' . $item->thumbnail) }}"
+                                alt="Gambar produk {{ strtolower($item->name) }}"
                                 class="aspect-square h-full w-20 scale-100 object-cover brightness-100 transition-all ease-in-out hover:scale-105 hover:brightness-95"
                                 loading="lazy"
                             />
                         </a>
                         <div class="flex h-20 w-full flex-col items-start">
                             <a
-                                href="{{ route('products.detail', ['slug' => $item->productVariant->product->slug]) }}"
+                                href="{{ route('products.detail', ['slug' => $item->slug]) }}"
                                 class="mb-0.5"
                                 wire:navigate
                             >
                                 <h3 class="!text-base text-black hover:text-primary">
-                                    {{ $item->productVariant->product->name }}
+                                    {{ $item->name }}
                                 </h3>
                             </a>
 
-                            @if ($item->productVariant->variant_sku)
+                            @if ($item->variation && $item->variant)
                                 <p class="mb-2 text-sm tracking-tight text-black">
-                                    {{ ucwords($item->productVariant->combinations->first()->variationVariant->variation->name) . ': ' . ucwords($item->productVariant->combinations->first()->variationVariant->name) }}
+                                    {{ ucwords($item->variation) . ': ' . ucwords($item->variant) }}
                                 </p>
                             @endif
 
@@ -398,5 +420,15 @@
                 @endforeach
             </ul>
         </section>
+        <div class="flex flex-col items-center gap-4 md:flex-row md:justify-end">
+            <x-common.button
+                :href="route('admin.orders.index')"
+                variant="secondary"
+                class="w-full md:w-fit"
+                wire:navigate
+            >
+                Kembali
+            </x-common.button>
+        </div>
     </section>
 @endsection

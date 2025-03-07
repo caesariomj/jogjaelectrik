@@ -2,9 +2,14 @@
 
 use App\Models\Order;
 use App\Services\DocumentService;
+use Carbon\Carbon;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Database\QueryException;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
@@ -62,13 +67,18 @@ new class extends Component {
             'count' => 0,
         ],
     ];
+
     public string $status = '';
 
     #[Url(as: 'q', except: '')]
     public string $search = '';
 
+    public int $perPage = 5;
+
     public string $shipmentTrackingNumber = '';
+
     public string $cancelationReason = '';
+
     public string $otherCancelationReason = '';
 
     public function boot(DocumentService $documentService)
@@ -76,41 +86,173 @@ new class extends Component {
         $this->documentService = $documentService;
     }
 
-    public function mount()
+    public function mount(): void
     {
         $this->status = 'all';
 
+        $this->countOrdersByStatuses();
+    }
+
+    /**
+     * Count prder by the order status.
+     */
+    private function countOrdersByStatuses(): void
+    {
+        $statusCounts = DB::table('orders')
+            ->select('status', DB::raw('count(*) as count'))
+            ->groupBy('status')
+            ->pluck('count', 'status')
+            ->toArray();
+
+        $totalCount = array_sum($statusCounts);
+
         foreach ($this->orderStatuses as &$status) {
             if ($status['code'] == 'all') {
-                $status['count'] = Order::count();
+                $status['count'] = $totalCount;
             } else {
-                $status['count'] = Order::where('status', $status['code'])->count();
+                $status['count'] = $statusCounts[$status['code']] ?? 0;
             }
         }
     }
 
-    #[Computed]
-    public function orders()
+    /**
+     * Lazy loading that displays the table skeleton with dynamic table rows.
+     */
+    public function placeholder(): View
     {
-        $search = $this->search;
-        $status = $this->status;
-
-        return Order::with(['details.productVariant.product.images', 'payment', 'user.city.province'])
-            ->when($search !== '', function ($query) use ($search) {
-                return $query->where('order_number', 'like', '%' . $search . '%');
-            })
-            ->when($status !== 'all', function ($query) use ($status) {
-                return $query->where('status', $status);
-            })
-            ->orderByDesc('created_at')
-            ->paginate(10);
+        return view('components.skeleton.order');
     }
 
+    /**
+     * Get a paginated list of orders with order detail, and user.
+     */
+    #[Computed]
+    public function orders(): LengthAwarePaginator
+    {
+        $orderIds = Order::queryAllByStatusWithRelations(status: $this->status, columns: ['orders.id'])
+            ->when($this->search, function ($query) {
+                return $query->where('orders.order_number', 'like', '%' . $this->search . '%');
+            })
+            ->groupBy('orders.id')
+            ->orderByDesc('orders.created_at');
+
+        $paginator = $orderIds->paginate($this->perPage);
+
+        $currentPageOrderIds = collect($paginator->items())
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($currentPageOrderIds)) {
+            return $paginator->setCollection(collect());
+        }
+
+        $orders = Order::queryAllByStatusWithRelations(
+            status: $this->status,
+            columns: [
+                'orders.id',
+                'orders.order_number',
+                'orders.status',
+                'orders.shipping_address',
+                'orders.shipping_courier',
+                'orders.estimated_shipping_min_days',
+                'orders.estimated_shipping_max_days',
+                'orders.shipment_tracking_number',
+                'orders.note',
+                'orders.subtotal_amount',
+                'orders.discount_amount',
+                'orders.shipping_cost_amount',
+                'orders.total_amount',
+                'orders.cancelation_reason',
+                'orders.created_at',
+            ],
+            relations: ['order_details', 'user'],
+        )
+            ->whereIn('orders.id', $currentPageOrderIds)
+            ->when($this->search, function ($query) {
+                return $query->where('orders.order_number', 'like', '%' . $this->search . '%');
+            })
+            ->orderByDesc('orders.created_at')
+            ->get();
+
+        $orders = $orders
+            ->groupBy('id')
+            ->map(function ($order) {
+                $firstOrder = $order->first();
+
+                $orderModel = new Order();
+
+                $orderModel->setRawAttributes(
+                    [
+                        'id' => $firstOrder->id,
+                        'order_number' => $firstOrder->order_number,
+                        'status' => $firstOrder->status,
+                        'shipping_address' => Crypt::decryptString($firstOrder->shipping_address),
+                        'shipping_courier' => $firstOrder->shipping_courier,
+                        'estimated_shipping_min_days' => $firstOrder->estimated_shipping_min_days,
+                        'estimated_shipping_max_days' => $firstOrder->estimated_shipping_max_days,
+                        'shipment_tracking_number' => $firstOrder->shipment_tracking_number,
+                        'note' => $firstOrder->note,
+                        'subtotal_amount' => $firstOrder->subtotal_amount,
+                        'discount_amount' => $firstOrder->discount_amount,
+                        'shipping_cost_amount' => $firstOrder->shipping_cost_amount,
+                        'total_amount' => $firstOrder->total_amount,
+                        'cancelation_reason' => $firstOrder->cancelation_reason,
+                        'created_at' => $firstOrder->created_at,
+                    ],
+                    true,
+                );
+
+                $orderModel->exists = true;
+
+                $orderModel->details = $order->map(function ($detail) {
+                    return (object) [
+                        'id' => $detail->order_detail_id,
+                        'name' => $detail->product_name,
+                        'sku' => $detail->product_variant_sku
+                            ? $detail->product_main_sku . '-' . $detail->product_variant_sku
+                            : $detail->product_main_sku,
+                        'slug' => $detail->product_slug,
+                        'variant' => $detail->variant_name,
+                        'variation' => $detail->variation_name,
+                        'price' => $detail->order_detail_price,
+                        'quantity' => $detail->order_detail_quantity,
+                        'thumbnail' => $detail->thumbnail,
+                    ];
+                });
+
+                $orderModel->user = (object) [
+                    'name' => $firstOrder->user_name,
+                    'phone_number' => '+62-' . Crypt::decryptString($firstOrder->user_phone_number),
+                    'postal_code' => Crypt::decryptString($firstOrder->user_postal_code),
+                    'city' => $firstOrder->city,
+                    'province' => $firstOrder->province,
+                ];
+
+                return $orderModel;
+            })
+            ->values();
+
+        $paginator->setCollection($orders);
+
+        return $paginator;
+    }
+
+    /**
+     * Reset the search query.
+     */
     public function resetSearch()
     {
         $this->reset('search');
     }
 
+    /**
+     * Download order invoice.
+     *
+     * @param   string  $id - The ID of the order invoice to download.
+     *
+     * @return  redirect if the order is not found.
+     * @return  void
+     */
     public function downloadInvoice(string $id)
     {
         $order = Order::find($id);
@@ -123,6 +265,14 @@ new class extends Component {
         return $this->documentService->generateInvoice($order);
     }
 
+    /**
+     * Download order shipping label.
+     *
+     * @param   string  $id - The ID of the order shipping label to download.
+     *
+     * @return  redirect if the order is not found.
+     * @return  void
+     */
     public function downloadShippingLabel(string $id)
     {
         $order = Order::find($id);
@@ -135,12 +285,28 @@ new class extends Component {
         return $this->documentService->generateShippingLabel($order);
     }
 
+    /**
+     * Process order.
+     *
+     * @param   string  $id - The ID of the order to process.
+     *
+     * @return  void
+     *
+     * @throws  AuthorizationException if the user is not authorized to process the order.
+     * @throws  QueryException if a database query error occurred.
+     * @throws  \Exception if an unexpected error occurred.
+     */
     public function processOrder(string $id)
     {
         $order = Order::find($id);
 
         if (! $order) {
             session()->flash('error', 'Pesanan dengan nomor: ' . $order->order_number . ' tidak dapat ditemukan.');
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        }
+
+        if ($order->status !== 'payment_received') {
+            session()->flash('error', 'Pesanan yang belum dibayar tidak dapat diproses.');
             return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         }
 
@@ -158,15 +324,53 @@ new class extends Component {
         } catch (AuthorizationException $e) {
             session()->flash('error', $e->getMessage());
             return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database query error occurred', [
+                'error_type' => 'QueryException',
+                'message' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Processing order data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam memproses pesanan dengan nomor: ' .
+                    $order->order_number .
+                    ', silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         } catch (\Exception $e) {
-            Log::error('Unexpected order processing error: ' . $e->getMessage());
+            Log::error('An unexpected error occurred', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Processing order data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
 
             session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
             return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         }
     }
 
-    #[On('initiate-order-shipping')]
+    /**
+     * Find order data before opening ship order modal.
+     *
+     * @param   string  $id - The ID of the order to find.
+     */
     public function confirmShipOrder(string $id)
     {
         $this->order = Order::find($id);
@@ -179,6 +383,17 @@ new class extends Component {
         $this->dispatch('open-modal', 'confirm-order-shipping-' . $this->order->id);
     }
 
+    /**
+     * Ship order.
+     *
+     * @param   string  $id - The ID of the order to ship.
+     *
+     * @return  void
+     *
+     * @throws  AuthorizationException if the user is not authorized to ship the order.
+     * @throws  QueryException if a database query error occurred.
+     * @throws  \Exception if an unexpected error occurred.
+     */
     public function shipOrder()
     {
         $validated = $this->validate(
@@ -207,15 +422,53 @@ new class extends Component {
         } catch (AuthorizationException $e) {
             session()->flash('error', $e->getMessage());
             return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database query error occurred', [
+                'error_type' => 'QueryException',
+                'message' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Shipping order data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam mengirim pesanan dengan nomor: ' .
+                    $order->order_number .
+                    ', silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         } catch (\Exception $e) {
-            Log::error('Unexpected order shipping error: ' . $e->getMessage());
+            Log::error('An unexpected error occurred', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Shipping order data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
 
             session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
             return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         }
     }
 
-    #[On('initiate-order-cancellation')]
+    /**
+     * Find order data before opening cancel order modal.
+     *
+     * @param   string  $id - The ID of the order to find.
+     */
     public function confirmCancelOrder(string $id)
     {
         $this->order = Order::find($id);
@@ -228,6 +481,17 @@ new class extends Component {
         $this->dispatch('open-modal', 'confirm-order-cancellation-' . $this->order->id);
     }
 
+    /**
+     * Cancel order.
+     *
+     * @param   string  $id - The ID of the order to cancel.
+     *
+     * @return  void
+     *
+     * @throws  AuthorizationException if the user is not authorized to cancel the order.
+     * @throws  QueryException if a database query error occurred.
+     * @throws  \Exception if an unexpected error occurred.
+     */
     public function cancelOrder()
     {
         $validated = $this->validate(
@@ -275,15 +539,53 @@ new class extends Component {
         } catch (AuthorizationException $e) {
             session()->flash('error', $e->getMessage());
             return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database query error occurred', [
+                'error_type' => 'QueryException',
+                'message' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Cancelling order data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam membatalkan pesanan dengan nomor: ' .
+                    $order->order_number .
+                    ', silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         } catch (\Exception $e) {
-            Log::error('Unexpected order cancelation error: ' . $e->getMessage());
+            Log::error('An unexpected error occurred', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Cancelling order data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
 
             session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
             return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         }
     }
 
-    #[On('initiate-order-finishing')]
+    /**
+     * Find order data before opening finish order modal.
+     *
+     * @param   string  $id - The ID of the order to find.
+     */
     public function confirmFinishOrder(string $id)
     {
         $this->order = Order::find($id);
@@ -296,6 +598,17 @@ new class extends Component {
         $this->dispatch('open-modal', 'confirm-order-finishing-' . $this->order->id);
     }
 
+    /**
+     * Finish order.
+     *
+     * @param   string  $id - The ID of the order to finish.
+     *
+     * @return  void
+     *
+     * @throws  AuthorizationException if the user is not authorized to finish the order.
+     * @throws  QueryException if a database query error occurred.
+     * @throws  \Exception if an unexpected error occurred.
+     */
     public function finishOrder()
     {
         $order = $this->order;
@@ -314,8 +627,42 @@ new class extends Component {
         } catch (AuthorizationException $e) {
             session()->flash('error', $e->getMessage());
             return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database query error occurred', [
+                'error_type' => 'QueryException',
+                'message' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Finishing order data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam menyelesaikan pesanan dengan nomor: ' .
+                    $order->order_number .
+                    ', silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
         } catch (\Exception $e) {
-            Log::error('Unexpected order finishing error: ' . $e->getMessage());
+            Log::error('An unexpected error occurred', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Finishing order data',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
 
             session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
             return $this->redirectIntended(route('admin.orders.index'), navigate: true);
@@ -324,71 +671,80 @@ new class extends Component {
 }; ?>
 
 <div>
-    <div class="mb-6 flex flex-col gap-y-3">
-        <div class="relative">
-            <div class="pointer-events-none absolute inset-y-0 start-0 z-20 flex items-center ps-3.5">
-                <svg
-                    class="size-4 shrink-0 text-black/70"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                >
-                    <circle cx="11" cy="11" r="8" />
-                    <path d="m21 21-4.3-4.3" />
-                </svg>
-            </div>
-            <div class="relative">
-                <x-form.input
-                    id="order-search"
-                    name="order-search"
-                    wire:model.live.debounce.250ms="search"
-                    class="block w-full ps-10"
-                    type="text"
-                    role="combobox"
-                    placeholder="Cari data pesanan berdasarkan nomor pesanan..."
-                    autocomplete="off"
-                />
-                <div
-                    wire:loading
-                    wire:target="search,resetSearch"
-                    class="pointer-events-none absolute end-0 top-1/2 -translate-y-1/2 pe-3"
-                >
+    <div class="mb-6 flex flex-col gap-y-4 rounded-xl bg-white p-4 shadow-sm">
+        <div class="flex w-full flex-col justify-between gap-4 md:flex-row md:items-center">
+            <div class="relative w-full shrink">
+                <div class="pointer-events-none absolute inset-y-0 start-0 z-20 flex items-center ps-3.5">
                     <svg
-                        class="size-5 shrink-0 animate-spin text-black"
-                        fill="currentColor"
-                        viewBox="0 0 256 256"
+                        class="size-4 shrink-0 text-black/70"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
                         aria-hidden="true"
                     >
-                        <path
-                            d="M232,128a104,104,0,0,1-208,0c0-41,23.81-78.36,60.66-95.27a8,8,0,0,1,6.68,14.54C60.15,61.59,40,93.27,40,128a88,88,0,0,0,176,0c0-34.73-20.15-66.41-51.34-80.73a8,8,0,0,1,6.68-14.54C208.19,49.64,232,87,232,128Z"
-                        />
+                        <circle cx="11" cy="11" r="8" />
+                        <path d="m21 21-4.3-4.3" />
                     </svg>
                 </div>
-                @if ($search)
-                    <button
-                        wire:click="resetSearch"
-                        wire:loading.remove
+                <div class="relative">
+                    <x-form.input
+                        id="search-input"
+                        name="search-input"
+                        wire:model.live.debounce.250ms="search"
+                        class="block w-full ps-10"
+                        type="text"
+                        placeholder="Cari pesanan berdasarkan nomor pesanan..."
+                        autocomplete="off"
+                    />
+                    <div
+                        class="pointer-events-none absolute end-0 top-1/2 -translate-y-1/2 pe-3"
+                        wire:loading
                         wire:target="search,resetSearch"
-                        type="button"
-                        class="absolute end-0 top-1/2 -translate-y-1/2 pe-3"
                     >
                         <svg
-                            class="size-5 shrink-0 text-black"
+                            class="size-5 shrink-0 animate-spin text-black"
                             fill="currentColor"
                             viewBox="0 0 256 256"
                             aria-hidden="true"
                         >
                             <path
-                                d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"
+                                d="M232,128a104,104,0,0,1-208,0c0-41,23.81-78.36,60.66-95.27a8,8,0,0,1,6.68,14.54C60.15,61.59,40,93.27,40,128a88,88,0,0,0,176,0c0-34.73-20.15-66.41-51.34-80.73a8,8,0,0,1,6.68-14.54C208.19,49.64,232,87,232,128Z"
                             />
                         </svg>
-                    </button>
-                @endif
+                    </div>
+                    @if ($search)
+                        <button
+                            type="button"
+                            class="absolute end-0 top-1/2 -translate-y-1/2 pe-3"
+                            aria-label="Reset pencarian"
+                            wire:click="resetSearch"
+                            wire:loading.remove
+                            wire:target="search,resetSearch"
+                        >
+                            <svg class="size-5 shrink-0 text-black" fill="currentColor" viewBox="0 0 256 256">
+                                <path
+                                    d="M205.66,194.34a8,8,0,0,1-11.32,11.32L128,139.31,61.66,205.66a8,8,0,0,1-11.32-11.32L116.69,128,50.34,61.66A8,8,0,0,1,61.66,50.34L128,116.69l66.34-66.35a8,8,0,0,1,11.32,11.32L139.31,128Z"
+                                />
+                            </svg>
+                        </button>
+                    @endif
+                </div>
+            </div>
+            <div class="ml-auto inline-flex shrink-0 items-center gap-2">
+                <select
+                    id="per-page"
+                    class="block w-16 rounded-md border border-neutral-300 p-3 text-sm text-black focus:border-primary focus:ring-primary"
+                    wire:model.lazy="perPage"
+                >
+                    @for ($i = 5; $i <= 25; $i += 5)
+                        <option value="{{ $i }}">{{ $i }}</option>
+                    @endfor
+                </select>
+                <span class="text-sm font-medium tracking-tight text-black">data per halaman</span>
             </div>
         </div>
         <ul class="flex flex-nowrap gap-x-2 overflow-x-auto pb-2 text-center">
@@ -471,7 +827,12 @@ new class extends Component {
                         </span>
 
                         @if ($orderStatus['count'] > 0)
-                            <span class="whitespace-nowrap text-sm font-medium">
+                            <span
+                                @class([
+                                    'inline-flex size-5 items-center justify-center whitespace-nowrap rounded-full text-xs font-medium tracking-tight',
+                                    'bg-red-500 text-white' => in_array($orderStatus['code'], ['payment_received', 'processing', 'shipping']),
+                                ])
+                            >
                                 {{ $orderStatus['count'] > 100 ? '99+' : $orderStatus['count'] }}
                             </span>
                         @endif
@@ -483,9 +844,9 @@ new class extends Component {
     <div class="relative space-y-4">
         @forelse ($this->orders as $order)
             <article
-                class="relative rounded-lg border border-neutral-300 shadow-sm"
+                class="relative rounded-xl bg-white shadow-sm"
                 wire:loading.class="opacity-50"
-                wire:target="status, search, resetSearch"
+                wire:target="status,search,resetSearch,perPage"
             >
                 <header class="mb-4 border-b border-neutral-300 p-4">
                     <div class="flex flex-col gap-2">
@@ -700,31 +1061,31 @@ new class extends Component {
                     @foreach ($order->details as $item)
                         <li wire:key="{{ $item->id }}" class="flex items-start gap-x-4">
                             <a
-                                href="{{ route('admin.products.show', ['slug' => $item->productVariant->product->slug]) }}"
+                                href="{{ route('admin.products.show', ['slug' => $item->slug]) }}"
                                 class="size-20 shrink-0 overflow-hidden rounded-lg bg-neutral-100"
                                 wire:navigate
                             >
                                 <img
-                                    src="{{ asset('storage/uploads/product-images/' .$item->productVariant->product->images()->thumbnail()->first()->file_name,) }}"
-                                    alt="Gambar produk {{ strtolower($item->productVariant->product->name) }}"
+                                    src="{{ asset('storage/uploads/product-images/' . $item->thumbnail) }}"
+                                    alt="Gambar produk {{ strtolower($item->name) }}"
                                     class="aspect-square h-full w-20 scale-100 object-cover brightness-100 transition-all ease-in-out hover:scale-105 hover:brightness-95"
                                     loading="lazy"
                                 />
                             </a>
                             <div class="flex h-20 w-full flex-col items-start">
                                 <a
-                                    href="{{ route('admin.products.show', ['slug' => $item->productVariant->product->slug]) }}"
+                                    href="{{ route('admin.products.show', ['slug' => $item->slug]) }}"
                                     class="mb-0.5"
                                     wire:navigate
                                 >
                                     <h3 class="!text-base text-black hover:text-primary">
-                                        {{ $item->productVariant->product->name }}
+                                        {{ $item->name }}
                                     </h3>
                                 </a>
 
-                                @if ($item->productVariant->variant_sku)
+                                @if ($item->variation && $item->variant)
                                     <p class="mb-2 text-sm tracking-tight text-black">
-                                        {{ ucwords($item->productVariant->combinations->first()->variationVariant->variation->name) . ': ' . ucwords($item->productVariant->combinations->first()->variationVariant->name) }}
+                                        {{ ucwords($item->variation) . ': ' . ucwords($item->variant) }}
                                     </p>
                                 @endif
 
@@ -777,7 +1138,7 @@ new class extends Component {
                             Nomor Telefon :
                         </dt>
                         <dd class="text-sm font-medium tracking-tight text-black">
-                            {{ '0' . \Illuminate\Support\Facades\Crypt::decryptString($order->user->phone_number) }}
+                            {{ $order->user->phone_number }}
                         </dd>
 
                         @php
@@ -863,7 +1224,7 @@ new class extends Component {
                             Alamat Pengiriman :
                         </dt>
                         <dd class="text-sm font-medium tracking-tight text-black">
-                            {{ \Illuminate\Support\Facades\Crypt::decryptString($order->shipping_address) . ', ' . \Illuminate\Support\Facades\Crypt::decryptString($order->user->postal_code) . ' - ' . $order->user->city->province->name . ', ' . $order->user->city->name }}
+                            {{ $order->shipping_address . ', ' . $order->user->postal_code . ' - ' . $order->user->city . ', ' . $order->user->province }}
                         </dd>
                     </dl>
                     <div class="flex w-full flex-col items-center justify-between gap-4 md:flex-row">
@@ -897,134 +1258,155 @@ new class extends Component {
                                         variant="danger"
                                         class="w-full md:w-fit"
                                         aria-label="Batalkan pesanan"
-                                        x-on:click.prevent.stop="$dispatch('initiate-order-cancellation', { 'id': '{{ $order->id }}' })"
+                                        x-on:click.prevent.stop="$wire.confirmCancelOrder('{{ $order->id }}')"
                                         wire:loading.attr="disabled"
                                         wire:target.except="cancelationReason,shipmentTrackingNumber"
                                     >
                                         Batalkan Pesanan
                                     </x-common.button>
-                                    <x-common.modal
-                                        name="confirm-order-cancellation-{{ $order->id }}"
-                                        :show="$errors->isNotEmpty()"
-                                        focusable
-                                    >
-                                        <form wire:submit="cancelOrder" class="flex flex-col items-center p-6">
-                                            <div class="mb-4 rounded-full bg-red-100 p-4" aria-hidden="true">
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 24 24"
-                                                    fill="currentColor"
-                                                    class="size-16 text-red-500"
+                                    <template x-teleport="body">
+                                        <x-common.modal
+                                            name="confirm-order-cancellation-{{ $order->id }}"
+                                            :show="$errors->isNotEmpty()"
+                                            focusable
+                                        >
+                                            <form wire:submit="cancelOrder" class="flex flex-col items-center p-6">
+                                                <div class="mb-4 rounded-full bg-red-100 p-4" aria-hidden="true">
+                                                    <svg
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 24 24"
+                                                        fill="currentColor"
+                                                        class="size-16 text-red-500"
+                                                    >
+                                                        <path
+                                                            fill-rule="evenodd"
+                                                            d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+                                                            clip-rule="evenodd"
+                                                        />
+                                                    </svg>
+                                                </div>
+                                                <h2 class="mb-2 text-center text-black">Batalkan Pesanan</h2>
+                                                <p
+                                                    class="mb-4 text-center text-base font-medium tracking-tight text-black/70"
                                                 >
-                                                    <path
-                                                        fill-rule="evenodd"
-                                                        d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
-                                                        clip-rule="evenodd"
+                                                    Apakah Anda yakin ingin membatalkan pesanan dengan nomor pesanan:
+                                                    <strong class="text-black">{{ $order->order_number }}</strong>
+                                                    ? Proses ini
+                                                    <strong class="text-black">tidak dapat dibatalkan</strong>
+                                                    , dan perubahan status pesanan akan menjadi
+                                                    <strong class="text-black">Dibatalkan</strong>
+                                                    .
+                                                </p>
+                                                <p
+                                                    class="mb-4 text-center text-sm font-medium tracking-tight text-red-800"
+                                                >
+                                                    <strong>Catatan:</strong>
+                                                    Jika pelanggan telah melakukan pembayaran, Anda perlu memproses
+                                                    refund melalui menu
+                                                    <a
+                                                        href="#"
+                                                        class="underline transition-colors hover:text-primary"
+                                                        wire:navigate
+                                                    >
+                                                        permintaan refund
+                                                    </a>
+                                                    .
+                                                </p>
+                                                <div class="flex w-full flex-col items-start">
+                                                    <x-form.input-label
+                                                        value="Alasan Pembatalan"
+                                                        for="cancelation-reason"
                                                     />
-                                                </svg>
-                                            </div>
-                                            <h2 class="mb-2 text-center text-black">Batalkan Pesanan</h2>
-                                            <p
-                                                class="mb-4 text-center text-base font-medium tracking-tight text-black/70"
-                                            >
-                                                Apakah Anda yakin ingin membatalkan pesanan dengan nomor pesanan:
-                                                <strong class="text-black">{{ $order->order_number }}</strong>
-                                                ? Proses ini
-                                                <strong class="text-black">tidak dapat dibatalkan</strong>
-                                                , dan perubahan status pesanan akan menjadi
-                                                <strong class="text-black">Dibatalkan</strong>
-                                                .
-                                            </p>
-                                            <p class="mb-4 text-center text-sm font-medium tracking-tight text-red-800">
-                                                <strong>Catatan:</strong>
-                                                Jika pelanggan telah melakukan pembayaran, Anda perlu memproses refund
-                                                melalui menu
-                                                <a
-                                                    href="#"
-                                                    class="underline transition-colors hover:text-primary"
-                                                    wire:navigate
-                                                >
-                                                    permintaan refund
-                                                </a>
-                                                .
-                                            </p>
-                                            <div class="flex w-full flex-col items-start">
-                                                <x-form.input-label value="Alasan Pembatalan" for="reason" />
-                                                <select
-                                                    wire:model.lazy="cancelationReason"
-                                                    name="cancelation-reason"
-                                                    id="cancelation-reason"
-                                                    class="mt-1 block w-full rounded-lg border-neutral-300 px-4 py-3 pe-9 text-sm focus:border-primary focus:ring-primary disabled:pointer-events-none disabled:opacity-50"
-                                                    required
-                                                >
-                                                    <option value="" selected>Pilih Alasan Pembatalan Pesanan</option>
-                                                    <optgroup label="Masalah Stok">
-                                                        <option value="stok_habis">Produk habis (stok kosong)</option>
-                                                    </optgroup>
-                                                    <optgroup label="Masalah Pembayaran">
-                                                        <option value="pembayaran_belum_selesai">
-                                                            Pembayaran belum selesai
-                                                        </option>
-                                                        <option value="pembayaran_tidak_valid">
-                                                            Pembayaran tidak valid
-                                                        </option>
-                                                    </optgroup>
-                                                    <optgroup label="Permintaan dari Pelanggan">
-                                                        <option value="permintaan_pelanggan">
-                                                            Pelanggan meminta pembatalan
-                                                        </option>
-                                                        <option value="pelanggan_ingin_mengubah_pesanan">
-                                                            Pelanggan ingin mengganti atau mengubah pesanan
-                                                        </option>
-                                                    </optgroup>
-                                                    <optgroup label="Masalah Pengiriman">
-                                                        <option value="alamat_pengiriman_tidak_dapat_dijangkau">
-                                                            Alamat pengiriman tidak dapat dijangkau
-                                                        </option>
-                                                        <option value="kendala_logistik">Kendala logistik</option>
-                                                    </optgroup>
-                                                    <optgroup label="Kesalahan Admin">
-                                                        <option value="kesalahan_harga_produk">
-                                                            Kesalahan harga pada produk
-                                                        </option>
-                                                    </optgroup>
-                                                    <optgroup label="Alasan lainnya">
-                                                        <option value="alasan_lainnya">Alasan lainnya</option>
-                                                    </optgroup>
-                                                </select>
-                                                <x-form.input-error
-                                                    :messages="$errors->get('cancelationReason')"
-                                                    class="mt-2"
-                                                />
-                                            </div>
-                                            @if ($cancelationReason === 'alasan_lainnya')
-                                                <div class="mt-4">
-                                                    <x-form.input-label value="Alasan Lainnya" for="other-reason" />
-                                                    <textarea
-                                                        wire:model.lazy="otherCancelationReason"
-                                                        name="other-reason"
-                                                        id="other-reason"
-                                                        class="mt-1 block w-full rounded-lg border-neutral-300 px-4 py-3 pe-9 text-sm focus:border-primary focus:ring-primary"
-                                                        placeholder="Masukkan alasan lainnya..."
+                                                    <select
+                                                        wire:model.lazy="cancelationReason"
+                                                        name="cancelation-reason"
+                                                        id="cancelation-reason"
+                                                        class="mt-1 block w-full rounded-lg border-neutral-300 px-4 py-3 pe-9 text-sm focus:border-primary focus:ring-primary disabled:pointer-events-none disabled:opacity-50"
                                                         required
-                                                    ></textarea>
+                                                    >
+                                                        <option value="" selected>
+                                                            Pilih Alasan Pembatalan Pesanan
+                                                        </option>
+                                                        <optgroup label="Masalah Stok">
+                                                            <option value="stok_habis">
+                                                                Produk habis (stok kosong)
+                                                            </option>
+                                                        </optgroup>
+                                                        <optgroup label="Masalah Pembayaran">
+                                                            <option value="pembayaran_belum_selesai">
+                                                                Pembayaran belum selesai
+                                                            </option>
+                                                            <option value="pembayaran_tidak_valid">
+                                                                Pembayaran tidak valid
+                                                            </option>
+                                                        </optgroup>
+                                                        <optgroup label="Permintaan dari Pelanggan">
+                                                            <option value="permintaan_pelanggan">
+                                                                Pelanggan meminta pembatalan
+                                                            </option>
+                                                            <option value="pelanggan_ingin_mengubah_pesanan">
+                                                                Pelanggan ingin mengganti atau mengubah pesanan
+                                                            </option>
+                                                        </optgroup>
+                                                        <optgroup label="Masalah Pengiriman">
+                                                            <option value="alamat_pengiriman_tidak_dapat_dijangkau">
+                                                                Alamat pengiriman tidak dapat dijangkau
+                                                            </option>
+                                                            <option value="kendala_logistik">Kendala logistik</option>
+                                                        </optgroup>
+                                                        <optgroup label="Kesalahan Admin">
+                                                            <option value="kesalahan_harga_produk">
+                                                                Kesalahan harga pada produk
+                                                            </option>
+                                                        </optgroup>
+                                                        <optgroup label="Alasan lainnya">
+                                                            <option value="alasan_lainnya">Alasan lainnya</option>
+                                                        </optgroup>
+                                                    </select>
                                                     <x-form.input-error
-                                                        :messages="$errors->get('otherCancelationReason')"
+                                                        :messages="$errors->get('cancelationReason')"
                                                         class="mt-2"
                                                     />
                                                 </div>
-                                            @endif
+                                                @if ($cancelationReason === 'alasan_lainnya')
+                                                    <div class="mt-4 w-full">
+                                                        <x-form.input-label value="Alasan Lainnya" for="other-reason" />
+                                                        <textarea
+                                                            wire:model.lazy="otherCancelationReason"
+                                                            name="other-reason"
+                                                            id="other-reason"
+                                                            class="mt-1 block w-full rounded-lg border-neutral-300 px-4 py-3 pe-9 text-sm focus:border-primary focus:ring-primary"
+                                                            placeholder="Masukkan alasan lainnya..."
+                                                            required
+                                                        ></textarea>
+                                                        <x-form.input-error
+                                                            :messages="$errors->get('otherCancelationReason')"
+                                                            class="mt-2"
+                                                        />
+                                                    </div>
+                                                @endif
 
-                                            <div class="mt-8 flex justify-end gap-4">
-                                                <x-common.button variant="secondary" x-on:click="$dispatch('close')">
-                                                    Batal
-                                                </x-common.button>
-                                                <x-common.button type="submit" variant="danger">
-                                                    Batalkan Pesanan
-                                                </x-common.button>
-                                            </div>
-                                        </form>
-                                    </x-common.modal>
+                                                <div
+                                                    class="mt-8 flex w-full flex-col items-center justify-end gap-4 md:flex-row"
+                                                >
+                                                    <x-common.button
+                                                        variant="secondary"
+                                                        class="w-full md:w-fit"
+                                                        x-on:click="$dispatch('close')"
+                                                    >
+                                                        Batal
+                                                    </x-common.button>
+                                                    <x-common.button
+                                                        type="submit"
+                                                        variant="danger"
+                                                        class="w-full md:w-fit"
+                                                    >
+                                                        Batalkan Pesanan
+                                                    </x-common.button>
+                                                </div>
+                                            </form>
+                                        </x-common.modal>
+                                    </template>
                                 @endif
                             @endcan
 
@@ -1042,9 +1424,9 @@ new class extends Component {
                                             Proses Pesanan
                                         </span>
                                         <span
+                                            class="items-center gap-x-2"
                                             wire:loading.flex
                                             wire:target="processOrder('{{ $order->id }}')"
-                                            class="items-center gap-x-2"
                                         >
                                             <div
                                                 class="inline-block size-4 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
@@ -1065,75 +1447,87 @@ new class extends Component {
                                         variant="primary"
                                         class="w-full md:w-fit"
                                         aria-label="Kirim pesanan"
-                                        x-on:click.prevent.stop="$dispatch('initiate-order-shipping', { 'id': '{{ $order->id }}' })"
+                                        x-on:click.prevent.stop="$wire.confirmShipOrder('{{ $order->id }}')"
                                         wire:loading.attr="disabled"
                                         wire:target.except="cancelationReason,shipmentTrackingNumber"
                                     >
                                         Kirim Pesanan
                                     </x-common.button>
-                                    <x-common.modal
-                                        name="confirm-order-shipping-{{ $order->id }}"
-                                        :show="$errors->isNotEmpty()"
-                                        focusable
-                                    >
-                                        <form wire:submit="shipOrder" class="flex flex-col items-center p-6">
-                                            <div class="mb-4 rounded-full bg-primary-100 p-4" aria-hidden="true">
-                                                <svg
-                                                    class="size-16 shrink-0 text-primary"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 24 24"
-                                                    fill="currentColor"
-                                                    aria-hidden="true"
+                                    <template x-teleport="body">
+                                        <x-common.modal
+                                            name="confirm-order-shipping-{{ $order->id }}"
+                                            :show="$errors->isNotEmpty()"
+                                            focusable
+                                        >
+                                            <form wire:submit="shipOrder" class="flex flex-col items-center p-6">
+                                                <div class="mb-4 rounded-full bg-primary-100 p-4" aria-hidden="true">
+                                                    <svg
+                                                        class="size-16 shrink-0 text-primary"
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 24 24"
+                                                        fill="currentColor"
+                                                        aria-hidden="true"
+                                                    >
+                                                        <path
+                                                            d="M3.375 4.5C2.339 4.5 1.5 5.34 1.5 6.375V13.5h12V6.375c0-1.036-.84-1.875-1.875-1.875h-8.25ZM13.5 15h-12v2.625c0 1.035.84 1.875 1.875 1.875h.375a3 3 0 1 1 6 0h3a.75.75 0 0 0 .75-.75V15Z"
+                                                        />
+                                                        <path
+                                                            d="M8.25 19.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0ZM15.75 6.75a.75.75 0 0 0-.75.75v11.25c0 .087.015.17.042.248a3 3 0 0 1 5.958.464c.853-.175 1.522-.935 1.464-1.883a18.659 18.659 0 0 0-3.732-10.104 1.837 1.837 0 0 0-1.47-.725H15.75Z"
+                                                        />
+                                                        <path d="M19.5 19.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0Z" />
+                                                    </svg>
+                                                </div>
+                                                <h2 class="mb-2 text-center text-black">Kirim Pesanan</h2>
+                                                <p
+                                                    class="mb-4 text-center text-base font-medium tracking-tight text-black/70"
                                                 >
-                                                    <path
-                                                        d="M3.375 4.5C2.339 4.5 1.5 5.34 1.5 6.375V13.5h12V6.375c0-1.036-.84-1.875-1.875-1.875h-8.25ZM13.5 15h-12v2.625c0 1.035.84 1.875 1.875 1.875h.375a3 3 0 1 1 6 0h3a.75.75 0 0 0 .75-.75V15Z"
+                                                    Silakan isi nomor resi yang diberikan oleh kurir ekspedisi pada
+                                                    inputan dibawah ini.
+                                                </p>
+                                                <div class="mb-8 flex w-full flex-col items-start">
+                                                    <x-form.input-label
+                                                        value="Nomor Resi Pengiriman"
+                                                        for="shipment-tracking-number"
                                                     />
-                                                    <path
-                                                        d="M8.25 19.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0ZM15.75 6.75a.75.75 0 0 0-.75.75v11.25c0 .087.015.17.042.248a3 3 0 0 1 5.958.464c.853-.175 1.522-.935 1.464-1.883a18.659 18.659 0 0 0-3.732-10.104 1.837 1.837 0 0 0-1.47-.725H15.75Z"
+                                                    <x-form.input
+                                                        wire:model.lazy="shipmentTrackingNumber"
+                                                        type="text"
+                                                        id="shipment-tracking-number"
+                                                        name="shipment-tracking-number"
+                                                        class="mt-1 w-full"
+                                                        placeholder="Isikan nomor resi pengiriman disini..."
+                                                        minlength="5"
+                                                        maxlength="50"
+                                                        autocomplete="off"
+                                                        required
+                                                        :hasError="$errors->has('shipmentTrackingNumber')"
                                                     />
-                                                    <path d="M19.5 19.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0Z" />
-                                                </svg>
-                                            </div>
-                                            <h2 class="mb-2 text-center text-black">Kirim Pesanan</h2>
-                                            <p
-                                                class="mb-4 text-center text-base font-medium tracking-tight text-black/70"
-                                            >
-                                                Silakan isi nomor resi yang diberikan oleh kurir ekspedisi pada inputan
-                                                dibawah ini.
-                                            </p>
-                                            <div class="mb-8 flex w-full flex-col items-start">
-                                                <x-form.input-label
-                                                    value="Nomor Resi Pengiriman"
-                                                    for="shipment-tracking-number"
-                                                />
-                                                <x-form.input
-                                                    wire:model.lazy="shipmentTrackingNumber"
-                                                    type="text"
-                                                    id="shipment-tracking-number"
-                                                    name="shipment-tracking-number"
-                                                    class="mt-1 w-full"
-                                                    placeholder="Isikan nomor resi pengiriman disini..."
-                                                    minlength="5"
-                                                    maxlength="50"
-                                                    autocomplete="off"
-                                                    required
-                                                    :hasError="$errors->has('shipmentTrackingNumber')"
-                                                />
-                                                <x-form.input-error
-                                                    :messages="$errors->get('shipmentTrackingNumber')"
-                                                    class="mt-2"
-                                                />
-                                            </div>
-                                            <div class="flex justify-end gap-4">
-                                                <x-common.button variant="secondary" x-on:click="$dispatch('close')">
-                                                    Batal
-                                                </x-common.button>
-                                                <x-common.button type="submit" variant="primary">
-                                                    Kirim Pesanan
-                                                </x-common.button>
-                                            </div>
-                                        </form>
-                                    </x-common.modal>
+                                                    <x-form.input-error
+                                                        :messages="$errors->get('shipmentTrackingNumber')"
+                                                        class="mt-2"
+                                                    />
+                                                </div>
+                                                <div
+                                                    class="flex w-full flex-col items-center justify-end gap-4 md:flex-row"
+                                                >
+                                                    <x-common.button
+                                                        variant="secondary"
+                                                        class="w-full md:w-fit"
+                                                        x-on:click="$dispatch('close')"
+                                                    >
+                                                        Batal
+                                                    </x-common.button>
+                                                    <x-common.button
+                                                        type="submit"
+                                                        variant="primary"
+                                                        class="w-full md:w-fit"
+                                                    >
+                                                        Kirim Pesanan
+                                                    </x-common.button>
+                                                </div>
+                                            </form>
+                                        </x-common.modal>
+                                    </template>
                                 @endif
                             @endcan
 
@@ -1143,80 +1537,91 @@ new class extends Component {
                                         variant="primary"
                                         class="w-full md:w-fit"
                                         aria-label="Selesaikan pesanan"
-                                        x-on:click.prevent.stop="$dispatch('initiate-order-finishing', { 'id': '{{ $order->id }}' })"
+                                        x-on:click.prevent.stop="$wire.confirmFinishOrder('{{ $order->id }}')"
                                         wire:loading.attr="disabled"
                                         wire:target.except="cancelationReason,shipmentTrackingNumber"
                                     >
                                         Selesaikan Pesanan
                                     </x-common.button>
-                                    <x-common.modal
-                                        name="confirm-order-finishing-{{ $order->id }}"
-                                        :show="$errors->isNotEmpty()"
-                                        focusable
-                                    >
-                                        <form wire:submit="finishOrder" class="flex flex-col items-center p-6">
-                                            <div class="mb-4 rounded-full bg-primary-100 p-4">
-                                                <svg
-                                                    class="size-16 shrink-0 text-primary"
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    stroke-width="2"
-                                                    stroke-linecap="round"
-                                                    stroke-linejoin="round"
-                                                    aria-hidden="true"
+                                    <template x-teleport="body">
+                                        <x-common.modal
+                                            name="confirm-order-finishing-{{ $order->id }}"
+                                            :show="$errors->isNotEmpty()"
+                                            focusable
+                                        >
+                                            <form wire:submit="finishOrder" class="flex flex-col items-center p-6">
+                                                <div class="mb-4 rounded-full bg-primary-100 p-4">
+                                                    <svg
+                                                        class="size-16 shrink-0 text-primary"
+                                                        xmlns="http://www.w3.org/2000/svg"
+                                                        viewBox="0 0 24 24"
+                                                        fill="none"
+                                                        stroke="currentColor"
+                                                        stroke-width="2"
+                                                        stroke-linecap="round"
+                                                        stroke-linejoin="round"
+                                                        aria-hidden="true"
+                                                    >
+                                                        <path d="m16 16 2 2 4-4" />
+                                                        <path
+                                                            d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"
+                                                        />
+                                                        <path d="m7.5 4.27 9 5.15" />
+                                                        <polyline points="3.29 7 12 12 20.71 7" />
+                                                        <line x1="12" x2="12" y1="22" y2="12" />
+                                                    </svg>
+                                                </div>
+                                                <h2 class="mb-2 text-center text-black">Selesaikan Pesanan</h2>
+                                                <p
+                                                    class="mb-4 text-center text-base font-medium tracking-tight text-black/70"
                                                 >
-                                                    <path d="m16 16 2 2 4-4" />
-                                                    <path
-                                                        d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"
-                                                    />
-                                                    <path d="m7.5 4.27 9 5.15" />
-                                                    <polyline points="3.29 7 12 12 20.71 7" />
-                                                    <line x1="12" x2="12" y1="22" y2="12" />
-                                                </svg>
-                                            </div>
-                                            <h2 class="mb-2 text-center text-black">Selesaikan Pesanan</h2>
-                                            <p
-                                                class="mb-4 text-center text-base font-medium tracking-tight text-black/70"
-                                            >
-                                                <strong class="text-black">
-                                                    Pastikan bahwa pelanggan telah menerima produk yang dipesan
-                                                </strong>
-                                                sebelum anda menyelesaikan pesanan ini.
-                                            </p>
-                                            <p
-                                                class="mb-8 text-center text-base font-medium tracking-tight text-black/70"
-                                            >
-                                                Anda dapat
-                                                <strong class="text-black">
-                                                    menghubungi nomor telefon yang tertera pada pesanan ini
-                                                </strong>
-                                                untuk mengkonfirmasi kepada pelanggan bahwa produk yang dipesan yang
-                                                telah diterima.
-                                            </p>
-                                            <div class="flex justify-end gap-4">
-                                                <x-common.button variant="secondary" x-on:click="$dispatch('close')">
-                                                    Batal
-                                                </x-common.button>
-                                                <x-common.button type="submit" variant="primary">
-                                                    Selesaikan Pesanan
-                                                </x-common.button>
-                                            </div>
-                                        </form>
-                                    </x-common.modal>
+                                                    <strong class="text-black">
+                                                        Pastikan bahwa pelanggan telah menerima produk yang dipesan
+                                                    </strong>
+                                                    sebelum anda menyelesaikan pesanan ini.
+                                                </p>
+                                                <p
+                                                    class="mb-8 text-center text-base font-medium tracking-tight text-black/70"
+                                                >
+                                                    Anda dapat
+                                                    <strong class="text-black">
+                                                        menghubungi nomor telefon yang tertera pada pesanan ini
+                                                    </strong>
+                                                    untuk mengkonfirmasi kepada pelanggan bahwa produk yang dipesan yang
+                                                    telah diterima.
+                                                </p>
+                                                <div
+                                                    class="flex w-full flex-col items-center justify-end gap-4 md:flex-row"
+                                                >
+                                                    <x-common.button
+                                                        variant="secondary"
+                                                        class="w-full md:w-fit"
+                                                        x-on:click="$dispatch('close')"
+                                                    >
+                                                        Batal
+                                                    </x-common.button>
+                                                    <x-common.button
+                                                        type="submit"
+                                                        variant="primary"
+                                                        class="w-full md:w-fit"
+                                                    >
+                                                        Selesaikan Pesanan
+                                                    </x-common.button>
+                                                </div>
+                                            </form>
+                                        </x-common.modal>
+                                    </template>
                                 @endif
                             @endcan
                         </div>
                     </div>
                 </footer>
             </article>
-            {{ $this->orders->links() }}
         @empty
             <figure
                 class="flex h-full flex-col items-center justify-center"
                 wire:loading.class="opacity-50"
-                wire:target="status, search, resetSearch"
+                wire:target="status,search,resetSearch,perPage"
             >
                 <img
                     src="https://placehold.co/400"
@@ -1275,10 +1680,13 @@ new class extends Component {
                 </figcaption>
             </figure>
         @endforelse
+        <div class="p-4">
+            {{ $this->orders->links('components.common.pagination') }}
+        </div>
         <div
             class="absolute left-1/2 top-32 h-full -translate-x-1/2"
             wire:loading
-            wire:target="status, search, resetSearch"
+            wire:target="status,search,resetSearch,perPage"
         >
             <div
                 class="inline-block size-10 animate-spin rounded-full border-4 border-current border-t-transparent text-primary"
