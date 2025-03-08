@@ -2,6 +2,13 @@
     'searchable' => null,
 ])
 
+@php
+    $placeholder =
+        $searchable === 'refund'
+            ? 'Cari refund berdasarkan nomor pesananan...'
+            : 'Cari ' . $searchable . ' berdasarkan nama...';
+@endphp
+
 <section class="rounded-xl bg-white shadow-sm">
     <div class="flex w-full flex-col justify-between gap-4 p-4 md:flex-row md:items-center">
         <div class="relative w-full shrink">
@@ -28,7 +35,7 @@
                     wire:model.live.debounce.250ms="search"
                     class="block w-full !border-neutral-100 !bg-neutral-100 !px-12"
                     type="text"
-                    placeholder="Cari {{ $searchable }} berdasarkan nama..."
+                    placeholder="{{ $placeholder }}"
                     autocomplete="off"
                 />
                 <div
