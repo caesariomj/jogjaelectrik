@@ -25,7 +25,19 @@ class RefundController extends Controller
 
     public function show(string $id): View|RedirectResponse
     {
-        $refund = Refund::with(['payment.order'])->find($id);
+        $refund = (new Refund)->newFromBuilder(
+            Refund::queryById(id: $id, columns: [
+                'refunds.id',
+                'refunds.payment_id',
+                'refunds.xendit_refund_id',
+                'refunds.status',
+                'refunds.rejection_reason',
+                'refunds.approved_at',
+                'refunds.succeeded_at',
+                'refunds.created_at',
+                'refunds.updated_at',
+            ])
+        );
 
         if (! $refund) {
             session()->flash('error', 'Permintaan refund tidak ditemukan.');
