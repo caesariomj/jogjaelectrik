@@ -3,10 +3,16 @@
 ])
 
 @php
-    $placeholder =
-        $searchable === 'refund'
-            ? 'Cari refund berdasarkan nomor pesananan...'
-            : 'Cari ' . $searchable . ' berdasarkan nama...';
+    switch ($searchable) {
+        case 'refund':
+            $placeholder = 'Cari refund berdasarkan nomor pesananan...';
+            break;
+        case 'report':
+            $placeholder = 'Cari penjualan berdasarkan nomor pesananan...';
+            break;
+        default:
+            $placeholder = 'Cari ' . $searchable . ' berdasarkan nama...';
+    }
 @endphp
 
 <section class="rounded-xl bg-white shadow-sm">
