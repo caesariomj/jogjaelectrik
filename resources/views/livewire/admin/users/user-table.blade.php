@@ -6,6 +6,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
@@ -21,6 +22,16 @@ new class extends Component {
     public string $sortField = 'name';
     public string $sortDirection = 'asc';
     public int $perPage = 10;
+
+    /**
+     * Lazy loading that displays the table skeleton with dynamic table rows.
+     */
+    public function placeholder(): View
+    {
+        $totalRows = 8;
+
+        return view('components.skeleton.table', compact('totalRows'));
+    }
 
     /**
      * Get a paginated list of users with total order counts.
