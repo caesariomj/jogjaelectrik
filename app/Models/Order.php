@@ -192,6 +192,12 @@ class Order extends Model
                     'cities.name as city',
                     'provinces.name as province',
                 ]);
+            })
+            ->when(in_array('payment', $relations), function ($query) {
+                $query->leftJoin('payments', 'payments.order_id', '=', 'orders.id');
+                $query->addSelect([
+                    'payments.method as payment_method',
+                ]);
             });
     }
 
