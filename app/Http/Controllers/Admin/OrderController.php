@@ -26,8 +26,6 @@ class OrderController extends Controller
 
     public function show(string $orderNumber): View|RedirectResponse
     {
-        // $order = Order::with(['details.productVariant.product.images', 'payment', 'user.city.province'])->where('order_number', $orderNumber)->first();
-
         $order = Order::queryByOrderNumber(orderNumber: $orderNumber, columns: [
             'orders.id',
             'orders.order_number',
@@ -50,10 +48,6 @@ class OrderController extends Controller
             'payment',
         ])
             ->get();
-
-        // pembayaran, refund, pengiriman, pelanggan, detail
-
-        // dd($order);
 
         if (! $order) {
             session()->flash('error', 'Pesanan dengan nomor '.$orderNumber.' tidak ditemukan.');
