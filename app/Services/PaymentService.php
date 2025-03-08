@@ -22,6 +22,11 @@ class PaymentService
         Configuration::setXenditKey($this->secretKey);
     }
 
+    private function findOrderById(string $id)
+    {
+        return Order::find($id);
+    }
+
     public function createInvoice(Order $order)
     {
         $user = $order->user;
@@ -167,8 +172,10 @@ class PaymentService
         }
     }
 
-    public function createRefund(Order $order)
+    public function createRefund(string $orderId)
     {
+        $order = $this->findOrderById(id: $orderId);
+
         $params = [
             'invoice_id' => $order->payment->xendit_invoice_id,
             'reference_id' => $order->order_number,
@@ -185,22 +192,22 @@ class PaymentService
         } catch (\Xendit\XenditSdkException $e) {
             $userMessage = null;
 
-            if ($e->getErrorCode() === 400) {
+            if ($e->getCode() === 400) {
                 $userMessage = 'Gagal memproses permintaan refund karena total belanja melebihi batas maksimal yang diizinkan untuk pengembalian dana.';
-            } elseif ($e->getErrorCode() === 403) {
+            } elseif ($e->getCode() === 403) {
                 $userMessage = 'Gagal memproses permintaan refund karena tidak ada API key yang valid.';
-            } elseif ($e->getErrorCode() === 404) {
+            } elseif ($e->getCode() === 404) {
                 $userMessage = 'Gagal memproses permintaan refund karena data yang diminta tidak ditemukan.';
-            } elseif ($e->getErrorCode() === 409) {
+            } elseif ($e->getCode() === 409) {
                 $userMessage = 'Gagal memproses permintaan refund karena permintaan refund ini telah diproses.';
-            } elseif ($e->getErrorCode() === 504) {
+            } elseif ($e->getCode() === 504) {
                 $userMessage = 'Gagal memproses permintaan refund karena saluran pembayaran yang diminta saat ini mengalami masalah, silakan coba beberapa saat lagi.';
             }
 
             throw new ApiRequestException(
                 logMessage: 'Unexpected error during xendit refund creation: '.$e->getErrorMessage(),
                 userMessage: $userMessage ?? 'Terjadi kesalahan pada sistem refund, silakan coba beberapa saat lagi.',
-                statusCode: $e->getErrorCode()
+                statusCode: $e->getCode()
             );
         } catch (\Exception $e) {
             throw new ApiRequestException(
