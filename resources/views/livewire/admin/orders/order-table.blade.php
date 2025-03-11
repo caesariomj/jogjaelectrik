@@ -1616,67 +1616,69 @@ new class extends Component {
                 </footer>
             </article>
         @empty
-            <figure
-                class="flex h-full flex-col items-center justify-center"
-                wire:loading.class="opacity-50"
-                wire:target="status,search,resetSearch,perPage"
-            >
-                <img
-                    src="https://placehold.co/400"
-                    class="mb-6 size-72 object-cover"
-                    alt="Gambar ilustrasi pesanan tidak ditemukan"
-                />
-                <figcaption class="flex flex-col items-center">
-                    <h2 class="mb-3 text-center !text-2xl text-black">
-                        Pesanan
+            <div class="rounded-xl bg-white px-8 py-16 shadow-sm">
+                <figure
+                    class="flex h-full flex-col items-center justify-center"
+                    wire:loading.class="opacity-50"
+                    wire:target="status,search,resetSearch,perPage"
+                >
+                    <img
+                        src="https://placehold.co/400"
+                        class="mb-6 size-72 object-cover"
+                        alt="Gambar ilustrasi pesanan tidak ditemukan"
+                    />
+                    <figcaption class="flex flex-col items-center">
+                        <h2 class="mb-3 text-center !text-2xl text-black">
+                            Pesanan
 
-                        @if ($status !== 'all')
-                            Dengan Status
-                            @if ($status === 'waiting_payment')
-                                Menunggu Pembayaran
-                            @elseif ($status === 'payment_received')
-                                Menunggu Diproses
-                            @elseif ($status === 'processing')
-                                Menunggu Dikirim
-                            @elseif ($status === 'shipping')
-                                Dalam Pengiriman
-                            @elseif ($status === 'completed')
-                                Berhasil
-                            @elseif ($status === 'failed')
-                                Gagal
-                            @elseif ($status === 'canceled')
-                                Dibatalkan
+                            @if ($status !== 'all')
+                                Dengan Status
+                                @if ($status === 'waiting_payment')
+                                    Menunggu Pembayaran
+                                @elseif ($status === 'payment_received')
+                                    Menunggu Diproses
+                                @elseif ($status === 'processing')
+                                    Menunggu Dikirim
+                                @elseif ($status === 'shipping')
+                                    Dalam Pengiriman
+                                @elseif ($status === 'completed')
+                                    Berhasil
+                                @elseif ($status === 'failed')
+                                    Gagal
+                                @elseif ($status === 'canceled')
+                                    Dibatalkan
+                                @endif
                             @endif
-                        @endif
 
-                        Tidak Ditemukan
-                    </h2>
-                    <p class="mb-8 text-center text-base font-normal tracking-tight text-black/70">
-                        Seluruh data pesanan pelanggan
+                            Tidak Ditemukan
+                        </h2>
+                        <p class="text-center text-base font-normal tracking-tight text-black/70">
+                            Seluruh data pesanan pelanggan
 
-                        @if ($status !== 'all')
-                            dengan status
-                            @if ($status === 'waiting_payment')
-                                "menunggu pembayaran"
-                            @elseif ($status === 'payment_received')
-                                "untuk diproses"
-                            @elseif ($status === 'processing')
-                                "untuk dikirim"
-                            @elseif ($status === 'shipping')
-                                "dalam pengiriman"
-                            @elseif ($status === 'completed')
-                                "berhasil"
-                            @elseif ($status === 'failed')
-                                "gagal"
-                            @elseif ($status === 'canceled')
-                                "dibatalkan"
+                            @if ($status !== 'all')
+                                dengan status
+                                @if ($status === 'waiting_payment')
+                                    "menunggu pembayaran"
+                                @elseif ($status === 'payment_received')
+                                    "untuk diproses"
+                                @elseif ($status === 'processing')
+                                    "untuk dikirim"
+                                @elseif ($status === 'shipping')
+                                    "dalam pengiriman"
+                                @elseif ($status === 'completed')
+                                    "berhasil"
+                                @elseif ($status === 'failed')
+                                    "gagal"
+                                @elseif ($status === 'canceled')
+                                    "dibatalkan"
+                                @endif
                             @endif
-                        @endif
 
-                        akan ditampilkan disini.
-                    </p>
-                </figcaption>
-            </figure>
+                            akan ditampilkan disini.
+                        </p>
+                    </figcaption>
+                </figure>
+            </div>
         @endforelse
         <div class="p-4">
             {{ $this->orders->links('components.common.pagination') }}
