@@ -48,7 +48,8 @@
                             <span
                                 @class([
                                     'inline-block size-1.5 rounded-full',
-                                    'bg-yellow-800' => $order->status === 'payment_received',
+                                    'bg-yellow-800' => $order->status === 'waiting_payment',
+                                    'bg-blue-800' => $order->status === 'payment_received',
                                     'bg-teal-800' => in_array($order->status, ['processing', 'shipping', 'completed']),
                                     'bg-red-800' => in_array($order->status, ['failed', 'canceled']),
                                 ])
@@ -377,7 +378,7 @@
                 @foreach ($order->details as $item)
                     <li
                         wire:key="{{ $item->id }}"
-                        class="flex items-start gap-x-4 rounded-md border border-neutral-300 p-2 shadow-sm"
+                        class="flex items-start gap-x-4 rounded-md border border-neutral-300 bg-white p-2 shadow-sm"
                     >
                         <a
                             href="{{ route('products.detail', ['slug' => $item->slug]) }}"
