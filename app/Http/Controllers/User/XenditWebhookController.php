@@ -103,9 +103,15 @@ class XenditWebhookController extends Controller
                 'message' => $message,
             ], 200);
         } catch (ApiRequestException $e) {
-            Log::error('API Request Exception in Xendit Webhook', [
-                'error_message' => $e->getLogMessage(),
+            Log::error('Xendit API request exception in Xendit Webhook Controller', [
+                'error_type' => 'ApiRequestException',
+                'message' => $e->getLogMessage(),
+                'payload' => $request->all(),
                 'trace' => $e->getTraceAsString(),
+                'context' => [
+                    'operation' => 'Processing Xendit webhook',
+                    'component_name' => 'XenditWebhookController.php',
+                ],
             ]);
 
             return response()->json([
@@ -113,9 +119,15 @@ class XenditWebhookController extends Controller
                 'message' => $e->getUserMessage(),
             ], 400);
         } catch (\Exception $e) {
-            Log::error('Unexpected Xendit Webhook Error', [
-                'error_message' => $e->getMessage(),
+            Log::error('Xendit exception in Xendit Webhook Controller', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'payload' => $request->all(),
                 'trace' => $e->getTraceAsString(),
+                'context' => [
+                    'operation' => 'Processing Xendit webhook',
+                    'component_name' => 'XenditWebhookController.php',
+                ],
             ]);
 
             return response()->json([
