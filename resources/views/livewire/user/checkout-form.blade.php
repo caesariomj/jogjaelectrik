@@ -5,7 +5,7 @@ use App\Livewire\Forms\CheckoutForm;
 use App\Models\Cart;
 use App\Models\City;
 use App\Models\Order;
-use App\Models\Province;
+use App\Models\ProductVariant;
 use App\Services\PaymentService;
 use App\Services\ShippingService;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -19,11 +19,15 @@ use Livewire\Volt\Component;
 
 new class extends Component {
     protected ShippingService $shippingService;
+
     protected PaymentService $paymentService;
 
     public CheckoutForm $form;
 
+    #[Locked]
     public Collection $provinces;
+
+    #[Locked]
     public Collection $cities;
 
     #[Locked]
@@ -41,20 +45,27 @@ new class extends Component {
             'code' => 'tiki',
         ],
     ];
+
     public array $selectedCourierServices = [];
 
     public function boot(ShippingService $shippingService, PaymentService $paymentService)
     {
         $this->shippingService = $shippingService;
+
         $this->paymentService = $paymentService;
     }
 
     public function mount(Cart $cart)
     {
         $this->form->setCheckoutData($cart);
-        $this->provinces = Province::select('id as value', 'name as label')->get();
+
+        $this->provinces = DB::table('provinces')
+            ->select('id as value', 'name as label')
+            ->get();
+
         $this->cities = $this->form->province
-            ? City::select('id as value', 'name as label')
+            ? DB::table('cities')
+                ->select('id as value', 'name as label')
                 ->where('province_id', $this->form->province)
                 ->get()
             : collect();
@@ -70,15 +81,21 @@ new class extends Component {
     {
         if ($comboboxInstanceName == 'provinsi') {
             $this->form->province = $value;
+
             $this->form->city = null;
-            $this->cities = City::select('id as value', 'name as label')
+
+            $this->cities = DB::table('cities')
+                ->select('id as value', 'name as label')
                 ->where('province_id', $this->form->province)
                 ->get();
         } elseif ($comboboxInstanceName == 'kabupaten/kota') {
             $this->form->city = $value;
-            $this->cities = City::select('id as value', 'name as label')
+
+            $this->cities = DB::table('cities')
+                ->select('id as value', 'name as label')
                 ->where('province_id', $this->form->province)
                 ->get();
+
             $this->getSelectedCourierServices();
         }
 
@@ -118,17 +135,33 @@ new class extends Component {
 
             $this->selectedCourierServices = $result;
         } catch (ApiRequestException $e) {
-            Log::error('RajaOngkir API Request Exception During Checkout Process', [
-                'error_message' => $e->getLogMessage(),
-                'trace' => $e->getTraceAsString(),
+            Log::error('RajaOngkir API request exception', [
+                'error_type' => 'ApiRequestException',
+                'message' => $e->getLogMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Fetching courier service data from RajaOngkir API',
+                    'component_name' => $this->getName(),
+                ],
             ]);
 
             session('error', $e->getUserMessage());
             return $this->redirectIntended(route('checkout'), navigate: true);
         } catch (\Exception $e) {
-            Log::error('Unexpected Error During Selected Courier Service Retrieval', [
-                'error_message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+            Log::error('An unexpected error occurred', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Fetching courier service data from RajaOngkir API',
+                    'component_name' => $this->getName(),
+                ],
             ]);
 
             session()->flash('error', 'Terjadi kesalahan yang tidak terduga, silakan coba beberapa saat lagi.');
@@ -143,15 +176,17 @@ new class extends Component {
         });
 
         if (empty($selectedCourierServiceData)) {
+            $this->form->shippingCourierService = null;
+
             $this->addError(
                 'form.shippingCourierService',
                 'Mohon pilih salah satu layanan kurir yang tersedia di atas ini.',
             );
-            $this->form->shippingCourierService = null;
             return;
         }
 
         $selectedCourierServiceData = reset($selectedCourierServiceData);
+
         $this->form->shippingCourierServiceTax = $selectedCourierServiceData['cost_value'];
     }
 
@@ -225,7 +260,8 @@ new class extends Component {
                 if (strpos($estimatedShippingDays, '-') !== false) {
                     [$minDays, $maxDays] = explode('-', $estimatedShippingDays);
                 } else {
-                    $minDays = $maxDays = $estimatedShippingDays;
+                    $minDays = $estimatedShippingDays;
+                    $maxDays = $estimatedShippingDays;
                 }
 
                 $order = $this->form->user->orders()->create([
@@ -247,26 +283,26 @@ new class extends Component {
 
                 foreach ($this->form->items as $item) {
                     $orderDetail = $order->details()->create([
-                        'product_variant_id' => $item->productVariant->id,
-                        'price' => $item->productVariant->price_discount
-                            ? (float) $item->productVariant->price_discount
-                            : (float) $item->productVariant->price,
-                        'quantity' => (int) $item->quantity,
+                        'product_variant_id' => $item->id,
+                        'price' => $item->price,
+                        'quantity' => $item->quantity,
                     ]);
 
-                    $item->productVariant->update([
-                        'stock' => (int) $item->productVariant->stock - $orderDetail->quantity,
-                    ]);
+                    ProductVariant::where('id', $item->id)
+                        ->first()
+                        ->update([
+                            'stock' => (int) $item->stock - $orderDetail->quantity,
+                        ]);
                 }
 
-                if ($this->form->cart->discount_id) {
+                if ($this->form->discount) {
                     $order->discounts()->create([
-                        'discount_id' => $this->form->cart->discount_id,
+                        'discount_id' => $this->form->discount->id,
                         'is_used' => true,
                         'used_at' => now(),
                     ]);
 
-                    $this->form->cart->discount()->increment('used_count');
+                    $this->form->discount->increment('used_count');
                 }
 
                 $invoice = $this->paymentService->createInvoice($order);
@@ -285,24 +321,51 @@ new class extends Component {
             session()->flash('error', $e->getMessage());
             return $this->redirectIntended(route('checkout'), navigate: true);
         } catch (QueryException $e) {
-            Log::error('Database Error During Checkout Process', [
-                'error_message' => $e->getMessage(),
+            Log::error('Database query error occurred', [
+                'error_type' => 'QueryException',
+                'message' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'User trying to checkout',
+                    'component_name' => $this->getName(),
+                ],
             ]);
 
             session()->flash('error', 'Terjadi kesalahan dalam proses checkout, silakan coba beberapa saat lagi.');
             return $this->redirectIntended(route('checkout'), navigate: true);
         } catch (ApiRequestException $e) {
-            Log::error('Xendit API Request Exception During Checkout Process', [
-                'error_message' => $e->getLogMessage(),
-                'trace' => $e->getTraceAsString(),
+            Log::error('Xendit API request exception', [
+                'error_type' => 'ApiRequestException',
+                'message' => $e->getLogMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'User trying to checkout',
+                    'component_name' => $this->getName(),
+                ],
             ]);
 
             session('error', $e->getUserMessage());
             return $this->redirectIntended(route('checkout'), navigate: true);
         } catch (\Exception $e) {
-            Log::error('Unexpected Error During Checkout Process', [
-                'error_message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+            Log::error('An unexpected error occurred', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'User trying to checkout',
+                    'component_name' => $this->getName(),
+                ],
             ]);
 
             session('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
@@ -379,24 +442,23 @@ new class extends Component {
                             </span>
                             <span
                                 aria-label="Kode Negara Indonesia"
-                                class="mb-[1px] border-l border-neutral-300 px-2 text-sm text-black"
+                                class="mb-[1px] border-l border-neutral-300 px-3 text-sm text-black/70"
                             >
-                                +62
+                                (+62)
                             </span>
                         </div>
                         <x-form.input
                             wire:model.lazy="form.phone"
                             id="phone"
-                            class="block w-full ps-24"
+                            class="block w-full ps-28"
                             type="tel"
                             name="phone"
-                            placeholder="8XX-XXXX-XXXX"
+                            placeholder="08XX-XXXX-XXXX"
                             minlength="10"
                             maxlength="15"
                             inputmode="numeric"
                             autocomplete="tel-national"
-                            x-on:input="$el.value = $el.value.replace(/^0+/, '')"
-                            x-mask="999-9999-9999"
+                            x-mask="0999-9999-9999"
                             required
                             :hasError="$errors->has('form.phone')"
                         />
@@ -490,7 +552,7 @@ new class extends Component {
                     <x-form.input
                         wire:model.lazy="form.postalCode"
                         id="postal-code"
-                        class="block w-full"
+                        class="block w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                         type="number"
                         name="postal-code"
                         placeholder="Isikan kode pos anda disini..."
@@ -500,6 +562,7 @@ new class extends Component {
                         autocomplete="shipping postal-code"
                         required
                         :hasError="$errors->has('form.postalCode')"
+                        x-mask="99999"
                     />
                     <x-form.input-error :messages="$errors->get('form.postalCode')" class="mt-2" />
                 </div>
@@ -656,15 +719,18 @@ new class extends Component {
                                             class="h-auto w-12"
                                             loading="lazy"
                                         />
-                                        <p class="inline-flex flex-col items-start text-sm">
+                                        <p class="inline-flex flex-col items-start gap-y-1 text-sm">
                                             <span class="font-semibold tracking-tight text-black">
                                                 {{ strtoupper($service['courier_code'] . '-' . $service['service']) }}
                                             </span>
                                             <span class="font-medium tracking-tight text-black/50">
                                                 {{ $service['description'] }}
                                             </span>
-                                            <span class="w-full text-black">
-                                                Estimasi waktu pengiriman: ± {{ $service['etd'] }} hari kerja &mdash;
+                                            <span class="w-full tracking-tight text-black">
+                                                Estimasi waktu pengiriman: ± {{ $service['etd'] }} hari kerja (setelah
+                                                pesanan telah dibayar)
+                                            </span>
+                                            <span class="w-full tracking-tight text-black">
                                                 Ongkir: Rp
                                                 {{ formatPrice($service['cost_value']) }}
                                             </span>
@@ -698,32 +764,34 @@ new class extends Component {
             </div>
         </fieldset>
     </div>
-    <aside class="relative h-full w-full md:w-1/3">
+    <aside class="relative h-full w-full rounded-md border border-neutral-300 py-4 shadow-md md:w-1/3">
         <div>
-            <h2 class="mb-4 text-xl text-black">Ringkasan Belanja</h2>
-            <div class="flex flex-col gap-y-2">
+            <h2 class="mb-4 px-4 text-xl text-black">Ringkasan Belanja</h2>
+            <div class="flex flex-col gap-y-2 px-4">
                 @foreach ($form->items as $item)
                     <article wire:key="{{ $item->id }}" class="flex items-start gap-x-2">
-                        <img
-                            src="{{ asset('storage/uploads/product-images/' .$item->productVariant->product->images()->thumbnail()->first()->file_name,) }}"
-                            alt="Gambar produk {{ strtolower($item->productVariant->product->name) }}"
-                            class="aspect-square h-full w-20 object-cover"
-                            loading="lazy"
-                        />
+                        <div class="size-20 shrink-0 overflow-hidden rounded-md bg-neutral-100">
+                            <img
+                                src="{{ asset('storage/uploads/product-images/' . $item->thumbnail) }}"
+                                alt="Gambar produk {{ strtolower($item->name) }}"
+                                class="aspect-square h-full w-full object-cover"
+                                loading="lazy"
+                            />
+                        </div>
                         <div class="flex flex-col gap-y-1">
-                            <h3 class="mb-1 max-w-64 truncate !text-base !font-medium text-black">
-                                {{ $item->productVariant->product->name }}
+                            <h3 class="mb-1 max-w-40 truncate !text-base !font-medium text-black md:max-w-60">
+                                {{ $item->name }}
                             </h3>
 
-                            @if ($item->productVariant->variant_sku)
+                            @if ($item->variant && $item->variation)
                                 <p class="text-sm tracking-tight text-black">
-                                    {{ ucwords($item->productVariant->combinations->first()->variationVariant->variation->name) . ': ' . ucwords($item->productVariant->combinations->first()->variationVariant->name) }}
+                                    {{ ucwords($item->variation) . ': ' . ucwords($item->variant) }}
                                 </p>
                             @endif
 
                             <p class="text-sm tracking-tight text-black">Jumlah: {{ $item->quantity }}</p>
                         </div>
-                        <div class="ml-auto">
+                        <div class="ml-auto shrink-0">
                             <p class="text-end font-medium tracking-tight text-black">
                                 Rp {{ formatPrice($item->price) }}
                             </p>
@@ -732,7 +800,7 @@ new class extends Component {
                 @endforeach
             </div>
             <hr class="my-4 border-neutral-300" />
-            <dl class="grid grid-cols-2 gap-y-2">
+            <dl class="grid grid-cols-2 gap-y-2 px-4">
                 <dt class="mb-1 text-start tracking-tight text-black/70">Subtotal</dt>
                 <dd class="mb-1 text-end font-medium tracking-tight text-black">
                     Rp {{ formatPrice($form->totalPrice) }}
@@ -753,7 +821,7 @@ new class extends Component {
                 </dd>
             </dl>
             <hr class="my-4 border-neutral-300" />
-            <dl class="grid grid-cols-2">
+            <dl class="grid grid-cols-2 px-4">
                 <dt class="text-start tracking-tight text-black/70">Total</dt>
                 <dd class="text-end font-medium tracking-tight text-black">
                     Rp
@@ -761,7 +829,7 @@ new class extends Component {
                 </dd>
             </dl>
             <hr class="my-4 border-neutral-300" />
-            <div class="mb-4">
+            <div class="mb-4 px-4">
                 <div class="mb-1 flex items-center justify-between">
                     <x-form.input-label for="note" value="Catatan Pesanan" :required="false" />
                     <span class="text-sm font-medium tracking-tight text-black/70">(opsional)</span>
@@ -778,7 +846,7 @@ new class extends Component {
                 ></x-form.textarea>
                 <x-form.input-error :messages="$errors->get('form.note')" class="mt-2" />
             </div>
-            <div>
+            <div class="px-4">
                 <div class="flex">
                     <x-form.checkbox
                         wire:model.lazy="form.acceptTermsAndCondition"
@@ -796,7 +864,9 @@ new class extends Component {
                 <x-form.input-error :messages="$errors->get('form.acceptTermsAndCondition')" class="mt-2" />
             </div>
             <hr class="my-4 border-neutral-300" />
-            <x-common.button type="submit" variant="primary" class="w-full">Checkout</x-common.button>
+            <div class="px-4">
+                <x-common.button type="submit" variant="primary" class="w-full">Checkout</x-common.button>
+            </div>
         </div>
     </aside>
 </form>

@@ -3,8 +3,9 @@
 namespace App\Livewire\Forms;
 
 use App\Models\Cart;
+use App\Models\Discount;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
 use Livewire\Form;
@@ -13,31 +14,37 @@ class CheckoutForm extends Form
 {
     public Cart $cart;
 
-    public Collection $items;
-
     public User $user;
+
+    public Discount $discount;
+
+    #[Locked]
+    public Collection $items;
 
     #[Locked]
     public float $totalPrice = 0;
 
+    #[Locked]
     public float $totalWeight = 0;
 
+    #[Locked]
     public float $discountAmount = 0;
 
+    #[Locked]
     public string $email = '';
 
     #[Validate]
     public string $name = '';
 
-    public string $phone = '';
+    public ?string $phone = null;
 
     public ?string $province = null;
 
     public ?string $city = null;
 
-    public string $address = '';
+    public ?string $address = null;
 
-    public string $postalCode = '';
+    public ?string $postalCode = null;
 
     public ?string $shippingCourier = null;
 
@@ -134,30 +141,43 @@ class CheckoutForm extends Form
     {
         $this->cart = $cart;
         $this->items = $cart->items;
-        $this->totalPrice = $this->cart->calculateTotalPrice();
-        $this->totalWeight = $this->cart->calculateTotalWeight();
-        $this->discountAmount = $this->cart->discount ? $this->cart->discount->calculateDiscount($this->totalPrice) : 0;
-        $this->setUser($this->cart);
+        $this->totalPrice = $cart->total_price;
+        $this->totalWeight = $cart->total_weight;
+
+        $this->setUser($this->cart->user);
+
+        if ($cart->discount) {
+            $this->discount = $cart->discount;
+            $this->calculateDiscount($cart->discount);
+        }
     }
 
-    private function setUser($cart)
+    private function setUser(User $user)
     {
-        $this->user = $cart->user;
-        $this->name = $this->user->name;
-        $this->email = $this->user->email;
-        $this->phone = $this->safeDecrypt($this->user->phone_number);
-        $this->province = $this->user->city_id ? $this->user->city->province_id : null;
-        $this->city = $this->user->city_id ? $this->user->city_id : null;
-        $this->address = $this->safeDecrypt($this->user->address);
-        $this->postalCode = $this->safeDecrypt($this->user->postal_code);
+        $this->user = $user;
+        $this->name = $user->name;
+        $this->email = $user->email;
+        $this->phone = $user->phone_number;
+        $this->province = $user->province_id;
+        $this->city = $user->city_id;
+        $this->address = $user->address;
+        $this->postalCode = $user->postal_code;
     }
 
-    private function safeDecrypt($encryptedValue)
+    private function calculateDiscount(Discount $discount)
     {
-        try {
-            return $encryptedValue ? \Illuminate\Support\Facades\Crypt::decryptString($encryptedValue) : '';
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            return '';
+        if ($discount->type === 'fixed') {
+            $this->discountAmount = (float) min($discount->value, $this->totalPrice);
+        } elseif ($discount->type === 'percentage') {
+            $discountAmount = $this->totalPrice * ($discount->value / 100);
+
+            if ($discount->max_discount_amount && $discountAmount > $discount->max_discount_amount) {
+                $this->discountAmount = (float) $discount->max_discount_amount;
+            } else {
+                $this->discountAmount = (float) $discountAmount;
+            }
+        } else {
+            $this->discountAmount = (float) 0.0;
         }
     }
 }
