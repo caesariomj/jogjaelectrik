@@ -40,7 +40,7 @@ new class extends Component {
     {
         return User::queryAllAdmins()
             ->when($this->search !== '', function ($query) {
-                return $query->where('name', 'like', '%' . $this->search . '%');
+                return $query->where('users.name', 'like', '%' . $this->search . '%');
             })
             ->orderBy($this->sortField, $this->sortDirection)
             ->paginate($this->perPage);
@@ -407,7 +407,7 @@ new class extends Component {
                 </x-datatable.row>
             @empty
                 <tr wire:loading.class="opacity-50" wire:target="search,sortBy,resetSearch,perPage">
-                    <td class="p-4" colspan="6" align="center">
+                    <td class="p-4" colspan="7" align="center">
                         <figure class="my-4 flex h-full flex-col items-center justify-center">
                             <img
                                 src="https://placehold.co/400"
