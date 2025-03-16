@@ -6,7 +6,7 @@
 @endphp
 
 <aside
-    class="hidden md:sticky md:top-20 md:block md:h-full md:w-64 md:shrink-0 md:rounded md:border md:border-neutral-300 md:p-4 md:shadow-md"
+    class="hidden md:sticky md:top-20 md:block md:h-full md:w-64 md:shrink-0 md:rounded-md md:border md:border-neutral-300 md:p-4 md:shadow-md"
 >
     <ul class="space-y-1.5">
         @can('view own account')
