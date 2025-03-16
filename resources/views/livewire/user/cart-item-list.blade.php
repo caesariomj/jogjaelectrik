@@ -744,7 +744,7 @@ new class extends Component {
                                 class="flex items-start gap-x-4 border-b border-b-neutral-300 py-4"
                             >
                                 <a
-                                    href="{{ route('products.detail', ['category' => $item->category_slug, 'subcategory' => $item->subcategory_slug, 'slug' => $item->slug]) }}"
+                                    href="{{ $item->category_slug && $item->subcategory_slug ? route('products.detail', ['category' => $item->category_slug, 'subcategory' => $item->subcategory_slug, 'slug' => $item->slug]) : route('products.detail.without.category.subcategory', ['slug' => $item->slug]) }}"
                                     class="size-32 shrink-0 overflow-hidden rounded-lg bg-neutral-100 md:size-36"
                                     wire:navigate
                                 >
@@ -757,7 +757,7 @@ new class extends Component {
                                 </a>
                                 <div class="flex min-h-32 w-full flex-col items-start md:min-h-36">
                                     <a
-                                        href="{{ route('products.detail', ['category' => $item->category_slug, 'subcategory' => $item->subcategory_slug, 'slug' => $item->slug]) }}"
+                                        href="{{ $item->category_slug && $item->subcategory_slug ? route('products.detail', ['category' => $item->category_slug, 'subcategory' => $item->subcategory_slug, 'slug' => $item->slug]) : route('products.detail.without.category.subcategory', ['slug' => $item->slug]) }}"
                                         class="mb-0.5"
                                         wire:navigate
                                     >
