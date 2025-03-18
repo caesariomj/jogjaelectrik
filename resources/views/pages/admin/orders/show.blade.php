@@ -361,7 +361,7 @@
                 <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                     <dt class="w-full tracking-tight text-black/70 md:w-1/3">Nomor Telefon</dt>
                     <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
-                        {{ $order->user->phone_number }}
+                        {{ $order->user->phone_number ? $order->user->phone_number : '-' }}
                     </dd>
                 </div>
             </dl>
@@ -381,7 +381,7 @@
                         class="flex items-start gap-x-4 rounded-md border border-neutral-300 bg-white p-2 shadow-sm"
                     >
                         <a
-                            href="{{ route('products.detail', ['slug' => $item->slug]) }}"
+                            href="{{ route('admin.products.show', ['slug' => $item->slug]) }}"
                             class="size-20 shrink-0 overflow-hidden rounded-lg bg-neutral-100"
                             wire:navigate
                         >
@@ -394,7 +394,7 @@
                         </a>
                         <div class="flex h-20 w-full flex-col items-start">
                             <a
-                                href="{{ route('products.detail', ['slug' => $item->slug]) }}"
+                                href="{{ route('admin.products.show', ['slug' => $item->slug]) }}"
                                 class="mb-0.5"
                                 wire:navigate
                             >

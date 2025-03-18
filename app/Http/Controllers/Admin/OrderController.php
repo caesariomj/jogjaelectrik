@@ -79,10 +79,9 @@ class OrderController extends Controller
                 $user = (object) [
                     'name' => $firstOrder->user_name,
                     'email' => $firstOrder->user_email,
-                    'phone_number' => '+62-'.Crypt::decryptString($firstOrder->user_phone_number),
-                    'postal_code' => Crypt::decryptString($firstOrder->user_postal_code),
-                    'city' => $firstOrder->city,
-                    'province' => $firstOrder->province,
+                    'phone_number' => $firstOrder->user_phone_number
+                        ? '+62-'.Crypt::decryptString($firstOrder->user_phone_number)
+                        : null,
                 ];
 
                 $payment = (object) [
