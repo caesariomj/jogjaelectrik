@@ -179,12 +179,14 @@ new class extends Component {
 
                 $orderModel = new Order();
 
+                $shippingAddress = Crypt::decryptString($firstOrder->shipping_address);
+
                 $orderModel->setRawAttributes(
                     [
                         'id' => $firstOrder->id,
                         'order_number' => $firstOrder->order_number,
                         'status' => $firstOrder->status,
-                        'shipping_address' => Crypt::decryptString($firstOrder->shipping_address),
+                        'shipping_address' => $shippingAddress,
                         'shipping_courier' => $firstOrder->shipping_courier,
                         'estimated_shipping_min_days' => $firstOrder->estimated_shipping_min_days,
                         'estimated_shipping_max_days' => $firstOrder->estimated_shipping_max_days,
@@ -220,10 +222,9 @@ new class extends Component {
 
                 $orderModel->user = (object) [
                     'name' => $firstOrder->user_name,
-                    'phone_number' => '+62-' . Crypt::decryptString($firstOrder->user_phone_number),
-                    'postal_code' => Crypt::decryptString($firstOrder->user_postal_code),
-                    'city' => $firstOrder->city,
-                    'province' => $firstOrder->province,
+                    'phone_number' => $firstOrder->user_phone_number
+                        ? '+62-' . Crypt::decryptString($firstOrder->user_phone_number)
+                        : null,
                 ];
 
                 return $orderModel;
@@ -580,6 +581,108 @@ new class extends Component {
     }
 
     /**
+     * Find order data before opening edit shipment tracking number modal.
+     *
+     * @param   string  $id - The ID of the order to find.
+     */
+    public function editShipmentTrackingNumber(string $id)
+    {
+        $this->order = Order::find($id);
+
+        if (! $this->order) {
+            session()->flash('error', 'Pesanan tidak dapat ditemukan.');
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        }
+
+        $this->shipmentTrackingNumber = $this->order->shipment_tracking_number;
+
+        $this->dispatch('open-modal', 'edit-shipment-tracking-number-' . $this->order->id);
+    }
+
+    /**
+     * Update order shipment tracking number.
+     *
+     * @param   string  $id - The ID of the order to update.
+     *
+     * @return  void
+     *
+     * @throws  AuthorizationException if the user is not authorized to update the order.
+     * @throws  QueryException if a database query error occurred.
+     * @throws  \Exception if an unexpected error occurred.
+     */
+    public function updateShipmentTrackingNumber()
+    {
+        $validated = $this->validate(
+            rules: [
+                'shipmentTrackingNumber' => 'required|string|min:5|max:50',
+            ],
+            attributes: [
+                'shipmentTrackingNumber' => 'Nomor resi pengiriman',
+            ],
+        );
+
+        $order = $this->order;
+
+        try {
+            $this->authorize('update', $order);
+
+            DB::transaction(function () use ($order, $validated) {
+                $order->update([
+                    'shipment_tracking_number' => strtoupper($validated['shipmentTrackingNumber']),
+                ]);
+            });
+
+            session()->flash(
+                'success',
+                'Nomor resi pada pesanan dengan nomor: ' . $order->order_number . ' berhasil diubah.',
+            );
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        } catch (QueryException $e) {
+            Log::error('Database query error occurred', [
+                'error_type' => 'QueryException',
+                'message' => $e->getMessage(),
+                'sql' => $e->getSql(),
+                'bindings' => $e->getBindings(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Updating shipment tracking number',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
+
+            session()->flash(
+                'error',
+                'Terjadi kesalahan dalam mengubah nomor resi pesanan dengan nomor: ' .
+                    $order->order_number .
+                    ', silakan coba beberapa saat lagi.',
+            );
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        } catch (\Exception $e) {
+            Log::error('An unexpected error occurred', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'Updating shipment tracking number',
+                    'component_name' => $this->getName(),
+                ],
+            ]);
+
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            return $this->redirectIntended(route('admin.orders.index'), navigate: true);
+        }
+    }
+
+    /**
      * Find order data before opening finish order modal.
      *
      * @param   string  $id - The ID of the order to find.
@@ -670,7 +773,7 @@ new class extends Component {
 
 <div>
     <div class="mb-6 flex flex-col gap-y-4 rounded-xl bg-white p-4 shadow-sm">
-        <div class="flex w-full flex-col justify-between gap-4 md:flex-row md:items-center">
+        <div class="flex w-full flex-col-reverse justify-between gap-4 md:flex-row md:items-center">
             <div class="relative w-full shrink">
                 <div class="pointer-events-none absolute inset-y-0 start-0 z-20 flex items-center ps-3.5">
                     <svg
@@ -960,7 +1063,7 @@ new class extends Component {
                     <div class="absolute end-4 top-4 inline-flex items-center gap-x-2">
                         <span
                             @class([
-                                'inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium tracking-tight',
+                                'mb-0.5 inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium tracking-tight',
                                 'bg-yellow-100 text-yellow-800' => $order->status === 'waiting_payment',
                                 'bg-blue-100 text-blue-800' => $order->status === 'payment_received',
                                 'bg-teal-100 text-teal-800' => in_array($order->status, ['processing', 'shipping', 'completed']),
@@ -968,7 +1071,15 @@ new class extends Component {
                             ])
                             role="status"
                         >
-                            <span class="mb-0.5">•</span>
+                            <span
+                                @class([
+                                    'inline-block size-1.5 rounded-full',
+                                    'bg-yellow-800' => $order->status === 'waiting_payment',
+                                    'bg-blue-800' => $order->status === 'payment_received',
+                                    'bg-teal-800' => in_array($order->status, ['processing', 'shipping', 'completed']),
+                                    'bg-red-800' => in_array($order->status, ['failed', 'canceled']),
+                                ])
+                            ></span>
                             @if ($order->status === 'all')
                                 Semua
                             @elseif ($order->status === 'waiting_payment')
@@ -1136,7 +1247,7 @@ new class extends Component {
                             Nomor Telefon :
                         </dt>
                         <dd class="text-sm font-medium tracking-tight text-black">
-                            {{ $order->user->phone_number }}
+                            {{ $order->user->phone_number ? $order->user->phone_number : '-' }}
                         </dd>
 
                         @php
@@ -1222,8 +1333,111 @@ new class extends Component {
                             Alamat Pengiriman :
                         </dt>
                         <dd class="text-sm font-medium tracking-tight text-black">
-                            {{ $order->shipping_address . ', ' . $order->user->postal_code . ' - ' . $order->user->city . ', ' . $order->user->province }}
+                            {{ $order->shipping_address ? $order->shipping_address : '-' }}
                         </dd>
+                        @if ($order->status === 'shipping')
+                            <dt class="inline-flex items-center text-sm font-medium tracking-tight text-black/70">
+                                <svg
+                                    class="me-1 size-4 shrink-0"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="currentColor"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M1.5 6.375c0-1.036.84-1.875 1.875-1.875h17.25c1.035 0 1.875.84 1.875 1.875v3.026a.75.75 0 0 1-.375.65 2.249 2.249 0 0 0 0 3.898.75.75 0 0 1 .375.65v3.026c0 1.035-.84 1.875-1.875 1.875H3.375A1.875 1.875 0 0 1 1.5 17.625v-3.026a.75.75 0 0 1 .374-.65 2.249 2.249 0 0 0 0-3.898.75.75 0 0 1-.374-.65V6.375Zm15-1.125a.75.75 0 0 1 .75.75v.75a.75.75 0 0 1-1.5 0V6a.75.75 0 0 1 .75-.75Zm.75 4.5a.75.75 0 0 0-1.5 0v.75a.75.75 0 0 0 1.5 0v-.75Zm-.75 3a.75.75 0 0 1 .75.75v.75a.75.75 0 0 1-1.5 0v-.75a.75.75 0 0 1 .75-.75Zm.75 4.5a.75.75 0 0 0-1.5 0V18a.75.75 0 0 0 1.5 0v-.75ZM6 12a.75.75 0 0 1 .75-.75H12a.75.75 0 0 1 0 1.5H6.75A.75.75 0 0 1 6 12Zm.75 2.25a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5h-3Z"
+                                        clip-rule="evenodd"
+                                    />
+                                </svg>
+                                Nomor Resi Pengiriman :
+                            </dt>
+                            <dd class="inline-flex flex-col gap-2 text-sm font-medium tracking-tight text-black">
+                                {{ $order->shipment_tracking_number }}
+                                <button
+                                    class="inline-flex items-center gap-1 underline transition-colors hover:text-black/70"
+                                    x-on:click.prevent.stop="$wire.editShipmentTrackingNumber('{{ $order->id }}')"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        fill="none"
+                                        viewBox="0 0 24 24"
+                                        stroke-width="1.5"
+                                        stroke="currentColor"
+                                        class="size-4 shrink-0"
+                                    >
+                                        <path
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10"
+                                        />
+                                    </svg>
+                                    Ubah nomor resi
+                                </button>
+                                <template x-teleport="body">
+                                    <x-common.modal
+                                        name="edit-shipment-tracking-number-{{ $order->id }}"
+                                        :show="$errors->isNotEmpty()"
+                                        focusable
+                                    >
+                                        <form
+                                            wire:submit="updateShipmentTrackingNumber"
+                                            class="flex flex-col items-start p-6"
+                                        >
+                                            <h2 class="mb-2 text-center text-black">Ubah Nomor Resi</h2>
+                                            <p
+                                                class="mb-4 text-center text-base font-medium tracking-tight text-black/70"
+                                            >
+                                                Ubah nomor resi pesanan dengan nomor:
+                                                <strong class="text-black">{{ $order->order_number }}</strong>
+                                                .
+                                            </p>
+                                            <div class="flex w-full flex-col items-start">
+                                                <x-form.input-label
+                                                    value="Nomor Resi Baru"
+                                                    for="new-shipment-tracking-number"
+                                                />
+                                                <x-form.input
+                                                    wire:model.lazy="shipmentTrackingNumber"
+                                                    type="text"
+                                                    id="new-shipment-tracking-number"
+                                                    name="new-shipment-tracking-number"
+                                                    class="mt-1 w-full"
+                                                    placeholder="Isikan nomor resi pengiriman disini..."
+                                                    minlength="5"
+                                                    maxlength="50"
+                                                    autocomplete="off"
+                                                    required
+                                                    :hasError="$errors->has('shipmentTrackingNumber')"
+                                                />
+                                                <x-form.input-error
+                                                    :messages="$errors->get('shipmentTrackingNumber')"
+                                                    class="mt-2"
+                                                />
+                                            </div>
+                                            <div
+                                                class="mt-8 flex w-full flex-col items-center justify-end gap-4 md:flex-row"
+                                            >
+                                                <x-common.button
+                                                    variant="secondary"
+                                                    class="w-full md:w-fit"
+                                                    x-on:click="$dispatch('close')"
+                                                >
+                                                    Batal
+                                                </x-common.button>
+                                                <x-common.button
+                                                    type="submit"
+                                                    variant="primary"
+                                                    class="w-full md:w-fit"
+                                                >
+                                                    Ubah Nomor Resi
+                                                </x-common.button>
+                                            </div>
+                                        </form>
+                                    </x-common.modal>
+                                </template>
+                            </dd>
+                        @endif
                     </dl>
                     <div class="flex w-full flex-col items-center justify-between gap-4 md:flex-row">
                         <div class="inline-flex items-center">
@@ -1234,7 +1448,7 @@ new class extends Component {
                                 </span>
                                 <x-common.tooltip
                                     id="total-price-information"
-                                    text="Total harga sudah termasuk ongkos kirim dan diskon yang digunakan saat pesanan dibuat."
+                                    text="Total harga sudah termasuk ongkos kirim dan diskon yang digunakan pelanggan saat pesanan dibuat."
                                     class="z-[60] w-72"
                                 />
                             </p>
@@ -1680,7 +1894,7 @@ new class extends Component {
                 </figure>
             </div>
         @endforelse
-        <div class="p-4">
+        <div class="rounded-xl bg-white p-4 shadow-sm">
             {{ $this->orders->links('components.common.pagination') }}
         </div>
         <div
