@@ -92,7 +92,7 @@ new class extends Component {
     }
 
     /**
-     * Count prder by the order status.
+     * Count order by the order statuses.
      */
     private function countOrdersByStatuses(): void
     {
