@@ -49,7 +49,15 @@
                                 ])
                                 role="status"
                             >
-                                <span class="mb-0.5">•</span>
+                                <span
+                                    @class([
+                                        'inline-block size-1.5 rounded-full',
+                                        'bg-yellow-800' => $order->status === 'waiting_payment',
+                                        'bg-blue-800' => $order->status === 'payment_received',
+                                        'bg-teal-800' => in_array($order->status, ['processing', 'shipping', 'completed']),
+                                        'bg-red-800' => in_array($order->status, ['failed', 'canceled']),
+                                    ])
+                                ></span>
                                 @if ($order->status === 'all')
                                     Semua
                                 @elseif ($order->status === 'waiting_payment')
@@ -168,32 +176,34 @@
                 <section class="mb-4">
                     <h2 class="mb-2 text-2xl text-black">Informasi Pembayaran</h2>
                     <dl class="grid grid-cols-1">
-                        <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
-                            <dt class="w-full tracking-tight text-black/70 md:w-1/3">Link Pembayaran</dt>
-                            <dd class="w-full md:w-2/3">
-                                <a
-                                    href="{{ $order->payment->xendit_invoice_url }}"
-                                    class="inline-flex items-center gap-x-1 font-medium tracking-tight text-black underline transition-colors hover:text-primary"
-                                >
-                                    Klik disini untuk mengakses link pembayaran
-                                    <svg
-                                        class="size-3 shrink-0"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        fill="none"
-                                        viewBox="0 0 24 24"
-                                        stroke-width="2"
-                                        stroke="currentColor"
-                                        aria-hidden="true"
+                        @if ($order->payment->status === 'unpaid')
+                            <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
+                                <dt class="w-full tracking-tight text-black/70 md:w-1/3">Link Pembayaran</dt>
+                                <dd class="w-full md:w-2/3">
+                                    <a
+                                        href="{{ $order->payment->xendit_invoice_url }}"
+                                        class="inline-flex items-center gap-x-1 font-medium tracking-tight text-black underline transition-colors hover:text-primary"
                                     >
-                                        <path
-                                            stroke-linecap="round"
-                                            stroke-linejoin="round"
-                                            d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25"
-                                        />
-                                    </svg>
-                                </a>
-                            </dd>
-                        </div>
+                                        Klik disini untuk mengakses link pembayaran
+                                        <svg
+                                            class="size-3 shrink-0"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            fill="none"
+                                            viewBox="0 0 24 24"
+                                            stroke-width="2"
+                                            stroke="currentColor"
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                stroke-linecap="round"
+                                                stroke-linejoin="round"
+                                                d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25"
+                                            />
+                                        </svg>
+                                    </a>
+                                </dd>
+                            </div>
+                        @endif
 
                         @if ($order->payment->method)
                             <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
@@ -236,7 +246,15 @@
                                     ])
                                     role="status"
                                 >
-                                    <span class="mb-0.5">•</span>
+                                    <span
+                                        @class([
+                                            'inline-block size-1.5 rounded-full',
+                                            'bg-yellow-800' => $order->payment->status === 'unpaid',
+                                            'bg-teal-800' => in_array($order->payment->status, ['paid', 'settled']),
+                                            'bg-red-800' => $order->payment->status === 'expired',
+                                            'bg-blue-800' => $order->payment->status === 'refunded',
+                                        ])
+                                    ></span>
                                     @if ($order->payment->status === 'unpaid')
                                         Belum Dibayar
                                     @elseif (in_array($order->payment->status, ['paid', 'settled']))
@@ -287,7 +305,14 @@
                                     ])
                                     role="status"
                                 >
-                                    <span class="mb-0.5">•</span>
+                                    <span
+                                        @class([
+                                            'inline-block size-1.5 rounded-full',
+                                            'bg-yellow-800' => $order->payment->refund->status === 'pending',
+                                            'bg-teal-800' => $order->payment->refund->status === 'succeeded',
+                                            'bg-red-800' => $order->payment->refund->status === 'failed',
+                                        ])
+                                    ></span>
                                     @if ($order->payment->refund->status === 'pending')
                                         Menunggu Diproses
                                     @elseif ($order->payment->refund->status === 'succeeded')
@@ -356,7 +381,7 @@
                     <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                         <dt class="w-full tracking-tight text-black/70 md:w-1/3">Alamat Pengiriman</dt>
                         <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
-                            {{ \Illuminate\Support\Facades\Crypt::decryptString($order->shipping_address) }}
+                            {{ $order->shipping_address }}
                         </dd>
                     </div>
                 </dl>
@@ -370,31 +395,31 @@
                             class="flex items-start gap-x-4 rounded-md border border-neutral-300 p-2 shadow-sm"
                         >
                             <a
-                                href="{{ route('products.detail', ['slug' => $item->productVariant->product->slug]) }}"
+                                href="{{ $item->category_slug && $item->subcategory_slug ? route('products.detail', ['category' => $item->category_slug, 'subcategory' => $item->subcategory_slug, 'slug' => $item->slug]) : route('products.detail.without.category.subcategory', ['slug' => $item->slug]) }}"
                                 class="size-20 shrink-0 overflow-hidden rounded-lg bg-neutral-100"
                                 wire:navigate
                             >
                                 <img
-                                    src="{{ asset('storage/uploads/product-images/' .$item->productVariant->product->images()->thumbnail()->first()->file_name,) }}"
-                                    alt="Gambar produk {{ strtolower($item->productVariant->product->name) }}"
+                                    src="{{ asset('storage/uploads/product-images/' . $item->thumbnail) }}"
+                                    alt="Gambar produk {{ strtolower($item->name) }}"
                                     class="aspect-square h-full w-20 scale-100 object-cover brightness-100 transition-all ease-in-out hover:scale-105 hover:brightness-95"
                                     loading="lazy"
                                 />
                             </a>
                             <div class="flex h-20 w-full flex-col items-start">
                                 <a
-                                    href="{{ route('products.detail', ['slug' => $item->productVariant->product->slug]) }}"
+                                    href="{{ $item->category_slug && $item->subcategory_slug ? route('products.detail', ['category' => $item->category_slug, 'subcategory' => $item->subcategory_slug, 'slug' => $item->slug]) : route('products.detail.without.category.subcategory', ['slug' => $item->slug]) }}"
                                     class="mb-0.5"
                                     wire:navigate
                                 >
                                     <h3 class="!text-base text-black hover:text-primary">
-                                        {{ $item->productVariant->product->name }}
+                                        {{ $item->name }}
                                     </h3>
                                 </a>
 
-                                @if ($item->productVariant->variant_sku)
-                                    <p class="mb-2 text-sm tracking-tight text-black">
-                                        {{ ucwords($item->productVariant->combinations->first()->variationVariant->variation->name) . ': ' . ucwords($item->productVariant->combinations->first()->variationVariant->name) }}
+                                @if ($item->variation && $item->variant)
+                                    <p class="mb-1 text-sm tracking-tight text-black">
+                                        {{ ucwords($item->variation) . ': ' . ucwords($item->variant) }}
                                     </p>
                                 @endif
 
