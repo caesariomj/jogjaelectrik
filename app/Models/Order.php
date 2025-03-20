@@ -87,6 +87,11 @@ class Order extends Model
         return DB::table('orders')->select($columns);
     }
 
+    public static function queryByUserId(string $userId, array $columns = ['*'])
+    {
+        return self::baseQuery(columns: $columns)->where('orders.user_id', $userId);
+    }
+
     public static function queryByOrderNumber(string $orderNumber, array $columns = ['*'], array|string|null $relations = null)
     {
         $relations = is_array($relations) ? $relations : [$relations];
@@ -103,6 +108,8 @@ class Order extends Model
                     $join->on('product_images.product_id', '=', 'products.id')
                         ->where('product_images.is_thumbnail', true);
                 });
+                $query->leftJoin('subcategories', 'subcategories.id', '=', 'products.subcategory_id');
+                $query->leftJoin('categories', 'categories.id', '=', 'subcategories.category_id');
                 $query->addSelect([
                     'order_details.id as order_detail_id',
                     'order_details.price as order_detail_price',
@@ -114,19 +121,16 @@ class Order extends Model
                     'variation_variants.name as variant_name',
                     'variations.name as variation_name',
                     'product_images.file_name as thumbnail',
+                    'subcategories.slug as subcategory_slug',
+                    'categories.slug as category_slug',
                 ]);
             })
             ->when(in_array('user', $relations), function ($query) {
                 $query->leftJoin('users', 'users.id', '=', 'orders.user_id');
-                $query->leftJoin('cities', 'cities.id', '=', 'users.city_id');
-                $query->leftJoin('provinces', 'provinces.id', '=', 'cities.province_id');
                 $query->addSelect([
                     'users.name as user_name',
                     'users.email as user_email',
                     'users.phone_number as user_phone_number',
-                    'users.postal_code as user_postal_code',
-                    'cities.name as city',
-                    'provinces.name as province',
                 ]);
             })
             ->when(in_array('payment', $relations), function ($query) {
@@ -199,6 +203,63 @@ class Order extends Model
                     'payments.method as payment_method',
                 ]);
             });
+    }
+
+    public static function queryAllByUserIdAndStatusWithRelations(string $userId, string $status, array $columns = ['*'], array|string|null $relations = null)
+    {
+        $relations = is_array($relations) ? $relations : [$relations];
+
+        return self::queryByUserId(userId: $userId, columns: $columns)
+            ->when($status && $status !== 'all', function ($query) use ($status) {
+                $query->where('orders.status', $status);
+            })
+            ->when(in_array('order_details', $relations), function ($query) {
+                $query->leftJoin('order_details', 'order_details.order_id', '=', 'orders.id');
+                $query->leftJoin('product_variants', 'product_variants.id', '=', 'order_details.product_variant_id');
+                $query->leftJoin('variant_combinations', 'variant_combinations.product_variant_id', '=', 'product_variants.id');
+                $query->leftJoin('variation_variants', 'variation_variants.id', '=', 'variant_combinations.variation_variant_id');
+                $query->leftJoin('variations', 'variations.id', '=', 'variation_variants.variation_id');
+                $query->leftJoin('products', 'products.id', '=', 'product_variants.product_id');
+                $query->leftJoin('product_images', function ($join) {
+                    $join->on('product_images.product_id', '=', 'products.id')
+                        ->where('product_images.is_thumbnail', true);
+                });
+                $query->leftJoin('subcategories', 'subcategories.id', '=', 'products.subcategory_id');
+                $query->leftJoin('categories', 'categories.id', '=', 'subcategories.category_id');
+                $query->addSelect([
+                    'order_details.id as order_detail_id',
+                    'order_details.price as order_detail_price',
+                    'order_details.quantity as order_detail_quantity',
+                    'product_variants.id as product_variant_id',
+                    'product_variants.variant_sku as product_variant_sku',
+                    'products.name as product_name',
+                    'products.slug as product_slug',
+                    'products.main_sku as product_main_sku',
+                    'variation_variants.name as variant_name',
+                    'variations.name as variation_name',
+                    'product_images.file_name as thumbnail',
+                    'subcategories.slug as subcategory_slug',
+                    'categories.slug as category_slug',
+                ]);
+            })
+            ->when(in_array('user', $relations), function ($query) {
+                $query->leftJoin('users', 'users.id', '=', 'orders.user_id');
+                $query->addSelect([
+                    'users.name as user_name',
+                    'users.phone_number as user_phone_number',
+                ]);
+            })
+            ->when(in_array('payment', $relations), function ($query) {
+                $query->leftJoin('payments', 'payments.order_id', '=', 'orders.id');
+                $query->addSelect([
+                    'payments.method as payment_method',
+                ]);
+            });
+    }
+
+    public function hasBeenReviewed()
+    {
+        return $this->details()->whereHas('productReview')->exists();
     }
 
     public function scopeExpired($query)
