@@ -13,22 +13,28 @@ class UpdateProfileForm extends Form
     public User $user;
 
     #[Locked]
-    public string $role;
+    public string $role = '';
 
     #[Validate]
     public string $name = '';
 
+    #[Validate]
     public string $email = '';
 
-    public string $phone = '';
+    #[Validate]
+    public ?string $phone = null;
 
-    public ?string $province = '';
+    #[Validate]
+    public ?int $province = null;
 
-    public ?string $city = '';
+    #[Validate]
+    public ?int $city = null;
 
-    public string $address = '';
+    #[Validate]
+    public ?string $address = null;
 
-    public string $postalCode = '';
+    #[Validate]
+    public ?string $postalCode = null;
 
     protected function rules()
     {
@@ -94,22 +100,13 @@ class UpdateProfileForm extends Form
         $this->user = $user;
         $this->name = $user->name;
         $this->email = $user->email;
-        $this->phone = $user->phone_number ? $this->safeDecrypt($user->phone_number) : '';
+        $this->phone = $user->phone_number ? Crypt::decryptString($user->phone_number) : null;
 
         if (! in_array($this->role, ['admin', 'super_admin'])) {
-            $this->province = $user->city->province_id;
-            $this->city = $user->city_id;
-            $this->address = $this->safeDecrypt($user->address);
-            $this->postalCode = $this->safeDecrypt($user->postal_code);
-        }
-    }
-
-    private function safeDecrypt(string $encryptedValue)
-    {
-        try {
-            return $encryptedValue ? Crypt::decryptString($encryptedValue) : '';
-        } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
-            return '';
+            $this->province = $user->city_id ? $user->city->province_id : null;
+            $this->city = $user->city_id ? $user->city_id : null;
+            $this->address = $user->address ? Crypt::decryptString($user->address) : null;
+            $this->postalCode = $user->postal_code ? Crypt::decryptString($user->postal_code) : null;
         }
     }
 }

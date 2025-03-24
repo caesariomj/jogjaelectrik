@@ -7,6 +7,8 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
+use Livewire\Attributes\Locked;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -14,15 +16,20 @@ new class extends Component {
 
     public bool $isEditing = false;
 
+    #[Locked]
     public Collection $provinces;
+
+    #[Locked]
     public Collection $cities;
 
-    public function mount()
+    public function mount(): void
     {
         $this->form->setUser(auth()->user());
+
         $this->provinces = DB::table('provinces')
             ->select('id as value', 'name as label')
             ->get();
+
         $this->cities = $this->form->province
             ? DB::table('cities')
                 ->select('id as value', 'name as label')
@@ -31,17 +38,30 @@ new class extends Component {
             : collect();
     }
 
-    public function handleComboboxChange($value, $comboboxInstanceName)
+    /**
+     * Lazy loading that displays the user update profile skeleton.
+     */
+    public function placeholder(): View
+    {
+        return view('components.skeleton.user-update-profile');
+    }
+
+    /**
+     * Set city and province value when the combobox component change.
+     */
+    public function handleComboboxChange($value, $comboboxInstanceName): void
     {
         if ($comboboxInstanceName == 'provinsi') {
             $this->form->province = $value;
             $this->form->city = null;
+
             $this->cities = DB::table('cities')
                 ->select('id as value', 'name as label')
                 ->where('province_id', $this->form->province)
                 ->get();
         } elseif ($comboboxInstanceName == 'kabupaten/kota') {
             $this->form->city = $value;
+
             $this->cities = DB::table('cities')
                 ->select('id as value', 'name as label')
                 ->where('province_id', $this->form->province)
@@ -49,6 +69,15 @@ new class extends Component {
         }
     }
 
+    /**
+     * Update user profile information.
+     *
+     * @return  void
+     *
+     * @throws  AuthorizationException if the user is not authorized to update the user profile information.
+     * @throws  QueryException if a database query error occurred.
+     * @throws  \Exception if an unexpected error occurred.
+     */
     public function updateProfileInformation()
     {
         if (! $this->isEditing) {
@@ -89,10 +118,19 @@ new class extends Component {
             session()->flash('error', $e->getMessage());
             return $this->redirectIntended(route('profile'), navigate: true);
         } catch (QueryException $e) {
-            Log::error('Database Error During User Profile Alteration', [
-                'error_message' => $e->getMessage(),
+            Log::error('Database query error occurred', [
+                'error_type' => 'QueryException',
+                'message' => $e->getMessage(),
                 'sql' => $e->getSql(),
                 'bindings' => $e->getBindings(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'User updating their profile information',
+                    'component_name' => $this->getName(),
+                ],
             ]);
 
             session()->flash(
@@ -101,9 +139,17 @@ new class extends Component {
             );
             return $this->redirectIntended(route('profile'), navigate: true);
         } catch (\Exception $e) {
-            Log::error('Unexpected User Profile Alteration Error', [
-                'error_message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+            Log::error('An unexpected error occurred', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'User updating their profile information',
+                    'component_name' => $this->getName(),
+                ],
             ]);
 
             session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
@@ -111,24 +157,69 @@ new class extends Component {
         }
     }
 
+    /**
+     * Send email verification to user.
+     */
     public function sendVerification()
     {
-        $user = auth()->user();
-
-        if ($user->hasVerifiedEmail()) {
-            $this->redirectIntended(default: route('dashboard', absolute: false));
+        if ($this->form->user->hasVerifiedEmail()) {
+            $this->redirectIntended(url()->previous(), navigate: true);
 
             return;
         }
 
-        $user->sendEmailVerificationNotification();
+        $this->form->user->sendEmailVerificationNotification();
 
-        session()->flash('status', 'verification-link-sent');
+        $this->dispatch('verification-status-sent');
     }
 }; ?>
 
-<section>
-    <div x-data="{ isEditing: $wire.entangle('isEditing') }">
+<div>
+    <section x-data="{ isEditing: $wire.entangle('isEditing') }">
+        @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail &&! auth()->user()->hasVerifiedEmail())
+            <div class="pointer-events-auto mb-4">
+                <div
+                    class="rounded-md border border-yellow-400 bg-yellow-50 p-4 shadow-md"
+                    role="alert"
+                    aria-live="polite"
+                    aria-atomic="true"
+                >
+                    <div class="flex items-center" role="presentation">
+                        <div class="flex-shrink-0" aria-hidden="true">
+                            <svg class="size-4 text-yellow-800" viewBox="0 0 20 20" fill="currentColor">
+                                <title>Ikon notifikasi informasi</title>
+                                <path
+                                    d="M10 .5a9.5 9.5 0 1 0 9.5 9.5A9.51 9.51 0 0 0 10 .5ZM9.5 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM12 15H8a1 1 0 0 1 0-2h1v-3H8a1 1 0 0 1 0-2h2a1 1 0 0 1 1 1v4h1a1 1 0 0 1 0 2Z"
+                                />
+                            </svg>
+                        </div>
+                        <div
+                            x-data="{ show: false }"
+                            x-on:verification-status-sent.window="show = true"
+                            class="ml-3 flex flex-col items-start gap-2"
+                        >
+                            <p role="heading" aria-level="2" class="text-sm tracking-tight text-yellow-800">
+                                <strong>Perhatian! Akun Anda belum ter-aktivasi.</strong>
+                                Silakan aktivasi akun Anda terlebih dahulu sebelum mulai berbelanja. Cek email Anda
+                                untuk tautan aktivasi atau
+                                <button type="button" class="font-bold underline" wire:click.prevent="sendVerification">
+                                    klik di sini
+                                </button>
+                                untuk mengirim ulang.
+                            </p>
+                            <span
+                                x-show="show"
+                                x-transition.opacity
+                                class="text-sm font-medium tracking-tight text-green-600"
+                            >
+                                Tautan verifikasi baru telah dikirim ke alamat email Anda.
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        @endif
+
         <form wire:submit="updateProfileInformation" class="gap-8">
             <fieldset>
                 <legend class="flex w-full flex-col pb-4">
@@ -169,59 +260,13 @@ new class extends Component {
                             x-bind:disabled="!isEditing"
                         />
                         <x-form.input-error class="mt-2" :messages="$errors->get('form.email')" />
-
-                        @if (auth()->user() instanceof \Illuminate\Contracts\Auth\MustVerifyEmail &&! auth()->user()->hasVerifiedEmail())
-                            <div class="mt-2">
-                                <div class="inline-flex items-center">
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 24 24"
-                                        fill="currentColor"
-                                        class="me-1 size-4 text-red-500"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                    <p class="text-sm tracking-tight text-red-500">
-                                        Email Anda belum diverifikasi,
-                                        <button
-                                            wire:click.prevent="sendVerification"
-                                            class="ms-0.5 text-sm text-black/70 underline transition-colors hover:text-black focus:outline-none"
-                                        >
-                                            Klik disini untuk mengirim ulang email verifikasi
-                                        </button>
-                                    </p>
-                                </div>
-
-                                @if (session('status') === 'verification-link-sent')
-                                    <div class="mt-2 inline-flex items-center">
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 24 24"
-                                            fill="currentColor"
-                                            class="me-1 size-4 text-green-600"
-                                        >
-                                            <path
-                                                fill-rule="evenodd"
-                                                d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z"
-                                                clip-rule="evenodd"
-                                            />
-                                        </svg>
-                                        <p class="text-sm font-medium tracking-tight text-green-600">
-                                            Link verifikasi baru telah dikirim pada email Anda.
-                                        </p>
-                                    </div>
-                                @endif
-                            </div>
-                        @endif
                     </div>
                     <div>
                         <x-form.input-label for="phone" value="Nomor Telefon" class="mb-1" />
                         <div class="relative">
-                            <div class="absolute left-0 top-1/2 flex -translate-y-1/2 items-center pl-4">
+                            <div
+                                class="absolute left-0 top-1/2 flex -translate-y-1/2 items-center border-r border-r-neutral-300 pl-4"
+                            >
                                 <span
                                     aria-hidden="true"
                                     class="me-4 flex h-4 w-6 flex-col overflow-hidden rounded-sm border border-neutral-300"
@@ -229,28 +274,21 @@ new class extends Component {
                                     <div class="h-1/2 w-full bg-red-600"></div>
                                     <div class="h-1/2 w-full bg-white"></div>
                                 </span>
-                                <span
-                                    aria-label="Kode Negara Indonesia"
-                                    class="mb-[1px] border-l border-neutral-300 px-2 text-sm text-black"
-                                >
-                                    +62
-                                </span>
                             </div>
                             <x-form.input
-                                wire:model.lazy.lazy="form.phone"
+                                wire:model.lazy="form.phone"
                                 id="phone"
-                                class="block w-full ps-24"
+                                class="block w-full ps-16"
                                 type="tel"
                                 name="phone"
-                                placeholder="8XX-XXXX-XXXX"
+                                placeholder="08XX-XXXX-XXXX"
                                 minlength="10"
                                 maxlength="15"
                                 inputmode="numeric"
                                 autocomplete="tel-national"
-                                x-on:input="$el.value = $el.value.replace(/^0+/, '')"
-                                x-mask="999-9999-9999"
-                                :hasError="$errors->has('form.phone')"
+                                x-mask="0999-9999-9999"
                                 required
+                                :hasError="$errors->has('form.phone')"
                                 x-bind:disabled="!isEditing"
                             />
                         </div>
@@ -295,8 +333,19 @@ new class extends Component {
                                         class="inline-flex w-full items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-tight text-black transition hover:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:cursor-not-allowed disabled:opacity-50"
                                         disabled
                                     >
-                                        <span class="text-sm font-medium capitalize tracking-tight text-black">
+                                        <span
+                                            wire:loading.remove
+                                            wire:target="handleComboboxChange"
+                                            class="text-sm font-medium capitalize tracking-tight text-black"
+                                        >
                                             Silakan pilih provinsi anda terlebih dahulu
+                                        </span>
+                                        <span
+                                            wire:loading
+                                            wire:target="handleComboboxChange"
+                                            class="text-sm font-medium capitalize tracking-tight text-black"
+                                        >
+                                            Sedang diproses...
                                         </span>
                                         <svg
                                             xmlns="http://www.w3.org/2000/svg"
@@ -338,7 +387,7 @@ new class extends Component {
                                     class="inline-flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-tight text-black opacity-50 shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                                 >
                                     <span class="text-sm font-normal capitalize text-black">
-                                        {{ $form->city ? auth()->user()->city->province->name : 'Silakan Pilih Provinsi' }}
+                                        {{ auth()->user()->city ? auth()->user()->city->province->name : 'Silakan Pilih Provinsi' }}
                                     </span>
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
@@ -364,7 +413,7 @@ new class extends Component {
                                     class="inline-flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-tight text-black opacity-50 shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
                                 >
                                     <span class="text-sm font-normal capitalize text-black">
-                                        {{ $form->city ? auth()->user()->city->name : 'Silakan Pilih Kabupaten/Kota' }}
+                                        {{ auth()->user()->city ? auth()->user()->city->name : 'Silakan Pilih Kabupaten/Kota' }}
                                     </span>
                                     <svg
                                         xmlns="http://www.w3.org/2000/svg"
@@ -405,7 +454,7 @@ new class extends Component {
                         <x-form.input
                             wire:model.lazy="form.postalCode"
                             id="postal-code"
-                            class="block w-full"
+                            class="block w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                             type="number"
                             name="postal-code"
                             placeholder="Isikan kode pos anda disini..."
@@ -465,5 +514,5 @@ new class extends Component {
                 </div>
             </template>
         @endcan
-    </div>
-</section>
+    </section>
+</div>
