@@ -14,7 +14,7 @@ Route::middleware(['auth', 'role:user'])->group(function () {
 
     Route::get('/keranjang-belanja', [CartController::class, 'index'])->name('cart');
 
-    Route::get('/checkout', [CheckoutController::class, 'index'])->name('checkout');
+    Route::get('/checkout', [CheckoutController::class, 'index'])->middleware('verified')->name('checkout');
 
     Route::prefix('pesanan')->name('orders.')->middleware('order_ownership_check')->group(function () {
         Route::get('/', [OrderController::class, 'index'])->name('index');
