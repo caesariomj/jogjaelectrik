@@ -14,8 +14,10 @@ class UpdatePasswordForm extends Form
     #[Validate]
     public string $currentPassword = '';
 
+    #[Validate]
     public string $password = '';
 
+    #[Validate]
     public string $passwordConfirmation = '';
 
     public function rules()

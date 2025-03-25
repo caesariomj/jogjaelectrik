@@ -6,6 +6,7 @@ use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
 use Livewire\Volt\Component;
 
 new class extends Component {
@@ -13,11 +14,28 @@ new class extends Component {
 
     public bool $isEditing = false;
 
-    public function mount()
+    public function mount(): void
     {
         $this->form->setUser(auth()->user());
     }
 
+    /**
+     * Lazy loading that displays the user update password skeleton.
+     */
+    public function placeholder(): View
+    {
+        return view('components.skeleton.user-update-password');
+    }
+
+    /**
+     * Update user password.
+     *
+     * @return  void
+     *
+     * @throws  AuthorizationException if the user is not authorized to update the user password.
+     * @throws  QueryException if a database query error occurred.
+     * @throws  \Exception if an unexpected error occurred.
+     */
     public function updatePassword()
     {
         if (! $this->isEditing) {
@@ -41,10 +59,19 @@ new class extends Component {
             session()->flash('error', $e->getMessage());
             return $this->redirectIntended(route('setting'), navigate: true);
         } catch (QueryException $e) {
-            Log::error('Database Error During User Password Alteration', [
-                'error_message' => $e->getMessage(),
+            Log::error('Database query error occurred', [
+                'error_type' => 'QueryException',
+                'message' => $e->getMessage(),
                 'sql' => $e->getSql(),
                 'bindings' => $e->getBindings(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'User updating their password',
+                    'component_name' => $this->getName(),
+                ],
             ]);
 
             session()->flash(
@@ -53,9 +80,17 @@ new class extends Component {
             );
             return $this->redirectIntended(route('setting'), navigate: true);
         } catch (\Exception $e) {
-            Log::error('Unexpected User Password Alteration Error', [
-                'error_message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
+            Log::error('An unexpected error occurred', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'file' => $e->getFile(),
+                'line' => $e->getLine(),
+                'url' => request()->fullUrl(),
+                'user_id' => auth()->id(),
+                'context' => [
+                    'operation' => 'User updating their password',
+                    'component_name' => $this->getName(),
+                ],
             ]);
 
             session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
@@ -64,8 +99,8 @@ new class extends Component {
     }
 }; ?>
 
-<section>
-    <div x-data="{ isEditing: $wire.entangle('isEditing') }">
+<div>
+    <section x-data="{ isEditing: $wire.entangle('isEditing') }">
         <form wire:submit="updatePassword" class="gap-8">
             <fieldset>
                 <legend class="flex w-full flex-col pb-4">
@@ -167,5 +202,5 @@ new class extends Component {
                 </div>
             </template>
         @endcan
-    </div>
-</section>
+    </section>
+</div>
