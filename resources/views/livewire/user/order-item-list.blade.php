@@ -783,7 +783,7 @@ new class extends Component {
                 wire:target="status, search, resetSearch"
             >
                 <header class="mb-4 border-b border-neutral-300 p-4">
-                    <div class="flex flex-col gap-2">
+                    <div class="mt-2 flex flex-col gap-2 md:mt-0">
                         <h2
                             class="inline-flex flex-col items-start gap-1.5 text-sm font-normal tracking-tight text-black/70 md:flex-row md:items-center"
                         >
