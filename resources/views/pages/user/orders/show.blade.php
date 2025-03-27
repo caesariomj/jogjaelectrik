@@ -1,12 +1,12 @@
 @extends('layouts.app')
 
-@section('title', 'Pesanan ' . $order->order_number)
+@section('title', 'Detail Pesanan')
 
 @section('content')
-    <section class="flex flex-row gap-6 p-4 md:p-6">
+    <section class="container mx-auto flex max-w-md flex-row gap-6 p-6 md:max-w-[96rem] md:p-12">
         <x-user.sidebar />
         <section class="w-full md:w-5/6">
-            <header class="mb-4 flex items-start">
+            <header class="flex items-start">
                 <x-common.button
                     :href="route('orders.index')"
                     variant="secondary"
@@ -25,9 +25,9 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
                     </svg>
                 </x-common.button>
-                <h1 class="leading-none text-black">Detail Pesanan &mdash; {{ $order->order_number }}</h1>
+                <h1 class="leading-none text-black">Detail Pesanan</h1>
             </header>
-            <section class="mb-4">
+            <section class="mt-4">
                 <h2 class="mb-2 text-2xl text-black">Informasi Utama Pesanan</h2>
                 <dl class="grid grid-cols-1">
                     <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
@@ -173,7 +173,7 @@
             </section>
 
             @if ($order->payment()->exists())
-                <section class="mb-4">
+                <section class="mt-4">
                     <h2 class="mb-2 text-2xl text-black">Informasi Pembayaran</h2>
                     <dl class="grid grid-cols-1">
                         @if ($order->payment->status === 'unpaid')
@@ -290,7 +290,7 @@
             @endif
 
             @if ($order->payment->status === 'refunded' && $order->payment->refund()->exists())
-                <section class="mb-4">
+                <section class="mt-4">
                     <h2 class="mb-2 text-2xl text-black">Informasi Refund</h2>
                     <dl class="grid grid-cols-1">
                         <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
@@ -342,7 +342,7 @@
                 </section>
             @endif
 
-            <section class="mb-4">
+            <section class="mt-4">
                 <h2 class="mb-2 text-2xl text-black">Informasi Pengiriman</h2>
                 <dl class="grid grid-cols-1">
                     <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
@@ -386,7 +386,7 @@
                     </div>
                 </dl>
             </section>
-            <section class="mb-4">
+            <section class="mt-4">
                 <h2 class="mb-2 text-2xl text-black">Rincian Produk</h2>
                 <ul class="mb-8 space-y-4 py-4">
                     @foreach ($order->details as $item)
@@ -437,6 +437,11 @@
                     @endforeach
                 </ul>
             </section>
+            <div class="mt-4 flex flex-col justify-end gap-4 md:flex-row">
+                <x-common.button :href="route('orders.index')" variant="secondary" wire:navigate>
+                    Kembali
+                </x-common.button>
+            </div>
         </section>
     </section>
 @endsection
