@@ -15,7 +15,7 @@ class VerifyEmail extends LaravelVerifyEmail
     protected function buildMailMessage($url): MailMessage
     {
         return (new MailMessage)
-            ->subject('Verify Email Address')
+            ->subject('Verifikasi Alamat Email')
             ->greeting('Halo !')
             ->line('Silakan klik tombol dibawah ini untuk memverifikasi akun Anda.')
             ->action('Verifikasi Alamat Email', $url)
