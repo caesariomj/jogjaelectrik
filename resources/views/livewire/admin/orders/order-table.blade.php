@@ -1516,7 +1516,7 @@ new class extends Component {
                                                     Jika pelanggan telah melakukan pembayaran, Anda perlu memproses
                                                     refund melalui menu
                                                     <a
-                                                        href="#"
+                                                        href="{{ route('admin.refunds.index') }}"
                                                         class="underline transition-colors hover:text-primary"
                                                         wire:navigate
                                                     >
