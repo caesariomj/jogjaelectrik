@@ -21,7 +21,7 @@ Route::middleware(['auth', 'admin_page_access'])->prefix('admin')->name('admin.'
         Route::get('/{orderNumber}/detail', [OrderController::class, 'show'])->name('show');
     });
 
-    Route::prefix('manajemen-refund')->name('refunds.')->group(function () {
+    Route::prefix('permintaan-refund')->name('refunds.')->group(function () {
         Route::get('/', [RefundController::class, 'index'])->name('index');
         Route::get('/{id}/detail', [RefundController::class, 'show'])->name('show');
     });
