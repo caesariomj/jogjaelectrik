@@ -134,7 +134,17 @@ new #[Layout('layouts.auth')] class extends Component {
             @endif
         </div>
         <div class="mt-8 flex flex-col items-center justify-end gap-y-4">
-            <x-common.button type="submit" variant="primary" class="w-full">Masuk</x-common.button>
+            <x-common.button type="submit" variant="primary" class="w-full">
+                <span wire:loading.remove wire:target="login">Masuk</span>
+                <div
+                    class="ms-1 inline-block size-4 animate-spin rounded-full border-[3px] border-current border-t-transparent"
+                    role="status"
+                    aria-label="loading"
+                    wire:loading
+                    wire:target="login"
+                ></div>
+                <span wire:loading wire:target="login">Sedang Diproses...</span>
+            </x-common.button>
             <p class="text-center text-sm tracking-tight text-black/70">
                 Belum mempunyai akun? Silakan klik
                 <a href="{{ route('register') }}" class="font-medium text-black underline" wire:navigate>disini</a>
