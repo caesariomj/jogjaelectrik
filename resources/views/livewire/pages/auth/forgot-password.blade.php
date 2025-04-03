@@ -96,7 +96,7 @@ new #[Layout('layouts.auth')] class extends Component {
         <div>
             <x-form.input-label for="email" value="Email" />
             <x-form.input
-                wire:model="email"
+                wire:model.lazy="email"
                 id="email"
                 class="mt-1 block w-full"
                 type="email"
