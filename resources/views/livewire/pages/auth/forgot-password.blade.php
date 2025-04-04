@@ -71,7 +71,7 @@ new #[Layout('layouts.auth')] class extends Component {
 
     @if (session('status'))
         <div
-            class="mt-3 flex items-center gap-x-2 rounded-lg border border-teal-200 bg-teal-100 p-4 text-sm text-teal-800"
+            class="mt-3 flex items-center gap-x-2 rounded-lg border border-teal-200 bg-teal-100 p-4 text-sm font-medium tracking-tight text-teal-800"
             role="alert"
             tabindex="-1"
         >
