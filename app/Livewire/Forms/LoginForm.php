@@ -12,14 +12,41 @@ use Livewire\Form;
 
 class LoginForm extends Form
 {
-    #[Validate('required|string|email')]
+    #[Validate]
     public string $email = '';
 
-    #[Validate('required|string')]
+    #[Validate]
     public string $password = '';
 
-    #[Validate('boolean')]
+    #[Validate]
     public bool $remember = false;
+
+    protected function rules()
+    {
+        return [
+            'email' => [
+                'required',
+                'string',
+                'email',
+            ],
+            'password' => [
+                'required',
+                'string',
+            ],
+            'remember' => [
+                'boolean',
+            ],
+        ];
+    }
+
+    protected function validationAttributes()
+    {
+        return [
+            'email' => 'Email',
+            'password' => 'Password',
+            'remember' => 'Ingat saya',
+        ];
+    }
 
     /**
      * Attempt to authenticate the request's credentials.
