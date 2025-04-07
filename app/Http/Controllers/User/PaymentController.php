@@ -28,6 +28,7 @@ class PaymentController extends Controller
                 'payments.updated_at',
                 'refunds.status',
                 'refunds.rejection_reason',
+                'refunds.created_at as refund_created_at',
                 'refunds.approved_at',
                 'refunds.succeeded_at',
             ]
@@ -49,6 +50,7 @@ class PaymentController extends Controller
             'refund' => (object) [
                 'status' => $payment->status,
                 'rejection_reason' => $payment->rejection_reason,
+                'created_at' => $payment->refund_created_at,
                 'approved_at' => $payment->approved_at,
                 'succeeded_at' => $payment->succeeded_at,
             ],
