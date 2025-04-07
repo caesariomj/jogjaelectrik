@@ -28,6 +28,16 @@ new class extends Component {
     }
 
     /**
+     * Reset / delete user input after pressing cancel button.
+     */
+    public function resetForm(): void
+    {
+        $this->form->reset('currentPassword', 'password', 'passwordConfirmation');
+
+        $this->form->resetErrorBag();
+    }
+
+    /**
      * Update user password.
      *
      * @return  void
@@ -110,49 +120,286 @@ new class extends Component {
                     </p>
                 </legend>
                 <div class="grid grid-cols-1 gap-4 pb-8 pt-4 md:grid-cols-2">
-                    <div class="md:col-span-2">
+                    <div x-data="{ showPassword: false }" class="md:col-span-2">
                         <x-form.input-label for="current-password" value="Password saat ini" />
-                        <x-form.input
-                            wire:model.lazy="form.currentPassword"
-                            id="current-password"
-                            name="current-password"
-                            type="password"
-                            class="mt-1 block w-full"
-                            placeholder="Password saat ini..."
-                            autocomplete="current-password"
-                            :hasError="$errors->has('form.currentPassword')"
-                            x-bind:disabled="!isEditing"
-                        />
+                        <div class="relative">
+                            <x-form.input
+                                wire:model.lazy="form.currentPassword"
+                                id="current-password"
+                                name="current-password"
+                                x-bind:type="showPassword ? 'text' : 'password'"
+                                class="mt-1 block w-full"
+                                placeholder="Password saat ini..."
+                                autocomplete="current-password"
+                                :hasError="$errors->has('form.currentPassword')"
+                                x-bind:disabled="!isEditing"
+                            />
+                            <button
+                                type="button"
+                                class="absolute inset-y-0 end-4 disabled:cursor-not-allowed disabled:opacity-50"
+                                tabindex="-1"
+                                x-on:click="showPassword = ! showPassword"
+                                x-bind:disabled="!isEditing"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.8"
+                                    stroke="currentColor"
+                                    class="size-5 shrink-0 text-black/70"
+                                >
+                                    <path
+                                        x-show="!showPassword"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+                                    />
+                                    <path
+                                        x-show="!showPassword"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                                    />
+                                    <path
+                                        x-show="showPassword"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
                         <x-form.input-error :messages="$errors->get('form.currentPassword')" class="mt-2" />
                     </div>
-                    <div class="md:col-span-2">
+                    <div
+                        x-data="{
+                            show: false,
+                            password: '',
+                            showPassword: false,
+
+                            validPasswordLength() {
+                                return this.password.length >= 8
+                            },
+
+                            validPasswordHasUpperAndLowerCase() {
+                                return /[a-z]/.test(this.password) && /[A-Z]/.test(this.password)
+                            },
+
+                            validPasswordHasNumber() {
+                                return /\d/.test(this.password)
+                            },
+                        }"
+                        class="md:col-span-2"
+                    >
+                        <div
+                            x-show="show"
+                            class="mb-4 rounded-lg border border-neutral-300 bg-white p-4 text-sm"
+                            role="alert"
+                            tabindex="-1"
+                            aria-labelledby="password-requirement"
+                            x-cloak
+                        >
+                            <p id="password-requirement" class="text-sm tracking-tight text-black">
+                                Pastikan password akun Anda sudah memenuhi syarat berikut:
+                            </p>
+                            <ul class="mt-2 grid grid-cols-1 space-y-1">
+                                <li
+                                    class="inline-flex items-center gap-x-2 text-sm tracking-tight"
+                                    :class="{
+                                        'text-red-600' : !validPasswordLength(),
+                                        'text-teal-600' : validPasswordLength()
+                                    }"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="currentColor"
+                                        class="size-4 shrink-0"
+                                    >
+                                        <path
+                                            x-show="! validPasswordLength()"
+                                            fill-rule="evenodd"
+                                            d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 1 0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06 12l1.72-1.72a.75.75 0 1 0-1.06-1.06L12 10.94l-1.72-1.72Z"
+                                            clip-rule="evenodd"
+                                            x-cloak
+                                        />
+                                        <path
+                                            x-show="validPasswordLength()"
+                                            fill-rule="evenodd"
+                                            d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z"
+                                            clip-rule="evenodd"
+                                            x-cloak
+                                        />
+                                    </svg>
+                                    Minimal 8 karakter
+                                </li>
+                                <li
+                                    class="inline-flex items-center gap-x-2 text-sm tracking-tight"
+                                    :class="{
+                                        'text-red-600' : !validPasswordHasUpperAndLowerCase(),
+                                        'text-teal-600' : validPasswordHasUpperAndLowerCase()
+                                    }"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="currentColor"
+                                        class="size-4 shrink-0"
+                                    >
+                                        <path
+                                            x-show="! validPasswordHasUpperAndLowerCase()"
+                                            fill-rule="evenodd"
+                                            d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 1 0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06 12l1.72-1.72a.75.75 0 1 0-1.06-1.06L12 10.94l-1.72-1.72Z"
+                                            clip-rule="evenodd"
+                                            x-cloak
+                                        />
+                                        <path
+                                            x-show="validPasswordHasUpperAndLowerCase()"
+                                            fill-rule="evenodd"
+                                            d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z"
+                                            clip-rule="evenodd"
+                                            x-cloak
+                                        />
+                                    </svg>
+                                    Mengandung huruf besar (A-Z) dan huruf kecil (a-z)
+                                </li>
+                                <li
+                                    class="inline-flex items-center gap-x-2 text-sm tracking-tight"
+                                    :class="{
+                                        'text-red-600' : !validPasswordHasNumber(),
+                                        'text-teal-600' : validPasswordHasNumber()
+                                    }"
+                                >
+                                    <svg
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="currentColor"
+                                        class="size-4 shrink-0"
+                                    >
+                                        <path
+                                            x-show="! validPasswordHasNumber()"
+                                            fill-rule="evenodd"
+                                            d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25Zm-1.72 6.97a.75.75 0 1 0-1.06 1.06L10.94 12l-1.72 1.72a.75.75 0 1 0 1.06 1.06L12 13.06l1.72 1.72a.75.75 0 1 0 1.06-1.06L13.06 12l1.72-1.72a.75.75 0 1 0-1.06-1.06L12 10.94l-1.72-1.72Z"
+                                            clip-rule="evenodd"
+                                            x-cloak
+                                        />
+                                        <path
+                                            x-show="validPasswordHasNumber()"
+                                            fill-rule="evenodd"
+                                            d="M2.25 12c0-5.385 4.365-9.75 9.75-9.75s9.75 4.365 9.75 9.75-4.365 9.75-9.75 9.75S2.25 17.385 2.25 12Zm13.36-1.814a.75.75 0 1 0-1.22-.872l-3.236 4.53L9.53 12.22a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.14-.094l3.75-5.25Z"
+                                            clip-rule="evenodd"
+                                            x-cloak
+                                        />
+                                    </svg>
+                                    Mengandung setidaknya satu angka (0-9)
+                                </li>
+                            </ul>
+                        </div>
                         <x-form.input-label for="password" value="Password baru" />
-                        <x-form.input
-                            wire:model.lazy="form.password"
-                            id="password"
-                            name="password"
-                            type="password"
-                            class="mt-1 block w-full"
-                            placeholder="Password baru..."
-                            autocomplete="new-password"
-                            :hasError="$errors->has('form.password')"
-                            x-bind:disabled="!isEditing"
-                        />
+                        <div class="relative">
+                            <x-form.input
+                                wire:model.lazy="form.password"
+                                id="password"
+                                name="password"
+                                x-bind:type="showPassword ? 'text' : 'password'"
+                                class="mt-1 block w-full"
+                                placeholder="Password baru..."
+                                autocomplete="new-password"
+                                x-model="password"
+                                x-on:focus="show = true"
+                                x-on:blur="show = false"
+                                :hasError="$errors->has('form.password')"
+                                x-bind:disabled="!isEditing"
+                            />
+                            <button
+                                type="button"
+                                class="absolute inset-y-0 end-4 disabled:cursor-not-allowed disabled:opacity-50"
+                                tabindex="-1"
+                                x-on:click="showPassword = ! showPassword"
+                                x-bind:disabled="!isEditing"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.8"
+                                    stroke="currentColor"
+                                    class="size-5 shrink-0 text-black/70"
+                                >
+                                    <path
+                                        x-show="!showPassword"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+                                    />
+                                    <path
+                                        x-show="!showPassword"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                                    />
+                                    <path
+                                        x-show="showPassword"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
                         <x-form.input-error :messages="$errors->get('form.password')" class="mt-2" />
                     </div>
-                    <div class="md:col-span-2">
+                    <div x-data="{ showPassword: false }" class="md:col-span-2">
                         <x-form.input-label for="password-confirmation" value="Konfirmasi password baru" />
-                        <x-form.input
-                            wire:model.lazy="form.passwordConfirmation"
-                            id="password-confirmation"
-                            name="password-confirmation"
-                            type="password"
-                            class="mt-1 block w-full"
-                            placeholder="Konfirmasi password baru..."
-                            autocomplete="new-password"
-                            :hasError="$errors->has('form.passwordConfirmation')"
-                            x-bind:disabled="!isEditing"
-                        />
+                        <div class="relative">
+                            <x-form.input
+                                wire:model.lazy="form.passwordConfirmation"
+                                id="password-confirmation"
+                                name="password-confirmation"
+                                x-bind:type="showPassword ? 'text' : 'password'"
+                                class="mt-1 block w-full"
+                                placeholder="Konfirmasi password baru..."
+                                autocomplete="new-password"
+                                :hasError="$errors->has('form.passwordConfirmation')"
+                                x-bind:disabled="!isEditing"
+                            />
+                            <button
+                                type="button"
+                                class="absolute inset-y-0 end-4 disabled:cursor-not-allowed disabled:opacity-50"
+                                tabindex="-1"
+                                x-on:click="showPassword = ! showPassword"
+                                x-bind:disabled="!isEditing"
+                            >
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke-width="1.8"
+                                    stroke="currentColor"
+                                    class="size-5 shrink-0 text-black/70"
+                                >
+                                    <path
+                                        x-show="!showPassword"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+                                    />
+                                    <path
+                                        x-show="!showPassword"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z"
+                                    />
+                                    <path
+                                        x-show="showPassword"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
                         <x-form.input-error :messages="$errors->get('form.passwordConfirmation')" class="mt-2" />
                     </div>
                 </div>
@@ -164,7 +411,7 @@ new class extends Component {
                         <x-common.button
                             variant="secondary"
                             class="w-full md:w-fit"
-                            x-on:click="isEditing = false"
+                            x-on:click="isEditing = false; $wire.resetForm()"
                             wire:loading.class="opacity-50 !pointers-event-none !cursor-not-allowed hover:!bg-neutral-100"
                             wire:target="updatePassword"
                         >
