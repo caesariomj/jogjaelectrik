@@ -9,9 +9,9 @@ use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
 Route::middleware(['auth', 'role:user'])->group(function () {
-    Route::get('/profil-saya', [ProfileController::class, 'index'])->middleware('password.confirm')->name('profile');
+    Route::get('/profil-saya', [ProfileController::class, 'index'])->name('profile');
 
-    Route::get('/pengaturan-akun', [ProfileController::class, 'setting'])->name('setting');
+    Route::get('/pengaturan-akun', [ProfileController::class, 'setting'])->middleware('password.confirm')->name('setting');
 
     Route::get('/keranjang-belanja', [CartController::class, 'index'])->name('cart');
 
