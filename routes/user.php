@@ -3,12 +3,13 @@
 use App\Http\Controllers\User\CartController;
 use App\Http\Controllers\User\CheckoutController;
 use App\Http\Controllers\User\OrderController;
+use App\Http\Controllers\User\PaymentController;
 use App\Http\Controllers\User\ProfileController;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
 Route::middleware(['auth', 'role:user'])->group(function () {
-    Route::get('/profil-saya', [ProfileController::class, 'index'])->name('profile');
+    Route::get('/profil-saya', [ProfileController::class, 'index'])->middleware('password.confirm')->name('profile');
 
     Route::get('/pengaturan-akun', [ProfileController::class, 'setting'])->name('setting');
 
@@ -22,5 +23,11 @@ Route::middleware(['auth', 'role:user'])->group(function () {
         Route::get('{orderNumber}/detail', [OrderController::class, 'show'])->name('show');
 
         Volt::route('/berhasil/{orderNumber?}', 'pages.user.order-success')->name('success');
+    });
+
+    Route::prefix('riwayat-transaksi')->name('transactions.')->group(function () {
+        Route::get('/', [PaymentController::class, 'index'])->name('index');
+
+        Route::get('{id}/detail', [PaymentController::class, 'show'])->name('show');
     });
 });
