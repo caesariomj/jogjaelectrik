@@ -74,7 +74,7 @@ Route::middleware(['auth', 'admin_page_access'])->prefix('admin')->name('admin.'
         Route::get('/laporan-penjualan', [ReportController::class, 'sales'])->name('sales');
     });
 
-    Route::get('/profil-saya', [ProfileController::class, 'index'])->name('profile');
+    Route::get('/profil-saya', [ProfileController::class, 'index'])->middleware('password.confirm')->name('profile');
 
     Route::get('/pengaturan-akun', [ProfileController::class, 'setting'])->name('setting');
 });
