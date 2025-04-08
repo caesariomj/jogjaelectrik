@@ -21,6 +21,9 @@ class RegisterForm extends Form
     #[Validate]
     public string $password_confirmation = '';
 
+    #[Validate]
+    public bool $accept_terms_and_conditions = false;
+
     protected function rules()
     {
         return [
@@ -44,6 +47,10 @@ class RegisterForm extends Form
                 'confirmed',
                 Rules\Password::defaults(),
             ],
+            'accept_terms_and_conditions' => [
+                'boolean',
+                'accepted',
+            ],
         ];
     }
 
@@ -54,6 +61,7 @@ class RegisterForm extends Form
             'email' => 'Email',
             'password' => 'Password',
             'password_confirmation' => 'Konfirmasi password',
+            'accept_terms_and_conditions' => 'Syarat dan ketentuan toko',
         ];
     }
 }

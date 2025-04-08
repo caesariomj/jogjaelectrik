@@ -307,6 +307,25 @@ new #[Layout('layouts.auth')] class extends Component {
             </div>
             <x-form.input-error :messages="$errors->get('form.password_confirmation')" class="mt-2" />
         </div>
+        <div class="mt-4">
+            <div class="flex">
+                <x-form.checkbox
+                    wire:model.lazy="form.accept_terms_and_conditions"
+                    id="accept-terms-and-condition"
+                    name="accept-terms-and-condition"
+                    required
+                    :hasError="$errors->has('form.accept_terms_and_conditions')"
+                />
+                <label for="accept-terms-and-condition" class="ms-2 text-sm text-black">
+                    Saya telah membaca dan menyetujui
+                    <a href="{{ route('terms-and-conditions') }}" class="font-medium underline" target="_blank">
+                        Syarat dan Ketentuan
+                    </a>
+                    toko.
+                </label>
+            </div>
+            <x-form.input-error :messages="$errors->get('form.accept_terms_and_conditions')" class="mt-2" />
+        </div>
         <div class="mt-8 flex flex-col items-center justify-end gap-y-4">
             <x-common.button type="submit" variant="primary" class="w-full">
                 <span wire:loading.remove wire:target="register">Daftar</span>
