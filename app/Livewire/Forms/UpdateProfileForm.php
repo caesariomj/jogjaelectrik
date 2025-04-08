@@ -36,6 +36,25 @@ class UpdateProfileForm extends Form
     #[Validate]
     public ?string $postalCode = null;
 
+    /**
+     * Original properties that will be used to reset the corresponding properties.
+     */
+    public string $originalRole = '';
+
+    public string $originalName = '';
+
+    public string $originalEmail = '';
+
+    public ?string $originalPhone = null;
+
+    public ?int $originalProvince = null;
+
+    public ?int $originalCity = null;
+
+    public ?string $originalAddress = null;
+
+    public ?string $originalPostalCode = null;
+
     protected function rules()
     {
         return [
@@ -107,6 +126,23 @@ class UpdateProfileForm extends Form
             $this->city = $user->city_id ? $user->city_id : null;
             $this->address = $user->address ? Crypt::decryptString($user->address) : null;
             $this->postalCode = $user->postal_code ? Crypt::decryptString($user->postal_code) : null;
+        }
+
+        $this->setOriginalUserState();
+    }
+
+    protected function setOriginalUserState()
+    {
+        $this->originalRole = $this->role;
+        $this->originalName = $this->name;
+        $this->originalEmail = $this->email;
+        $this->originalPhone = $this->phone;
+
+        if (! in_array($this->originalRole, ['admin', 'super_admin'])) {
+            $this->originalProvince = $this->province;
+            $this->originalCity = $this->city;
+            $this->originalAddress = $this->address;
+            $this->originalPostalCode = $this->postalCode;
         }
     }
 }

@@ -70,6 +70,23 @@ new class extends Component {
     }
 
     /**
+     * Reset / delete user input after pressing cancel button.
+     */
+    public function resetForm(): void
+    {
+        $this->form->role = $this->form->originalRole;
+        $this->form->name = $this->form->originalName;
+        $this->form->email = $this->form->originalEmail;
+        $this->form->phone = $this->form->originalPhone;
+        $this->form->province = $this->form->originalProvince;
+        $this->form->city = $this->form->originalCity;
+        $this->form->address = $this->form->originalAddress;
+        $this->form->postalCode = $this->form->originalPostalCode;
+
+        $this->form->resetErrorBag();
+    }
+
+    /**
      * Update user profile information.
      *
      * @return  void
@@ -476,7 +493,7 @@ new class extends Component {
                         <x-common.button
                             variant="secondary"
                             class="w-full md:w-fit"
-                            x-on:click="isEditing = false"
+                            x-on:click="isEditing = false; $wire.resetForm()"
                             wire:loading.class="opacity-50 !pointers-event-none !cursor-not-allowed hover:!bg-neutral-100"
                             wire:target="updateProfileInformation"
                         >
