@@ -70,10 +70,13 @@ class Refund extends Model
             ->when(in_array('payment', $relations), function ($query) {
                 $query->leftJoin('payments', 'payments.id', '=', 'refunds.payment_id');
                 $query->leftJoin('orders', 'orders.id', '=', 'payments.order_id');
+                $query->leftJoin('users', 'users.id', '=', 'orders.user_id');
                 $query->addSelect([
                     'payments.method as payment_method',
                     'orders.order_number',
                     'orders.total_amount',
+                    'orders.user_id',
+                    'users.name as user_name',
                 ]);
             });
     }

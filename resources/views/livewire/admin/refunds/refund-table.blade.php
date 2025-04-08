@@ -76,7 +76,9 @@ new class extends Component {
      */
     public function sortBy($field)
     {
-        if (! in_array($field, ['order_number', 'total_amount', 'payment_method', 'status', 'created_at'])) {
+        if (
+            ! in_array($field, ['order_number', 'user_name', 'total_amount', 'payment_method', 'status', 'created_at'])
+        ) {
             return;
         }
 
@@ -118,8 +120,6 @@ new class extends Component {
 
             DB::transaction(function () use ($refund) {
                 $result = $this->paymentService->createRefund(orderId: $refund->payment->order_id);
-
-                dd($result);
 
                 if ($result['failure_code'] === null) {
                     $refund->update([
@@ -342,6 +342,15 @@ new class extends Component {
             </x-datatable.heading>
             <x-datatable.heading
                 sortable
+                class="min-w-32"
+                :direction="$sortField === 'user_name' ? $sortDirection : null "
+                wire:click="sortBy('user_name')"
+                align="left"
+            >
+                Nama Pengguna
+            </x-datatable.heading>
+            <x-datatable.heading
+                sortable
                 class="min-w-40"
                 :direction="$sortField === 'total_amount' ? $sortDirection : null "
                 wire:click="sortBy('total_amount')"
@@ -396,6 +405,29 @@ new class extends Component {
                             wire:navigate
                         >
                             {{ $refund->order_number }}
+                            <svg
+                                class="size-3 shrink-0"
+                                xmlns="http://www.w3.org/2000/svg"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke-width="2"
+                                stroke="currentColor"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    d="m4.5 19.5 15-15m0 0H8.25m11.25 0v11.25"
+                                />
+                            </svg>
+                        </a>
+                    </x-datatable.cell>
+                    <x-datatable.cell align="left">
+                        <a
+                            href="{{ route('admin.users.show', ['id' => $refund->user_id]) }}"
+                            class="inline-flex items-center gap-x-1 text-sm font-medium tracking-tight text-black underline transition-colors hover:text-primary"
+                            wire:navigate
+                        >
+                            {{ $refund->user_name }}
                             <svg
                                 class="size-3 shrink-0"
                                 xmlns="http://www.w3.org/2000/svg"
