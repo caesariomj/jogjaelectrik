@@ -33,3 +33,13 @@ Route::match(['get', 'put', 'patch', 'delete', 'options'], '/api/xendit/webhook'
 });
 
 Route::get('/faq', [HomeController::class, 'faq'])->name('faq');
+
+Route::get('/bantuan', [HomeController::class, 'help'])->name('help');
+
+Route::get('/syarat-dan-ketentuan', [HomeController::class, 'termsAndConditions'])->name('terms-and-conditions');
+
+Route::get('/kebijakan-privasi', [HomeController::class, 'privacyPolicy'])->name('privacy-policy');
+
+Route::get('/tentang-kami', [HomeController::class, 'about'])->name('about');
+
+Route::get('/kontak-kami', [HomeController::class, 'contact'])->name('contact');
