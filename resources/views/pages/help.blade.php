@@ -1,17 +1,17 @@
 @extends('layouts.app')
 
-@section('title', 'FAQ')
+@section('title', 'Bantuan')
 
 @section('content')
     <section class="container mx-auto h-auto max-w-md p-6 md:max-w-[96rem] md:p-12">
-        <h1 class="mb-4 text-black">Pertanyaan yang Sering Diajukan</h1>
+        <h1 class="mb-4 text-black">Bantuan</h1>
         <div class="flex flex-col-reverse justify-between gap-6 md:flex-row">
-            <div class="h-full w-full text-center md:sticky md:top-40 md:w-1/2">
+            <div class="h-full w-full text-center md:sticky md:top-20 md:w-1/2">
                 <figure class="mb-6 hidden md:flex md:h-full md:justify-center">
                     <img
                         src="https://placehold.co/400"
                         class="size-72 object-cover"
-                        alt="Gambar ilustrasi halaman pertanyaan yang sering diajukan"
+                        alt="Gambar ilustrasi halaman bantuan"
                     />
                 </figure>
                 <p
@@ -19,7 +19,7 @@
                 >
                     Tidak menemukan pertanyaan yang anda cari? Anda dapat bertanya kepada kami melalui:
                 </p>
-                <x-common.button href="{{ config('business.whatsapp') }}" variant="secondary" target="_blank">
+                <x-common.button href="https://google.com" variant="secondary">
                     <svg
                         class="size-5 shrink-0 text-[#25D366]"
                         xmlns="http://www.w3.org/2000/svg"
@@ -35,7 +35,7 @@
                     WhatsApp
                 </x-common.button>
             </div>
-            <div x-data="faqAccordion(@js($faqItems))" class="w-full divide-y divide-neutral-300 md:w-1/2">
+            <div x-data="faqAccordion(@js($helpItems))" class="w-full divide-y divide-neutral-300 md:w-1/2">
                 <div class="relative mb-4">
                     <div class="pointer-events-none absolute inset-y-0 start-4 flex items-center">
                         <svg
@@ -68,7 +68,6 @@
                             item.title.toLowerCase().includes(search.toLowerCase()) ||
                                 item.content.toLowerCase().includes(search.toLowerCase())
                         "
-                        x-transition.opacity
                     >
                         <x-common.accordion>
                             <x-slot name="title">
