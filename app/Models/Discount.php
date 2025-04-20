@@ -64,9 +64,9 @@ class Discount extends Model
         return $this->hasMany(Cart::class);
     }
 
-    public function orderDiscounts(): HasMany
+    public function orders(): HasMany
     {
-        return $this->hasMany(OrderDiscount::class);
+        return $this->hasMany(Order::class);
     }
 
     /**
@@ -103,12 +103,9 @@ class Discount extends Model
             ->when($userId, function ($query) use ($userId) {
                 $query->whereNotExists(function ($subquery) use ($userId) {
                     $subquery->select(DB::raw(1))
-                        ->from('order_discounts')
-                        ->join('orders', 'orders.id', '=', 'order_discounts.order_id')
-                        ->where('order_discounts.is_used', true)
+                        ->from('orders')
                         ->where('orders.user_id', $userId)
-                        ->whereNotNull('orders.id')
-                        ->whereColumn('order_discounts.discount_id', 'discounts.id');
+                        ->whereColumn('orders.discount_id', 'discounts.id');
                 });
             });
     }

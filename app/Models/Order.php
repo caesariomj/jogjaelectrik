@@ -31,6 +31,7 @@ class Order extends Model
      */
     protected $fillable = [
         'user_id',
+        'discount_id',
         'order_number',
         'status',
         'shipping_address',
@@ -69,9 +70,9 @@ class Order extends Model
         return $this->hasMany(OrderDetail::class);
     }
 
-    public function discounts(): HasMany
+    public function discount(): BelongsTo
     {
-        return $this->hasMany(OrderDiscount::class);
+        return $this->belongsTo(Discount::class);
     }
 
     public function payment(): HasOne
