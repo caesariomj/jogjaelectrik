@@ -1831,17 +1831,15 @@ new class extends Component {
             </article>
         @empty
             <div class="rounded-xl bg-white px-8 py-16 shadow-sm">
-                <figure
+                <div
                     class="flex h-full flex-col items-center justify-center"
                     wire:loading.class="opacity-50"
                     wire:target="status,search,resetSearch,perPage"
                 >
-                    <img
-                        src="https://placehold.co/400"
-                        class="mb-6 size-72 object-cover"
-                        alt="Gambar ilustrasi pesanan tidak ditemukan"
-                    />
-                    <figcaption class="flex flex-col items-center">
+                    <div class="mb-6 size-72">
+                        {!! file_get_contents(public_path('images/illustrations/empty.svg')) !!}
+                    </div>
+                    <div class="flex flex-col items-center">
                         <h2 class="mb-3 text-center !text-2xl text-black">
                             Pesanan
 
@@ -1890,8 +1888,8 @@ new class extends Component {
 
                             akan ditampilkan disini.
                         </p>
-                    </figcaption>
-                </figure>
+                    </div>
+                </div>
             </div>
         @endforelse
         <div class="rounded-xl bg-white p-4 shadow-sm">

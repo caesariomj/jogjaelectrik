@@ -426,13 +426,11 @@ new class extends Component {
             @empty
                 <tr wire:loading.class="opacity-50" wire:target="search,sortBy,resetSearch,perPage">
                     <td class="p-4" colspan="6" align="center">
-                        <figure class="my-4 flex h-full flex-col items-center justify-center">
-                            <img
-                                src="https://placehold.co/400"
-                                class="mb-6 size-72 object-cover"
-                                alt="Gambar ilustrasi kategori tidak ditemukan"
-                            />
-                            <figcaption class="flex flex-col items-center">
+                        <div class="my-4 flex h-full flex-col items-center justify-center">
+                            <div class="mb-6 size-72">
+                                {!! file_get_contents(public_path('images/illustrations/empty.svg')) !!}
+                            </div>
+                            <div class="flex flex-col items-center">
                                 <h2 class="mb-3 text-center !text-2xl text-black">Kategori Tidak Ditemukan</h2>
                                 <p class="text-center text-base font-normal tracking-tight text-black/70">
                                     @if ($search)
@@ -446,8 +444,8 @@ new class extends Component {
                                         diatas.
                                     @endif
                                 </p>
-                            </figcaption>
-                        </figure>
+                            </div>
+                        </div>
                     </td>
                 </tr>
             @endforelse
