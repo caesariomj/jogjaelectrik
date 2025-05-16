@@ -21,6 +21,7 @@
             },
         }"
         x-init="setTimeout(() => (hasSession = false), 3000)"
+        class="bg-neutral-50"
     >
         <div class="sticky top-0 z-[3]">
             <x-common.alert />
@@ -28,14 +29,16 @@
 
         <x-admin.sidebar />
 
-        <div class="h-full w-full lg:pl-64">
+        <div class="flex min-h-screen w-full flex-col lg:pl-64">
             <livewire:layout.admin.navigation />
 
-            <x-common.breadcrumb class="px-4 pt-4 md:px-6 md:pt-6" />
+            <x-common.breadcrumb class="p-4 md:p-6" />
 
-            <main class="flex-1 p-4 md:p-6">
+            <main class="flex-1 px-4 md:px-6">
                 @yield('content', $slot ?? '')
             </main>
+
+            <x-admin.footer class="mt-auto p-4 md:p-6" />
         </div>
     </div>
 @endsection
