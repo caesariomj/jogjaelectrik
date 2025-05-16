@@ -1,20 +1,21 @@
-<footer class="bg-white shadow-[rgba(0,0,0,0.1)_0px_-10px_25px_-3px]">
+<footer class="border-t border-t-neutral-300 bg-white">
     <div
         {{ $attributes->merge(['class' => 'flex flex-col items-start justify-between gap-12 md:flex-row']) }}
     >
         <div class="flex w-full flex-col gap-12 md:w-1/3">
             <a
                 href="{{ route('home') }}"
-                class="inline-flex items-center justify-center gap-6 text-4xl font-bold leading-tight tracking-tighter text-black md:justify-start"
+                class="inline-flex items-center justify-start gap-6 text-4xl font-bold leading-tight tracking-tighter text-black"
                 wire:navigate
             >
-                <x-common.application-logo class="block h-16 w-auto fill-current text-primary" />
+                <x-common.application-logo class="block h-12 w-auto fill-current text-primary md:h-16" />
                 {{ config('app.name') }}
             </a>
             <address class="flex flex-col gap-y-3 not-italic">
                 <a
-                    href="#"
-                    class="inline-flex items-center gap-x-3 text-sm font-medium leading-tight tracking-tight text-black underline transition-colors hover:text-primary"
+                    href="{{ config('business.map_link') }}"
+                    target="_blank"
+                    class="inline-flex items-start gap-x-3 text-sm font-medium leading-tight tracking-tight text-black underline transition-colors hover:text-primary"
                 >
                     <svg
                         xmlns="http://www.w3.org/2000/svg"
@@ -35,10 +36,11 @@
                             d="M22 7v3a2 2 0 0 1-2 2a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 16 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 12 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 8 12a2.7 2.7 0 0 1-1.59-.63.7.7 0 0 0-.82 0A2.7 2.7 0 0 1 4 12a2 2 0 0 1-2-2V7"
                         />
                     </svg>
-                    Alamat
+                    {{ config('business.address') }}
                 </a>
                 <a
-                    href="#"
+                    href="{{ config('business.whatsapp') }}"
+                    target="_blank"
                     class="inline-flex items-center gap-x-3 text-sm font-medium leading-tight tracking-tight text-black underline transition-colors hover:text-primary"
                 >
                     <svg
@@ -58,10 +60,10 @@
                             d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"
                         />
                     </svg>
-                    WhatsApp
+                    {{ config('business.phone') }}
                 </a>
                 <a
-                    href="#"
+                    href="mailto:{{ config('business.email') }}"
                     class="inline-flex items-center gap-x-3 text-sm font-medium leading-tight tracking-tight text-black underline transition-colors hover:text-primary"
                 >
                     <svg
@@ -78,7 +80,7 @@
                         <rect width="20" height="16" x="2" y="4" rx="2" />
                         <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
                     </svg>
-                    Email
+                    {{ config('business.email') }}
                 </a>
             </address>
             <p class="hidden text-sm font-medium leading-tight tracking-tight text-black md:block">
@@ -93,7 +95,8 @@
                 <ul class="space-y-1.5">
                     <li>
                         <a
-                            href="#"
+                            href="{{ config('business.whatsapp') }}"
+                            target="_blank"
                             class="inline-flex items-center gap-x-2 text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
                         >
                             <svg
@@ -116,7 +119,8 @@
                     </li>
                     <li>
                         <a
-                            href="#"
+                            href="{{ config('business.facebook') }}"
+                            target="_blank"
                             class="inline-flex items-center gap-x-2 text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
                         >
                             <svg
@@ -137,7 +141,8 @@
                     </li>
                     <li>
                         <a
-                            href="#"
+                            href="{{ config('business.instagram') }}"
+                            target="_blank"
                             class="inline-flex items-center gap-x-2 text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
                         >
                             <svg
@@ -160,49 +165,45 @@
                     </li>
                 </ul>
             </nav>
-            <nav aria-label="Link Produk dan Belanja">
+            <nav aria-label="Link Produk">
                 <h2 class="mb-3 text-balance text-base font-semibold leading-tight tracking-tight text-black">
-                    Produk dan Belanja
+                    Produk
                 </h2>
                 <ul class="space-y-1.5">
                     <li>
                         <a
-                            href="#"
+                            href="{{ route('products') }}?sort=terlaris"
                             class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
+                            wire:navigate
                         >
-                            Produk Unggulan
+                            Produk Terlaris
                         </a>
                     </li>
                     <li>
                         <a
-                            href="#"
+                            href="{{ route('products') }}?sort=terbaru"
                             class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
-                        >
-                            Promo dan Diskon
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="#"
-                            class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
+                            wire:navigate
                         >
                             Produk Terbaru
                         </a>
                     </li>
                     <li>
                         <a
-                            href="#"
+                            href="{{ route('products') }}?sort=diskon"
                             class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
+                            wire:navigate
                         >
-                            Best Seller
+                            Sedang Diskon
                         </a>
                     </li>
                     @if ($primaryCategories->isNotEmpty())
                         @foreach ($primaryCategories as $category)
                             <li>
                                 <a
-                                    href="#"
+                                    href="{{ route('products.category', ['category' => $category->slug]) }}"
                                     class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
+                                    wire:navigate
                                 >
                                     {{ ucwords($category->name) }}
                                 </a>
@@ -218,8 +219,9 @@
                 <ul class="space-y-1.5">
                     <li>
                         <a
-                            href="#"
+                            href="{{ route('about') }}"
                             class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
+                            wire:navigate
                         >
                             Tentang Kami
                         </a>
@@ -233,50 +235,56 @@
                 <ul class="space-y-1.5">
                     <li>
                         <a
-                            href="#"
+                            href="{{ route('faq') }}"
                             class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
+                            wire:navigate
                         >
                             FAQ
                         </a>
                     </li>
                     <li>
                         <a
-                            href="#"
+                            href="{{ route('help') }}"
                             class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
+                            wire:navigate
+                        >
+                            Bantuan
+                        </a>
+                    </li>
+                    <li>
+                        <a
+                            href="{{ route('help') }}#cara pemesanan"
+                            class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
+                            wire:navigate
                         >
                             Cara Pemesanan
                         </a>
                     </li>
                     <li>
                         <a
-                            href="#"
+                            href="{{ route('help') }}#kebijakan pengiriman"
                             class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
-                        >
-                            Metode Pembayaran
-                        </a>
-                    </li>
-                    <li>
-                        <a
-                            href="#"
-                            class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
+                            wire:navigate
                         >
                             Kebijakan Pengiriman
                         </a>
                     </li>
                     <li>
                         <a
-                            href="#"
+                            href="{{ route('help') }}#kebijakan pengembalian barang"
                             class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
+                            wire:navigate
                         >
                             Kebijakan Pengembalian Barang
                         </a>
                     </li>
                     <li>
                         <a
-                            href="#"
+                            href="{{ route('contact') }}"
                             class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
+                            wire:navigate
                         >
-                            Hubungi Kami
+                            Kontak Kami
                         </a>
                     </li>
                 </ul>
@@ -288,16 +296,18 @@
                 <ul class="space-y-1.5">
                     <li>
                         <a
-                            href="#"
+                            href="{{ route('terms-and-conditions') }}"
                             class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
+                            wire:navigate
                         >
                             Syarat dan Ketentuan
                         </a>
                     </li>
                     <li>
                         <a
-                            href="#"
+                            href="{{ route('privacy-policy') }}"
                             class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
+                            wire:navigate
                         >
                             Kebijakan Privasi
                         </a>
@@ -310,7 +320,7 @@
                 </h2>
                 <ul class="flex flex-row flex-wrap gap-1.5">
                     @php
-                        $supportedPayments = ['qris', 'shopeepay', 'dana', 'ovo', 'linkaja', 'astrapay', 'jenius', 'bca', 'bni', 'bri', 'mandiri', 'permata', 'cimb', 'bsi', 'sampoerna', 'hana'];
+                        $supportedPayments = ['qris', 'shopeepay', 'dana', 'ovo', 'linkaja', 'jeniuspay', 'nexcash', 'astrapay', 'bca', 'bri', 'bni', 'mandiri', 'cimbniaga', 'permata', 'bsi', 'bjb', 'sampoerna', 'neobank'];
                     @endphp
 
                     @foreach ($supportedPayments as $payment)
@@ -318,6 +328,7 @@
                             <img
                                 src="{{ asset('images/logos/payments/' . $payment . '.webp') }}"
                                 alt="Logo {{ strtoupper($payment) }}"
+                                title="{{ strtoupper($payment) }}"
                                 class="h-full w-full object-contain"
                                 loading="lazy"
                             />
@@ -339,6 +350,7 @@
                             <img
                                 src="{{ asset('images/logos/shipping/' . $expedition . '.webp') }}"
                                 alt="Logo {{ strtoupper($expedition) }}"
+                                title="{{ strtoupper($expedition) }}"
                                 class="h-full w-full object-contain"
                                 loading="lazy"
                             />

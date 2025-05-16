@@ -1119,14 +1119,11 @@ new class extends Component {
                                             </x-common.button>
                                         </div>
                                     @else
-                                        <figure class="flex h-full flex-col items-center justify-center">
-                                            <img
-                                                src="https://placehold.co/400"
-                                                class="mb-6 size-72 object-cover"
-                                                alt="Gambar ilustrasi keranjang kosong"
-                                                loading="lazy"
-                                            />
-                                            <figcaption class="flex flex-col items-center">
+                                        <div class="flex h-full flex-col items-center justify-center">
+                                            <div class="mb-6 size-72">
+                                                {!! file_get_contents(public_path('images/illustrations/empty.svg')) !!}
+                                            </div>
+                                            <div class="flex flex-col items-center">
                                                 <h2 class="mb-3 text-center !text-2xl text-black">
                                                     Keranjang Belanja Anda Masih Kosong
                                                 </h2>
@@ -1154,116 +1151,14 @@ new class extends Component {
                                                         />
                                                     </svg>
                                                 </x-common.button>
-                                            </figcaption>
-                                        </figure>
+                                            </div>
+                                        </div>
                                     @endif
                                 </div>
                             </x-common.offcanvas>
                         </li>
                     @endcan
 
-                    <li>
-                        <x-common.dropdown align="right" width="72">
-                            <x-slot name="trigger">
-                                <button
-                                    type="button"
-                                    class="relative mt-1.5 rounded-full bg-white p-2 text-black transition-colors hover:bg-neutral-200"
-                                    aria-label="Buka notifikasi"
-                                >
-                                    <svg
-                                        class="size-5 shrink-0"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 24 24"
-                                        fill="none"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                    >
-                                        <path d="M10.268 21a2 2 0 0 0 3.464 0" />
-                                        <path
-                                            d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326"
-                                        />
-                                    </svg>
-                                    <span
-                                        class="absolute -end-1 -top-1 inline-flex size-5 items-center justify-center rounded-full border-2 border-white bg-red-500 p-0.5 text-xs font-semibold text-white"
-                                        aria-live="polite"
-                                    >
-                                        9
-                                    </span>
-                                </button>
-                            </x-slot>
-                            <x-slot name="content">
-                                <div
-                                    class="flex w-full flex-col items-start gap-y-1 overflow-hidden border-b border-b-neutral-300 p-4"
-                                >
-                                    <p class="text-sm font-semibold leading-none tracking-tight text-black">
-                                        Notifikasi
-                                    </p>
-                                </div>
-                                <ul class="h-full max-h-96 overflow-y-auto">
-                                    @for ($i = 0; $i < 5; $i++)
-                                        <li>
-                                            <x-common.dropdown-link
-                                                :href="route('home')"
-                                                class="justify-between"
-                                                wire:navigate
-                                            >
-                                                <div class="flex items-start gap-x-3">
-                                                    <div class="size-10 shrink-0 rounded-md bg-teal-50 p-2.5">
-                                                        <svg
-                                                            class="h-full w-full shrink-0 text-teal-500"
-                                                            xmlns="http://www.w3.org/2000/svg"
-                                                            viewBox="0 0 24 24"
-                                                            fill="none"
-                                                            stroke="currentColor"
-                                                            stroke-width="2"
-                                                            stroke-linecap="round"
-                                                            stroke-linejoin="round"
-                                                            aria-hidden="true"
-                                                        >
-                                                            <path
-                                                                d="M11 21.73a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73z"
-                                                            />
-                                                            <path d="M12 22V12" />
-                                                            <polyline points="3.29 7 12 12 20.71 7" />
-                                                            <path d="m7.5 4.27 9 5.15" />
-                                                        </svg>
-                                                    </div>
-                                                    <div class="flex flex-col items-start gap-y-1.5">
-                                                        <p
-                                                            class="text-pretty text-sm font-medium leading-none tracking-tight text-black"
-                                                        >
-                                                            Header Notifikasi Yang Cukup Panjang Lorem ipsum dolor sit
-                                                            amet.
-                                                        </p>
-                                                        <p
-                                                            class="text-pretty text-sm font-normal leading-none tracking-tight text-black/70"
-                                                        >
-                                                            Paragraf notifikasi Lorem ipsum dolor sit amet consectetur,
-                                                            adipisicing elit. Officia, exercitationem!
-                                                        </p>
-                                                    </div>
-                                                </div>
-                                                <span
-                                                    class="inline-block size-2 shrink-0 rounded-full bg-red-500"
-                                                ></span>
-                                            </x-common.dropdown-link>
-                                        </li>
-                                    @endfor
-                                </ul>
-                                <div class="-mb-1 border-t border-t-neutral-300">
-                                    <a
-                                        href="{{ route('home') }}"
-                                        class="flex w-full items-center justify-center bg-white p-4 text-sm font-medium leading-none tracking-tight text-black transition-colors hover:bg-primary-50 hover:text-primary"
-                                        wire:navigate
-                                    >
-                                        Lihat Semua
-                                    </a>
-                                </div>
-                            </x-slot>
-                        </x-common.dropdown>
-                    </li>
                     <li>
                         <x-common.dropdown align="right" width="48">
                             <x-slot name="trigger">
