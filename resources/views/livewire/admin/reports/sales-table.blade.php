@@ -84,7 +84,9 @@ new class extends Component {
                 ->user()
                 ->can('download reports')
         ) {
-            dd('oke');
+            session()->flash('error', 'Anda tidak memiliki izin untuk mengunduh laporan penjualan.');
+
+            return redirect()->route('admin.reports.sales');
         }
 
         $sales = Order::where('status', 'completed')
