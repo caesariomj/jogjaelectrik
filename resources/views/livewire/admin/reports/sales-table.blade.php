@@ -79,6 +79,14 @@ new class extends Component {
 
     public function download()
     {
+        if (
+            ! auth()
+                ->user()
+                ->can('download reports')
+        ) {
+            dd('oke');
+        }
+
         $sales = Order::where('status', 'completed')
             ->when($this->search !== '', function ($query) {
                 return $query->where('order_number', 'like', '%' . $this->search . '%');
@@ -90,7 +98,9 @@ new class extends Component {
             ->get();
 
         if ($sales->isEmpty()) {
-            return;
+            session()->flash('error', 'Data penjualan pada tahun ' . $this->year . ' tidak ditemukan.');
+
+            return redirect()->route('admin.reports.sales');
         }
 
         return $this->documentService->generateSalesReport($sales, $this->year);
@@ -113,24 +123,26 @@ new class extends Component {
                 @endfor
             </select>
         </div>
-        <x-common.button variant="primary" wire:click="download" :disabled="empty($this->sales)">
-            <svg
-                class="size-5"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-            >
-                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
-                <path d="M14 2v4a2 2 0 0 0 2 2h4" />
-                <path d="M12 18v-6" />
-                <path d="m9 15 3 3 3-3" />
-            </svg>
-            Unduh Laporan
-        </x-common.button>
+        @can('download reports')
+            <x-common.button variant="primary" wire:click="download" :disabled="empty($this->sales)">
+                <svg
+                    class="size-5"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z" />
+                    <path d="M14 2v4a2 2 0 0 0 2 2h4" />
+                    <path d="M12 18v-6" />
+                    <path d="m9 15 3 3 3-3" />
+                </svg>
+                Unduh Laporan
+            </x-common.button>
+        @endcan
     </div>
     <x-datatable.table searchable="report">
         <x-slot name="head">
@@ -211,11 +223,36 @@ new class extends Component {
                     <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="left">
                         Rp {{ formatPrice($sale->total_amount) }}
                     </x-datatable.cell>
-                    <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="left">
+                    <x-datatable.cell
+                        class="flex items-center gap-x-4 text-sm font-medium tracking-tight text-black/70"
+                        align="center"
+                    >
                         @if (str_contains($sale->payment_method, 'bank_transfer'))
-                            {{ strtoupper(str_replace('bank_transfer_', '', $sale->payment_method)) }}
+                            @php
+                                $paymentMethod = str_replace('bank_transfer_', '', $sale->payment_method);
+                            @endphp
+
+                            <img
+                                src="{{ asset('images/logos/payments/' . $paymentMethod . '.webp') }}"
+                                alt="Logo {{ strtoupper($paymentMethod) }}"
+                                title="{{ strtoupper($paymentMethod) }}"
+                                class="h-8 w-14 object-contain"
+                                loading="lazy"
+                            />
+                            {{ strtoupper($paymentMethod) }}
                         @else
-                            {{ strtoupper(str_replace('ewallet_', '', $sale->payment_method)) }}
+                            @php
+                                $paymentMethod = str_replace('ewallet_', '', $sale->payment_method);
+                            @endphp
+
+                            <img
+                                src="{{ asset('images/logos/payments/' . $paymentMethod . '.webp') }}"
+                                alt="Logo {{ strtoupper($paymentMethod) }}"
+                                title="{{ strtoupper($paymentMethod) }}"
+                                class="h-8 w-14 object-contain"
+                                loading="lazy"
+                            />
+                            {{ strtoupper($paymentMethod) }}
                         @endif
                     </x-datatable.cell>
                     <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="left">

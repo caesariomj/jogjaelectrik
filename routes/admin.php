@@ -71,7 +71,7 @@ Route::middleware(['auth', 'admin_page_access'])->prefix('admin')->name('admin.'
     });
 
     Route::name('reports.')->group(function () {
-        Route::get('/laporan-penjualan', [ReportController::class, 'sales'])->name('sales');
+        Route::get('/penjualan', [ReportController::class, 'sales'])->name('sales');
     });
 
     Route::get('/profil-saya', [ProfileController::class, 'index'])->middleware('password.confirm')->name('profile');
