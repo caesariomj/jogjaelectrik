@@ -14,7 +14,6 @@ class ReportPermissionsSeeder extends Seeder
     public function run(): void
     {
         $permissions = [
-            'view reports',
             'download reports',
         ];
 
@@ -24,7 +23,6 @@ class ReportPermissionsSeeder extends Seeder
 
         $superAdminRole = Role::findByName('super_admin');
 
-        $superAdminRole->givePermissionTo('view reports');
         $superAdminRole->givePermissionTo('download reports');
 
         $this->command->info('Report permissions successfully seeded.');
