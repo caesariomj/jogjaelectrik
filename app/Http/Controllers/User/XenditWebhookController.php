@@ -22,7 +22,7 @@ class XenditWebhookController extends Controller
     /**
      * Handle the incoming request.
      */
-    public function __invoke(Request $request)
+    public function paid(Request $request)
     {
         try {
             $invoice = $this->paymentService->getInvoice($request->id);
@@ -32,7 +32,7 @@ class XenditWebhookController extends Controller
             if (! $order) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Pesanan tidak ditemukan.',
+                    'message' => 'Pesanan dengan ID: '.$request->external_id.' tidak ditemukan.',
                 ], 404);
             }
 
@@ -109,7 +109,7 @@ class XenditWebhookController extends Controller
                 'payload' => $request->all(),
                 'trace' => $e->getTraceAsString(),
                 'context' => [
-                    'operation' => 'Processing Xendit webhook',
+                    'operation' => 'Processing Xendit paid webhook',
                     'component_name' => 'XenditWebhookController.php',
                 ],
             ]);
@@ -125,7 +125,105 @@ class XenditWebhookController extends Controller
                 'payload' => $request->all(),
                 'trace' => $e->getTraceAsString(),
                 'context' => [
-                    'operation' => 'Processing Xendit webhook',
+                    'operation' => 'Processing Xendit paid webhook',
+                    'component_name' => 'XenditWebhookController.php',
+                ],
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Terjadi kesalahan: '.$e->getMessage(),
+            ], 500);
+        }
+    }
+
+    public function refunded(Request $request)
+    {
+        try {
+            if (! str_starts_with($request->event, 'refund.')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'URL Webhook ini hanya digunakan untuk refund.',
+                ], 400);
+            }
+
+            $refund = $this->paymentService->getRefund($request->data['id']);
+
+            $order = Order::with('payment.refund')->where('order_number', $refund['reference_id'])->first();
+
+            if (! $order) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pesanan dengan nomor pesanan: '.$refund['reference_id'].' tidak ditemukan.',
+                ], 404);
+            }
+
+            if ($order->payment->refund->status !== 'approved') {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Permintaan refund pada pesanan dengan nomor pesanan: '.$refund['reference_id'].' belum diterima oleh admin.',
+                ], 400);
+            }
+
+            if ($request->data['status'] === 'SUCCEEDED') {
+                $order->payment->refund->update([
+                    'xendit_refund_id' => $refund['id'],
+                    'status' => 'succeeded',
+                    'succeeded_at' => Carbon::parse($refund['created'])->format('Y-m-d H:i:s'),
+                ]);
+
+                $responseMessage = 'Permintaan refund pada pesanan dengan nomor pesanan: '.$refund['reference_id'].' berhasil diproses.';
+            } elseif ($request->data['status'] !== 'SUCCEEDED') {
+                if ($refund['failure_code'] === 'INELIGIBLE_TRANSACTION') {
+                    $rejectionReason = 'Kami tidak dapat memproses pengembalian dana untuk transaksi ini. Silakan hubungi kami untuk bantuan lebih lanjut.';
+                } elseif ($refund['failure_code'] === 'INSUFFICIENT_BALANCE') {
+                    $rejectionReason = 'Pengembalian dana tidak dapat diproses saat ini. Silakan hubungi kami untuk bantuan lebih lanjut.';
+                } elseif ($refund['failure_code'] === 'REFUND_TEMPORARILY_UNAVAILABLE') {
+                    $rejectionReason = 'Layanan pengembalian dana sedang tidak tersedia untuk sementara. Silakan hubungi kami untuk informasi lebih lanjut.';
+                } elseif ($refund['failure_code'] === 'MAXIMUM_USER_BALANCE_EXCEEDED') {
+                    $rejectionReason = 'Kami tidak dapat memproses pengembalian dana karena batas saldo telah terlampaui. Silakan hubungi kami untuk bantuan lebih lanjut.';
+                } elseif ($refund['failure_code'] === 'INELIGIBLE_PARTIAL_REFUND_TRANSACTION') {
+                    $rejectionReason = 'Pengembalian dana sebagian tidak dapat dilakukan untuk transaksi ini. Silakan hubungi kami untuk bantuan selanjutnya.';
+                } else {
+                    $rejectionReason = 'Pengembalian dana tidak dapat diproses saat ini. Silakan hubungi kami untuk bantuan lebih lanjut.';
+                }
+
+                $order->payment->refund->update([
+                    'xendit_refund_id' => $refund['id'],
+                    'rejection_reason' => $rejectionReason,
+                ]);
+
+                $responseMessage = 'Permintaan refund pada pesanan dengan nomor pesanan: '.$refund['reference_id'].' gagal untuk diproses.';
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => $responseMessage,
+            ], 200);
+        } catch (ApiRequestException $e) {
+            Log::error('Xendit API request exception in Xendit Webhook Controller', [
+                'error_type' => 'ApiRequestException',
+                'message' => $e->getLogMessage(),
+                'payload' => $request->all(),
+                'trace' => $e->getTraceAsString(),
+                'context' => [
+                    'operation' => 'Processing Xendit refund webhook',
+                    'component_name' => 'XenditWebhookController.php',
+                ],
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => $e->getUserMessage(),
+            ], 400);
+        } catch (\Exception $e) {
+            Log::error('Xendit exception in Xendit Webhook Controller', [
+                'error_type' => 'Exception',
+                'message' => $e->getMessage(),
+                'payload' => $request->all(),
+                'trace' => $e->getTraceAsString(),
+                'context' => [
+                    'operation' => 'Processing Xendit refund webhook',
                     'component_name' => 'XenditWebhookController.php',
                 ],
             ]);
