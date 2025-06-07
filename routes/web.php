@@ -26,9 +26,11 @@ Route::get('/produk/{category}', [HomeController::class, 'products'])->where('ca
 
 Route::get('/produk/{category}/{subcategory}', [HomeController::class, 'products'])->name('products.subcategory');
 
-Route::post('/api/xendit/webhook', XenditWebhookController::class)->middleware(['validate_xendit_webhook_token', 'throttle:10,1']);
+Route::post('/api/xendit/webhook/paid', [XenditWebhookController::class, 'paid'])->middleware(['validate_xendit_webhook_token', 'throttle:10,1']);
 
-Route::match(['get', 'put', 'patch', 'delete', 'options'], '/api/xendit/webhook', function () {
+Route::post('/api/xendit/webhook/refunded', [XenditWebhookController::class, 'refunded'])->middleware(['validate_xendit_webhook_token', 'throttle:10,1']);
+
+Route::match(['get', 'put', 'patch', 'delete', 'options'], '/api/xendit/webhook/*', function () {
     abort(404);
 });
 
