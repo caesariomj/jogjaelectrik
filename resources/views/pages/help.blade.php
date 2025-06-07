@@ -6,14 +6,10 @@
     <section class="container mx-auto h-auto max-w-md p-6 md:max-w-[96rem] md:p-12">
         <h1 class="mb-4 text-black">Bantuan</h1>
         <div class="flex flex-col-reverse justify-between gap-6 md:flex-row">
-            <div class="h-full w-full text-center md:sticky md:top-20 md:w-1/2">
-                <figure class="mb-6 hidden md:flex md:h-full md:justify-center">
-                    <img
-                        src="https://placehold.co/400"
-                        class="size-72 object-cover"
-                        alt="Gambar ilustrasi halaman bantuan"
-                    />
-                </figure>
+            <div class="relative h-full w-full text-center md:sticky md:top-20 md:w-1/2">
+                <div class="mx-auto mb-6 h-auto w-[28rem]">
+                    {!! file_get_contents(public_path('images/illustrations/help.svg')) !!}
+                </div>
                 <p
                     class="mx-auto mb-6 w-full max-w-sm text-pretty text-sm font-medium tracking-tight text-black lg:text-base"
                 >

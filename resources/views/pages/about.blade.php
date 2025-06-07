@@ -40,12 +40,10 @@
                 .
             </p>
         </div>
-        <figure class="hidden md:flex md:w-1/2 md:items-center md:justify-center">
-            <img
-                src="https://placehold.co/400"
-                class="size-72 object-cover"
-                alt="Gambar ilustrasi halaman tentang kami"
-            />
-        </figure>
+        <div class="hidden md:flex md:w-1/2 md:items-center md:justify-center">
+            <div class="mx-auto mb-6 h-auto w-[28rem]">
+                {!! file_get_contents(public_path('images/illustrations/help.svg')) !!}
+            </div>
+        </div>
     </section>
 @endsection
