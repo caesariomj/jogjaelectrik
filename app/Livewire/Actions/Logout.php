@@ -16,5 +16,7 @@ class Logout
 
         Session::invalidate();
         Session::regenerateToken();
+
+        Session::flash('success', 'Anda berhasil keluar.');
     }
 }
