@@ -1,6 +1,7 @@
 import './bootstrap';
 
 import bannerCarouselComponent from './components/bannerCarousel';
+import chartComponent from './components/chart';
 import comboboxComponent from './components/combobox';
 import datepickerComponent from './components/datepicker';
 import dropdownComponent from './components/dropdown';
@@ -12,6 +13,7 @@ import productSliderComponent from './components/productSlider';
 
 document.addEventListener('alpine:init', () => {
     Alpine.data('bannerCarousel', bannerCarouselComponent);
+    Alpine.data('chart', chartComponent);
     Alpine.data('combobox', comboboxComponent);
     Alpine.data('dropdown', dropdownComponent);
     Alpine.data('faqAccordion', faqAccordionComponent);
