@@ -74,7 +74,7 @@ class PaymentService
 
         if ($order->discount_amount) {
             $discountAmount = [
-                'type' => 'Diskon '.ucwords($order->discounts()->first()->discount->name),
+                'type' => 'Diskon '.ucwords($order->discount->name),
                 'value' => (float) $order->discount_amount,
             ];
 
@@ -98,7 +98,7 @@ class PaymentService
                     'email',
                 ],
             ],
-            'success_redirect_url' => config('app.url'),
+            'success_redirect_url' => route('orders.success', ['orderNumber' => $order->order_number]),
             'failure_redirect_url' => config('app.url'),
             'items' => $items,
             'fees' => $fees,
@@ -213,6 +213,29 @@ class PaymentService
             throw new ApiRequestException(
                 logMessage: 'Unexpected error during refund creation: '.$e->getMessage(),
                 userMessage: 'Terjadi kesalahan tidak terduga pada sistem refund, silakan coba beberapa saat lagi.',
+                statusCode: $e->getCode()
+            );
+        }
+    }
+
+    public function getRefund(string $refundId)
+    {
+        $apiInstance = new RefundApi;
+
+        try {
+            $refund = $apiInstance->getRefund($refundId);
+
+            return $refund;
+        } catch (\Xendit\XenditSdkException $e) {
+            throw new ApiRequestException(
+                logMessage: 'Unexpected error during xendit refund retrieval: '.$e->getErrorMessage(),
+                userMessage: 'Terjadi kesalahan pada sistem pembayaran, silakan coba beberapa saat lagi.',
+                statusCode: $e->getErrorCode()
+            );
+        } catch (\Exception $e) {
+            throw new ApiRequestException(
+                logMessage: 'Unexpected error during refund retrieval: '.$e->getMessage(),
+                userMessage: 'Terjadi kesalahan tidak terduga pada sistem pembayaran, silakan coba beberapa saat lagi.',
                 statusCode: $e->getCode()
             );
         }
