@@ -20,7 +20,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'validate_xendit_webhook_token' => \App\Http\Middleware\ValidateXenditWebhookToken::class,
         ]);
         $middleware->validateCsrfTokens(except: [
-            '/api/xendit/webhook',
+            '/api/xendit/webhook/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
