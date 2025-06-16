@@ -6,7 +6,6 @@ use App\Http\Controllers\User\OrderController;
 use App\Http\Controllers\User\PaymentController;
 use App\Http\Controllers\User\ProfileController;
 use Illuminate\Support\Facades\Route;
-use Livewire\Volt\Volt;
 
 Route::middleware(['auth', 'role:user'])->group(function () {
     Route::get('/profil-saya', [ProfileController::class, 'index'])->middleware('password.confirm')->name('profile');
@@ -22,7 +21,7 @@ Route::middleware(['auth', 'role:user'])->group(function () {
 
         Route::get('{orderNumber}/detail', [OrderController::class, 'show'])->name('show');
 
-        Volt::route('/berhasil/{orderNumber?}', 'pages.user.order-success')->name('success');
+        Route::get('{orderNumber}/sukses', [OrderController::class, 'success'])->name('success');
     });
 
     Route::prefix('riwayat-transaksi')->name('transactions.')->group(function () {
