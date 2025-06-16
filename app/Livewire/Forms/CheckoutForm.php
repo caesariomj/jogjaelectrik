@@ -12,11 +12,11 @@ use Livewire\Form;
 
 class CheckoutForm extends Form
 {
-    public Cart $cart;
+    public ?Cart $cart = null;
 
-    public User $user;
+    public ?User $user = null;
 
-    public Discount $discount;
+    public ?Discount $discount = null;
 
     #[Locked]
     public Collection $items;

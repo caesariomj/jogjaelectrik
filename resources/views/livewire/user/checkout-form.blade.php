@@ -296,13 +296,9 @@ new class extends Component {
                 }
 
                 if ($this->form->discount) {
-                    $order->discounts()->create([
+                    $order->update([
                         'discount_id' => $this->form->discount->id,
-                        'is_used' => true,
-                        'used_at' => now(),
                     ]);
-
-                    $this->form->discount->increment('used_count');
                 }
 
                 $invoice = $this->paymentService->createInvoice($order);
@@ -374,8 +370,8 @@ new class extends Component {
     }
 }; ?>
 
-<form wire:submit.prevent="checkout" class="flex flex-col gap-8 md:flex-row">
-    <div class="w-full md:w-2/3">
+<form wire:submit.prevent="checkout" class="flex flex-col gap-8 lg:flex-row">
+    <div class="w-full lg:w-2/3">
         <fieldset>
             <legend class="flex w-full flex-col pb-4">
                 <h2 class="mb-2 text-xl text-black">Informasi Pribadi</h2>
@@ -432,7 +428,9 @@ new class extends Component {
                 <div class="w-full">
                     <x-form.input-label for="phone" value="Nomor Telefon" class="mb-1" />
                     <div class="relative">
-                        <div class="absolute left-0 top-1/2 flex -translate-y-1/2 items-center pl-4">
+                        <div
+                            class="absolute left-0 top-1/2 flex -translate-y-1/2 items-center border-r border-r-neutral-300 pl-4"
+                        >
                             <span
                                 aria-hidden="true"
                                 class="me-4 flex h-4 w-6 flex-col overflow-hidden rounded-sm border border-neutral-300"
@@ -440,17 +438,11 @@ new class extends Component {
                                 <div class="h-1/2 w-full bg-red-600"></div>
                                 <div class="h-1/2 w-full bg-white"></div>
                             </span>
-                            <span
-                                aria-label="Kode Negara Indonesia"
-                                class="mb-[1px] border-l border-neutral-300 px-3 text-sm text-black/70"
-                            >
-                                (+62)
-                            </span>
                         </div>
                         <x-form.input
                             wire:model.lazy="form.phone"
                             id="phone"
-                            class="block w-full ps-28"
+                            class="block w-full ps-16"
                             type="tel"
                             name="phone"
                             placeholder="08XX-XXXX-XXXX"
@@ -639,7 +631,7 @@ new class extends Component {
 
                     @if (empty($this->selectedCourierServices))
                         <div
-                            class="mb-4 flex items-start rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-sm text-yellow-800"
+                            class="mb-4 flex items-start rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-yellow-800"
                             role="alert"
                             wire:loading.remove
                             wire:target="form.shippingCourier, form.city"
@@ -657,7 +649,7 @@ new class extends Component {
                                 />
                             </svg>
                             <span class="sr-only">Informasi</span>
-                            <p class="text-sm">
+                            <p class="text-sm tracking-tight">
                                 <span class="font-medium">Perhatian!</span>
                                 Silakan pilih provinsi, kabupaten/kota, dan salah satu kurir ekspedisi pengiriman diatas
                                 terlebih dahulu sebelum memilih layanan pengiriman ekspedisi.
@@ -764,12 +756,12 @@ new class extends Component {
             </div>
         </fieldset>
     </div>
-    <aside class="relative h-full w-full rounded-md border border-neutral-300 py-4 shadow-md md:w-1/3">
+    <aside class="relative h-full w-full rounded-md border border-neutral-300 py-4 shadow-md lg:w-1/3">
         <div>
             <h2 class="mb-4 px-4 text-xl text-black">Ringkasan Belanja</h2>
             <div class="flex flex-col gap-y-2 px-4">
                 @foreach ($form->items as $item)
-                    <article wire:key="{{ $item->id }}" class="flex items-start gap-x-2">
+                    <article wire:key="{{ $item->id }}" class="flex items-start gap-x-4">
                         <div class="size-20 shrink-0 overflow-hidden rounded-md bg-neutral-100">
                             <img
                                 src="{{ asset('storage/uploads/product-images/' . $item->thumbnail) }}"
@@ -779,7 +771,7 @@ new class extends Component {
                             />
                         </div>
                         <div class="flex flex-col gap-y-1">
-                            <h3 class="mb-1 max-w-40 truncate !text-base !font-medium text-black md:max-w-60">
+                            <h3 class="mb-1 max-w-40 truncate !text-base !font-semibold text-black md:max-w-60">
                                 {{ $item->name }}
                             </h3>
 
@@ -789,7 +781,10 @@ new class extends Component {
                                 </p>
                             @endif
 
-                            <p class="text-sm tracking-tight text-black">Jumlah: {{ $item->quantity }}</p>
+                            <p class="text-sm tracking-tight text-black/70">
+                                Jumlah:
+                                <span class="font-medium text-black">{{ $item->quantity }}</span>
+                            </p>
                         </div>
                         <div class="ml-auto shrink-0">
                             <p class="text-end font-medium tracking-tight text-black">
@@ -855,9 +850,11 @@ new class extends Component {
                         required
                         :hasError="$errors->has('form.acceptTermsAndCondition')"
                     />
-                    <label for="accept-terms-and-condition" class="ms-2 text-sm text-black">
+                    <label for="accept-terms-and-condition" class="ms-2 text-sm tracking-tight text-black">
                         Saya telah membaca dan menyetujui
-                        <a href="#" class="font-medium underline" target="_blank">Syarat dan Ketentuan</a>
+                        <a href="{{ route('terms-and-conditions') }}" class="font-medium underline" target="_blank">
+                            Syarat dan Ketentuan
+                        </a>
                         toko.
                     </label>
                 </div>
