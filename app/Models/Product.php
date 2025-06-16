@@ -204,7 +204,8 @@ class Product extends Model
             })
             ->when(in_array('rating', $relations), function ($query) {
                 $query->leftJoin('product_variants', 'product_variants.product_id', '=', 'products.id');
-                $query->leftJoin('product_reviews', 'product_reviews.product_variant_id', '=', 'product_variants.id');
+                $query->leftJoin('order_details', 'order_details.product_variant_id', '=', 'product_variants.id');
+                $query->leftJoin('product_reviews', 'product_reviews.order_detail_id', '=', 'order_details.id');
 
                 $query->addSelect(DB::raw('COALESCE(AVG(product_reviews.rating), 0.0) as average_rating'));
             })
@@ -365,8 +366,9 @@ class Product extends Model
                 'product_reviews.review',
                 'product_reviews.created_at',
             ])
+            ->join('order_details', 'order_details.id', '=', 'product_reviews.order_detail_id')
+            ->join('product_variants', 'product_variants.id', '=', 'order_details.product_variant_id')
             ->join('users', 'users.id', '=', 'product_reviews.user_id')
-            ->join('product_variants', 'product_variants.id', '=', 'product_reviews.product_variant_id')
             ->where('product_variants.product_id', $productId)
             ->limit(5)
             ->get()
@@ -391,13 +393,15 @@ class Product extends Model
             ->selectSub('
                 SELECT COALESCE(COUNT(product_reviews.id), 0)
                 FROM product_reviews
-                JOIN product_variants ON product_variants.id = product_reviews.product_variant_id
+                JOIN order_details ON product_reviews.order_detail_id = order_details.id
+                JOIN product_variants ON product_variants.id = order_details.product_variant_id
                 WHERE product_variants.product_id = products.id
             ', 'total_reviews')
             ->selectSub('
                 SELECT COALESCE(AVG(product_reviews.rating), 0.0)
                 FROM product_reviews
-                JOIN product_variants ON product_variants.id = product_reviews.product_variant_id
+                JOIN order_details ON product_reviews.order_detail_id = order_details.id
+                JOIN product_variants ON product_variants.id = order_details.product_variant_id
                 WHERE product_variants.product_id = products.id
             ', 'average_rating')
             ->where('products.id', $productId)
