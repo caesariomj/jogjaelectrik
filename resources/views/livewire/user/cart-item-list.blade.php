@@ -702,13 +702,11 @@ new class extends Component {
     <div class="flex flex-col gap-4 lg:flex-row lg:gap-6">
         @can('view', $this->cart)
             @if (! $items)
-                <figure class="flex h-full w-full flex-col items-center justify-center">
-                    <img
-                        src="https://placehold.co/400"
-                        class="mb-6 size-72 object-cover"
-                        alt="Gambar ilustrasi keranjang kosong"
-                    />
-                    <figcaption class="flex flex-col items-center">
+                <div class="flex h-full w-full flex-col items-center justify-center">
+                    <div class="mb-6 size-72">
+                        {!! file_get_contents(public_path('images/illustrations/empty.svg')) !!}
+                    </div>
+                    <div class="flex flex-col items-center">
                         <h2 class="mb-3 text-center !text-2xl text-black">Keranjang Belanja Anda Masih Kosong</h2>
                         <p class="mb-8 text-center text-base font-normal tracking-tight text-black/70">
                             Seluruh produk yang Anda tambahkan ke dalam keranjang belanja akan ditampilkan disini.
@@ -727,8 +725,8 @@ new class extends Component {
                                 />
                             </svg>
                         </x-common.button>
-                    </figcaption>
-                </figure>
+                    </div>
+                </div>
             @else
                 <section class="w-full flex-1 lg:w-2/3" aria-labelledby="cart-product-list-title">
                     <div class="mb-4 flex items-baseline justify-between gap-x-4 lg:justify-start">
@@ -1112,11 +1110,9 @@ new class extends Component {
                                         </x-common.button>
                                     @else
                                         <figure class="flex h-full flex-col items-center justify-center">
-                                            <img
-                                                src="https://placehold.co/400"
-                                                class="mb-6 size-72 object-cover"
-                                                alt="Gambar ilustrasi diskon tidak ditemukan"
-                                            />
+                                            <div class="mb-6 size-72">
+                                                {!! file_get_contents(public_path('images/illustrations/empty.svg')) !!}
+                                            </div>
                                             <figcaption class="flex flex-col items-center">
                                                 <h2 class="mb-3 text-center !text-2xl text-black">
                                                     Diskon Tidak Ditemukan
@@ -1175,7 +1171,7 @@ new class extends Component {
                             {{ $discountAmount ? formatPrice($totalPrice - $discountAmount) : formatPrice($totalPrice) }}
                         </dd>
                     </dl>
-                    <hr class="mb-8 mt-4 border-neutral-300" />
+                    <hr class="my-4 border-neutral-300" />
                     <div class="px-4">
                         <x-common.button :href="route('checkout')" class="w-full" variant="primary" wire:navigate>
                             Checkout
