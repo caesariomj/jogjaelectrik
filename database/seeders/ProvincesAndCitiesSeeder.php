@@ -14,8 +14,8 @@ class ProvincesAndCitiesSeeder extends Seeder
      */
     public function run(): void
     {
-        $provinceUrl = 'https://api.rajaongkir.com/'.env('RAJAONGKIR_PACKAGE').'/province';
-        $cityUrl = 'https://api.rajaongkir.com/'.env('RAJAONGKIR_PACKAGE').'/city';
+        $provinceUrl = 'https://api.rajaongkir.com/'.config('services.rajaongkir.package').'/province';
+        $cityUrl = 'https://api.rajaongkir.com/'.config('services.rajaongkir.package').'/city';
 
         $headers = [
             'key' => env('RAJAONGKIR_API_KEY'),
