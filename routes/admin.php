@@ -61,6 +61,7 @@ Route::middleware(['auth', 'admin_page_access'])->prefix('admin')->name('admin.'
     Route::prefix('manajemen-pelanggan')->name('users.')->group(function () {
         Route::get('/', [UserController::class, 'index'])->name('index');
         Route::get('/{id}/detail', [UserController::class, 'show'])->name('show');
+        Route::get('/{id}/ubah', [UserController::class, 'edit'])->name('edit');
     });
 
     Route::prefix('manajemen-admin')->name('admins.')->group(function () {

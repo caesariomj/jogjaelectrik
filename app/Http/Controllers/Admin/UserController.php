@@ -56,4 +56,38 @@ class UserController extends Controller
             return redirect()->route('admin.users.index');
         }
     }
+
+    /**
+     * Show the form for editing the specified user.
+     */
+    public function edit(string $id): View|RedirectResponse
+    {
+        $user = (new User)->newFromBuilder(
+            User::queryById(id: $id, columns: [
+                'users.id',
+                'users.city_id',
+                'users.name',
+                'users.email',
+                'users.password',
+                'users.phone_number',
+                'users.address',
+                'users.postal_code'])->first()
+        );
+
+        if (! $user) {
+            session()->flash('error', 'Diskon tidak ditemukan.');
+
+            return redirect()->route('admin.users.index');
+        }
+
+        try {
+            $this->authorize('update', $user);
+
+            return view('pages.admin.users.edit', compact('user'));
+        } catch (AuthorizationException $e) {
+            session()->flash('error', $e->getMessage());
+
+            return redirect()->route('admin.users.index');
+        }
+    }
 }
