@@ -84,6 +84,11 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * User-related functions.
      */
+    public function sendEmailVerificationNotification()
+    {
+        $this->notify(new \App\Notifications\VerifyEmail);
+    }
+
     public static function baseQuery(array $columns = ['*'])
     {
         return DB::table('users')->select($columns);
