@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class ProductVariant extends Model
 {
@@ -70,9 +71,9 @@ class ProductVariant extends Model
         return $this->hasMany(OrderDetail::class);
     }
 
-    public function reviews(): HasMany
+    public function reviews(): HasManyThrough
     {
-        return $this->hasMany(ProductReview::class);
+        return $this->hasManyThrough(ProductReview::class, OrderDetail::class, 'product_variant_id', 'order_detail_id', 'id', 'id');
     }
 
     /**

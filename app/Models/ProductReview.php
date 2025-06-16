@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 
 class ProductReview extends Model
 {
@@ -27,7 +28,6 @@ class ProductReview extends Model
      */
     protected $fillable = [
         'user_id',
-        'product_variant_id',
         'order_detail_id',
         'rating',
         'review',
@@ -41,9 +41,9 @@ class ProductReview extends Model
         return $this->belongsTo(User::class);
     }
 
-    public function productVariant(): BelongsTo
+    public function productVariant(): HasOneThrough
     {
-        return $this->belongsTo(ProductVariant::class);
+        return $this->hasOneThrough(ProductVariant::class, OrderDetail::class, 'id', 'id', 'order_detail_id', 'product_variant_id');
     }
 
     public function orderDetail(): BelongsTo
