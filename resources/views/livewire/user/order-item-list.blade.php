@@ -460,10 +460,9 @@ new class extends Component {
      * Rate products.
      *
      * @param   array  $data  An associative array containing the rating details:
-     *                        - product_variant_id (string): The ID of the rated product variant.
-     *                        - order_detail_id (string): The ID of the related order detail.
-     *                        - rating (int): The rating given by the user (e.g., 1-5).
-     *                        - review (string|null): An optional review message.
+     * - order_detail_id (string): The ID of the related order detail.
+     * - rating (int): The rating given by the user (e.g., 1-5).
+     * - review (string|null): An optional review message.
      *
      * @return  void
      *
@@ -476,13 +475,11 @@ new class extends Component {
         $validator = Validator::make(
             $data,
             rules: [
-                '*.product_variant_id' => 'required|exists:product_variants,id',
                 '*.order_detail_id' => 'required|exists:order_details,id',
                 '*.rating' => 'required|integer|between:1,5',
                 '*.review' => 'nullable|string|min:5|max:255',
             ],
             attributes: [
-                '*.product_variant_id' => 'Produk :position',
                 '*.order_detail_id' => 'Detail pesanan :position',
                 '*.rating' => 'Rating produk :position',
                 '*.review' => 'Ulasan produk :position',
@@ -506,7 +503,6 @@ new class extends Component {
                 DB::transaction(function () use ($review) {
                     ProductReview::create([
                         'user_id' => auth()->id(),
-                        'product_variant_id' => $review['product_variant_id'],
                         'order_detail_id' => $review['order_detail_id'],
                         'rating' => (int) $review['rating'],
                         'review' => $review['review'] !== '' ? $review['review'] : null,
@@ -1365,21 +1361,19 @@ new class extends Component {
                                     class="p-6"
                                     x-data="{
                                         ratings: [],
-                                        saveRating(rating, review, productVariantId, orderDetailId) {
+                                        saveRating(rating, review, orderDetailId) {
                                             const productIndex = this.ratings.findIndex(
-                                                (r) => r.product_variant_id === productVariantId,
+                                                (r) => r.order_detail_id === orderDetailId,
                                             )
 
                                             if (productIndex !== -1) {
                                                 this.ratings[productIndex] = {
-                                                    product_variant_id: productVariantId,
                                                     order_detail_id: orderDetailId,
                                                     rating,
                                                     review,
                                                 }
                                             } else {
                                                 this.ratings.push({
-                                                    product_variant_id: productVariantId,
                                                     order_detail_id: orderDetailId,
                                                     rating,
                                                     review,
@@ -1397,16 +1391,11 @@ new class extends Component {
                                                 x-data="{
                                                     selectedRating: null,
                                                     review: '',
-                                                    productVariantId: '{{ $item->product_variant_id }}',
                                                     orderDetailId: '{{ $item->id }}',
                                                 }"
                                                 x-init="
-                                                    $watch('selectedRating', (value) =>
-                                                        saveRating(value, review, productVariantId, orderDetailId),
-                                                    )
-                                                    $watch('review', (value) =>
-                                                        saveRating(selectedRating, value, productVariantId, orderDetailId),
-                                                    )
+                                                    $watch('selectedRating', (value) => saveRating(value, review, orderDetailId))
+                                                    $watch('review', (value) => saveRating(selectedRating, value, orderDetailId))
                                                 "
                                             >
                                                 <div class="flex items-center gap-x-4">
@@ -1536,11 +1525,9 @@ new class extends Component {
                 wire:loading.class="opacity-50"
                 wire:target="status, search, resetSearch"
             >
-                <img
-                    src="https://placehold.co/400"
-                    class="mb-6 size-72 object-cover"
-                    alt="Gambar ilustrasi pesanan tidak ditemukan"
-                />
+                <div class="mb-6 size-72">
+                    {!! file_get_contents(public_path('images/illustrations/empty.svg')) !!}
+                </div>
                 <figcaption class="flex flex-col items-center">
                     <h2 class="mb-3 text-center !text-2xl text-black">
                         Pesanan
