@@ -2,6 +2,7 @@
 
 use App\Models\Order;
 use App\Services\DocumentService;
+use Carbon\Carbon;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Url;
@@ -14,6 +15,22 @@ new class extends Component {
 
     protected DocumentService $documentService;
 
+    public array $months = [
+        'Januari',
+        'Februari',
+        'Maret',
+        'April',
+        'Mei',
+        'Juni',
+        'Juli',
+        'Agustus',
+        'September',
+        'Oktober',
+        'November',
+        'Desember',
+    ];
+
+    public string $month = '';
     public string $year = '';
 
     #[Url(as: 'pencarian', except: '')]
@@ -30,6 +47,7 @@ new class extends Component {
 
     public function mount()
     {
+        $this->month = Carbon::now()->month;
         $this->year = date('Y');
     }
 
@@ -53,6 +71,9 @@ new class extends Component {
         )
             ->when($this->search !== '', function ($query) {
                 return $query->where('orders.order_number', 'like', '%' . $this->search . '%');
+            })
+            ->when($this->month !== '', function ($query) {
+                return $query->whereMonth('orders.created_at', $this->month);
             })
             ->when($this->year !== '', function ($query) {
                 return $query->whereYear('orders.created_at', $this->year);
@@ -89,9 +110,25 @@ new class extends Component {
             return redirect()->route('admin.reports.sales');
         }
 
+        $this->validate(
+            rules: [
+                'year' => 'required|digits:4',
+            ],
+            messages: [
+                'year.required' => 'Tahun wajib dipilih.',
+                'year.digits' => 'Tahun harus terdiri dari 4 digit.',
+            ],
+            attributes: [
+                'year' => 'Tahun',
+            ],
+        );
+
         $sales = Order::where('status', 'completed')
             ->when($this->search !== '', function ($query) {
                 return $query->where('order_number', 'like', '%' . $this->search . '%');
+            })
+            ->when($this->month !== '', function ($query) {
+                return $query->whereMonth('orders.created_at', $this->month);
             })
             ->when($this->year !== '', function ($query) {
                 return $query->whereYear('created_at', $this->year);
@@ -100,33 +137,83 @@ new class extends Component {
             ->get();
 
         if ($sales->isEmpty()) {
-            session()->flash('error', 'Data penjualan pada tahun ' . $this->year . ' tidak ditemukan.');
+            if ($this->year !== '' && $this->month !== '') {
+                session()->flash(
+                    'error',
+                    'Data penjualan pada bulan ' .
+                        $this->months[$this->month - 1] .
+                        ' tahun ' .
+                        $this->year .
+                        ' tidak ditemukan.',
+                );
+            } elseif ($this->year !== '') {
+                session()->flash('error', 'Data penjualan pada tahun ' . $this->year . ' tidak ditemukan.');
+            } elseif ($this->month !== '') {
+                session()->flash(
+                    'error',
+                    'Data penjualan bulan ' . $this->months[$this->month - 1] . ' tidak ditemukan.',
+                );
+            } else {
+                session()->flash('error', 'Data penjualan tidak ditemukan.');
+            }
 
             return redirect()->route('admin.reports.sales');
         }
 
-        return $this->documentService->generateSalesReport($sales, $this->year);
+        return $this->documentService->generateSalesReport(
+            sales: $sales,
+            month: $this->month ? $this->months[$this->month - 1] : '',
+            year: $this->year,
+        );
     }
 }; ?>
 
 <div>
-    <div class="flex items-center justify-end gap-x-4 pb-4">
-        <div class="inline-flex items-center gap-x-2">
-            <x-form.input-label for="sales-year" value="Tahun Penjualan :" :required="false" />
-            <select
-                wire:model.lazy="year"
-                id="sales-year"
-                name="sales-year"
-                class="block w-32 rounded-md border border-neutral-300 px-4 py-3 text-sm text-black focus:border-primary focus:ring-primary"
-            >
-                <option value="">Pilih tahun</option>
-                @for ($year = 2025; $year <= now()->year + 5; $year++)
-                    <option value="{{ $year }}">{{ $year }}</option>
-                @endfor
-            </select>
+    <div class="flex flex-col items-center justify-end gap-4 pb-4 md:flex-row md:items-start">
+        <div class="flex items-start gap-x-4">
+            <div class="flex items-center gap-x-2">
+                <x-form.input-label for="sales-month" value="Bulan :" :required="false" class="w-fit shrink-0" />
+                <select
+                    wire:model.lazy="month"
+                    id="sales-month"
+                    name="sales-month"
+                    class="block w-44 rounded-md border border-neutral-300 px-4 py-3 text-sm text-black focus:border-primary focus:ring-primary"
+                >
+                    <option value="">Semua bulan</option>
+                    @foreach ($months as $month)
+                        <option value="{{ $loop->iteration }}">{{ $month }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <div class="flex items-center gap-x-2">
+                    <x-form.input-label for="sales-year" value="Tahun :" :required="false" class="w-fit shrink-0" />
+                    <select
+                        wire:model.lazy="year"
+                        id="sales-year"
+                        name="sales-year"
+                        @class([
+                            'block w-44 rounded-md px-4 py-3 text-sm text-black focus:ring-primary',
+                            'border border-neutral-300 focus:border-primary' => ! $errors->has('year'),
+                            'border border-red-500 ring-red-500 focus:border-red-500' => $errors->has('year'),
+                        ])
+                    >
+                        <option value="">Pilih tahun</option>
+                        @for ($year = 2025; $year <= now()->year + 5; $year++)
+                            <option value="{{ $year }}">{{ $year }}</option>
+                        @endfor
+                    </select>
+                </div>
+                <x-form.input-error :messages="$errors->get('year')" class="mt-2 max-w-56" />
+            </div>
         </div>
         @can('download reports')
-            <x-common.button variant="primary" wire:click="download" :disabled="empty($this->sales)">
+            <x-common.button
+                variant="primary"
+                wire:click="download"
+                :disabled="empty($this->sales)"
+                class="w-full md:w-fit"
+            >
                 <svg
                     class="size-5"
                     xmlns="http://www.w3.org/2000/svg"
@@ -203,7 +290,7 @@ new class extends Component {
                     valign="middle"
                     wire:key="{{ $sale->id }}"
                     wire:loading.class="opacity-50"
-                    wire:target="search,sortBy,resetSearch,perPage,year"
+                    wire:target="search,sortBy,resetSearch,perPage,month,year"
                 >
                     <x-datatable.cell class="text-sm font-normal tracking-tight text-black/70" align="center">
                         {{ $loop->iteration . '.' }}
@@ -313,7 +400,10 @@ new class extends Component {
                     </x-datatable.cell>
                 </x-datatable.row>
             @empty
-                <x-datatable.row wire:loading.class="opacity-50" wire:target="search,sortBy,resetSearch,perPage,year">
+                <x-datatable.row
+                    wire:loading.class="opacity-50"
+                    wire:target="search,sortBy,resetSearch,perPage,month,year"
+                >
                     <x-datatable.cell class="p-4" colspan="9" align="center">
                         <div class="my-4 flex h-full flex-col items-center justify-center">
                             <div class="mb-6 size-72">
@@ -325,6 +415,9 @@ new class extends Component {
                                     @if ($this->search)
                                         Data penjualan yang Anda cari tidak ditemukan, silakan coba untuk mengubah kata kunci
                                         pencarian Anda.
+                                    @elseif ($this->month)
+                                        Data penjualan pada bulan {{ $this->months[$this->month - 1] }} tidak
+                                        ditemukan, silakan coba untuk mengubah bulan penjualan Anda.
                                     @elseif ($this->year)
                                         Data penjualan pada tahun {{ $this->year }} tidak ditemukan, silakan coba untuk
                                         mengubah tahun penjualan Anda.
@@ -342,7 +435,7 @@ new class extends Component {
             <div
                 class="absolute left-1/2 top-[50%-1rem] h-full -translate-x-1/2 -translate-y-1/2"
                 wire:loading
-                wire:target="search,sortBy,resetSearch,perPage,year"
+                wire:target="search,sortBy,resetSearch,perPage,month,year"
             >
                 <div
                     class="inline-block size-10 animate-spin rounded-full border-4 border-current border-t-transparent text-primary"

@@ -32,17 +32,25 @@ class DocumentService
         );
     }
 
-    public function generateSalesReport(Collection $sales, string $year = '')
+    public function generateSalesReport(Collection $sales, string $month = '', string $year = '')
     {
-        $pdf = Pdf::loadView('documents.sales-report', compact('sales', 'year'))
+        $pdf = Pdf::loadView('documents.sales-report', compact('sales', 'month', 'year'))
             ->setPaper('A4', 'landscape')
             ->output();
 
         $year = $year !== '' ? $year : date('Y');
 
+        $fileName = 'Laporan Penjualan';
+
+        if ($month !== '') {
+            $fileName .= '-'.$month;
+        }
+
+        $fileName .= '-'.$year.'.pdf';
+
         return response()->streamDownload(
             fn () => print ($pdf),
-            'Laporan Penjualan-'.$year.'.pdf'
+            $fileName
         );
     }
 }
