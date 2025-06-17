@@ -30,27 +30,21 @@
                 margin-bottom: 40px;
             }
 
-            section.company-details .company-logo {
-                width: 50px;
-                height: 50px;
-                border-radius: 100%;
-                background-color: #000;
-                margin-bottom: 10px;
-            }
-
             section.company-details h1 {
                 font-size: 20px;
                 font-weight: bolder;
+                margin-top: 10px;
                 margin-bottom: 8px;
             }
 
             section.company-details .company-address p {
                 width: 100%;
                 max-width: 300px;
-                margin: 4px 0;
+                margin: 10px 0;
             }
 
             section.company-details .company-address p a {
+                font-weight: bold;
                 color: #0c0c0c;
                 text-underline-offset: 2px;
             }
@@ -100,16 +94,16 @@
 
             main table thead tr th {
                 background-color: #fd5722;
-                border: 1px solid #ccc;
+                border: 1px solid #000000;
                 color: white;
                 text-align: left;
                 padding: 5px;
-                font-weight: normal;
+                font-weight: bold;
             }
 
             main table tbody tr,
             main table tbody td {
-                border: 1px solid #ccc;
+                border: 1px solid #000000;
             }
 
             main table tbody tr td {
@@ -185,53 +179,64 @@
                 color: #0c0c0c;
                 text-underline-offset: 2px;
             }
-
-            footer {
-                width: 100%;
-                padding: 8px 4px;
-                background-color: #ffe6d4;
-                text-align: center;
-            }
-
-            footer p {
-                margin: 4px 0;
-            }
-
-            footer p a {
-                color: #0c0c0c;
-                text-underline-offset: 2px;
-            }
         </style>
     </head>
     <body>
         <header>
             <section class="company-details">
-                <div class="company-logo"></div>
-                <h1>JOGJA ELECTRIK</h1>
+                @php
+                    $svg = '
+                    <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 316 316" fill="#fd5722">
+                        <polygon
+                            points="215.24 70.31 316.24 105.47 316.24 52.84 165.24 0.3 165.24 18.92 165.24 53.02 165.24 105.37 165.24 158.09 165.24 210.44 165.24 221.13 165.24 263.16 316.24 315.69 316.24 262.86 215.24 227.7 215.24 175.42 316.24 210.4 316.24 157.94 215.24 122.78 215.24 70.31"
+                        />
+                        <polygon
+                            points="0 52.64 0 105.27 101.33 70 101.33 70 101.33 227.9 51.02 245.45 51.02 210.73 0 227.9 0 263.18 0 316 151.29 263.36 151.29 221.25 151.29 210.54 151.29 52.82 151.29 18.65 151.29 0 0 52.64"
+                        />
+                    </svg>
+                    ';
+
+                    $image = '<img src="data:image/svg+xml;base64,' . base64_encode($svg) . '"  width="50" height="50" />';
+                @endphp
+
+                {!! $image !!}
+                <h1>{{ config('app.name') }}</h1>
                 <div class="company-address">
-                    <p><a href="https://google.com">123 Anywhere St., Any City</a></p>
-                    <p><a href="https://google.com">123-456-7890</a></p>
-                    <p><a href="mailto:someone@example.com">someone@example.com</a></p>
+                    <p>
+                        Alamat:
+                        <a href="{{ config('business.map_link') }}">{{ config('business.address') }}</a>
+                    </p>
+                    <p>
+                        Nomor WhatsApp:
+                        <a href="{{ config('business.whatsapp') }}">{{ config('business.phone') }}</a>
+                    </p>
+                    <p>
+                        Email:
+                        <a href="mailto:{{ config('business.email') }}">{{ config('business.email') }}</a>
+                    </p>
                 </div>
             </section>
             <section class="invoice-details">
                 <h2>INVOICE</h2>
                 <p>
                     <span>Nomor Pesanan:</span>
-                    {{ $order->order_number }}
+                    <strong>{{ $order->order_number }}</strong>
                 </p>
                 <p>
-                    <span>Tanggal Dibuat:</span>
-                    {{ formatTimestamp($order->created_at) }}
+                    <span>Tanggal Pesanan Dibuat:</span>
+                    <strong>{{ formatTimestamp($order->created_at) }}</strong>
                 </p>
             </section>
         </header>
         <main>
             <section class="bill-to">
                 <h3>PEMBELI:</h3>
-                <p>{{ $order->user->name }}</p>
-                <p>{{ \Illuminate\Support\Facades\Crypt::decryptString($order->shipping_address) }}</p>
-                <p>+62 {{ \Illuminate\Support\Facades\Crypt::decryptString($order->user->phone_number) }}</p>
+                <p>Nama: <strong>{{ $order->user->name }}</strong></p>
+                <p>Alamat: <strong>{{ \Illuminate\Support\Facades\Crypt::decryptString($order->shipping_address) }}</strong></p>
+                <p>
+                    Nomor Telefon:
+                    <strong>+62 {{ \Illuminate\Support\Facades\Crypt::decryptString($order->user->phone_number) }}</strong>
+                </p>
             </section>
             <table cellspacing="0" cellpadding="0">
                 <thead>
@@ -245,7 +250,16 @@
                 <tbody>
                     @foreach ($order->details as $item)
                         <tr>
-                            <td class="product-column">{{ $item->productVariant->product->name }}</td>
+                            @php
+                                $variant = $item->productVariant->combinations->first()->variationVariant ?? null;
+                            @endphp
+
+                            <td class="product-column">
+                                {{ $item->productVariant->product->name }}
+                                @if ($variant)
+                                        ({{ ucwords($variant->variation->name) . ' : ' . ucwords($variant->name) }})
+                                @endif
+                            </td>
                             <td class="price-column">Rp {{ formatPrice($item->price) }}</td>
                             <td class="qty-column">{{ $item->quantity }}</td>
                             <td class="amount-column">Rp {{ formatPrice($item->price * $item->quantity) }}</td>
@@ -258,7 +272,7 @@
                     </tr>
                     <tr class="summary-row">
                         <td colspan="3" style="text-align: right" class="amount-column"><span>Diskon:</span></td>
-                        <td>- Rp {{ formatPrice($order->discount_amount) }}</td>
+                        <td>- Rp {{ formatPrice(str_replace('-', '', $order->discount_amount)) }}</td>
                     </tr>
                     <tr class="summary-row">
                         <td colspan="3" style="text-align: right" class="amount-column"><span>Ongkos Kirim:</span></td>
@@ -278,21 +292,21 @@
                     @if (str_contains($order->payment->method, 'bank_transfer_'))
                         <p>
                             <span>Metode Pembayaran:</span>
-                            {{ strtoupper(str_replace('bank_transfer_', '', $order->payment->method)) }} VA
+                            <strong>{{ strtoupper(str_replace('bank_transfer_', '', $order->payment->method)) }} VA</strong>
                         </p>
                         <p>
-                            <span>Nomor Virtual Account:</span>
-                            {{ $order->payment->reference_number }}
+                            <span>Nomor Referensi Pembayaran:</span>
+                            <strong>{{ $order->payment->reference_number }}</strong>
                         </p>
                     @elseif (str_contains($order->payment->method, 'ewallet_'))
                         <p>
                             <span>Metode Pembayaran:</span>
-                            {{ strtoupper(str_replace('ewallet_', '', $order->payment->method)) }}
+                            <strong>{{ strtoupper(str_replace('ewallet_', '', $order->payment->method)) }}</strong>
                         </p>
                     @endif
                     <p>
                         <span>Status Pembayaran:</span>
-                        Berhasil
+                        <strong>Berhasil</strong>
                     </p>
                 @else
                     <p>Anda belum membayar pesanan ini.</p>
@@ -306,19 +320,12 @@
                     <li>Anda dapat menghubungi kami untuk mengajukan pengembalian barang.</li>
                     <li>Waktu pengiriman tergantung pada lokasi tujuan dan jasa pengiriman yang dipilih.</li>
                     <li>
-                        Untuk lebih lengkapnya, anda dapat mengakses
-                        <a href="{{ route('terms-and-condition') }}">halaman ini</a>
-                        .
+                        Untuk lebih lengkapnya, anda dapat mengakses halaman
+                        <a href="{{ route('terms-and-conditions') }}">syarat dan ketentuan</a>
+                        kami.
                     </li>
                 </ul>
             </section>
         </main>
-        <footer>
-            <p>
-                Terimakasih telah berbelanja di
-                <a href="{{ url('') }}">Jogja Electrik</a>
-            </p>
-            <p>&copy; 2024</p>
-        </footer>
     </body>
 </html>
