@@ -6,7 +6,6 @@ use App\Exceptions\ApiRequestException;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Services\PaymentService;
-use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 
@@ -48,7 +47,7 @@ class XenditWebhookController extends Controller
                 ], 400);
             }
 
-            if ($invoice['status'] === 'PAID') {
+            if ($invoice['status'] === 'PAID' || $invoice['status'] === 'SETTLED') {
                 $order->update([
                     'status' => 'payment_received',
                 ]);
@@ -75,16 +74,10 @@ class XenditWebhookController extends Controller
                     'status' => strtolower($invoice['status']),
                     'method' => $paymentMethod,
                     'reference_number' => $referenceNumber ?? null,
-                    'paid_at' => Carbon::parse($request->paid_at)->format('Y-m-d H:i:s'),
+                    'paid_at' => now(),
                 ]);
 
                 $message = 'Pembayaran pesanan dengan nomor: '.$order->order_number.' berhasil.';
-            } elseif ($invoice['status'] === 'SETTLED') {
-                $order->payment->update([
-                    'status' => strtolower($invoice['status']),
-                ]);
-
-                $message = 'Status pembayaran pesanan dengan nomor: '.$order->order_number.' telah settled.';
             } elseif ($invoice['status'] === 'EXPIRED') {
                 $order->update([
                     'status' => 'failed',
@@ -169,7 +162,7 @@ class XenditWebhookController extends Controller
                 $order->payment->refund->update([
                     'xendit_refund_id' => $refund['id'],
                     'status' => 'succeeded',
-                    'succeeded_at' => Carbon::parse($refund['created'])->format('Y-m-d H:i:s'),
+                    'succeeded_at' => now(),
                 ]);
 
                 $responseMessage = 'Permintaan refund pada pesanan dengan nomor pesanan: '.$refund['reference_id'].' berhasil diproses.';
