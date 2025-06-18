@@ -3,7 +3,7 @@
 @section('title', 'Detail Pesanan')
 
 @section('content')
-    <section class="container mx-auto flex max-w-md flex-row gap-6 p-6 md:max-w-[96rem] md:p-12">
+    <section class="container mx-auto flex max-w-md flex-row gap-6 px-6 py-6 md:max-w-[96rem] md:px-12">
         <x-user.sidebar />
         <section class="w-full md:w-5/6">
             <header class="flex items-start">

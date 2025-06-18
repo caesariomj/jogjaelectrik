@@ -3,7 +3,7 @@
 @section('title', 'Detail Transaksi')
 
 @section('content')
-    <section class="container mx-auto flex max-w-md flex-row gap-6 p-6 md:max-w-[96rem] md:p-12">
+    <section class="container mx-auto flex max-w-md flex-row gap-6 px-6 py-6 md:max-w-[96rem] md:px-12">
         <x-user.sidebar />
         <section class="w-full md:w-5/6">
             <header class="mb-4 flex items-start">
@@ -42,6 +42,7 @@
                             <a
                                 href="{{ route('orders.show', ['orderNumber' => $payment->order->order_number]) }}"
                                 class="inline-flex items-center gap-x-1 font-medium tracking-tight text-black underline transition-colors hover:text-primary"
+                                wire:navigate
                             >
                                 {{ $payment->order->order_number }}
                                 <svg
