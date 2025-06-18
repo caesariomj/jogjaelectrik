@@ -173,10 +173,13 @@ class Order extends Model
                     $join->on('product_images.product_id', '=', 'products.id')
                         ->where('product_images.is_thumbnail', true);
                 });
+                $query->leftJoin('subcategories', 'subcategories.id', '=', 'products.subcategory_id');
+                $query->leftJoin('categories', 'categories.id', '=', 'subcategories.category_id');
                 $query->addSelect([
                     'order_details.id as order_detail_id',
                     'order_details.price as order_detail_price',
                     'order_details.quantity as order_detail_quantity',
+                    'product_variants.id as product_variant_id',
                     'product_variants.variant_sku as product_variant_sku',
                     'products.name as product_name',
                     'products.slug as product_slug',
@@ -184,6 +187,8 @@ class Order extends Model
                     'variation_variants.name as variant_name',
                     'variations.name as variation_name',
                     'product_images.file_name as thumbnail',
+                    'subcategories.name as subcategory_name',
+                    'categories.name as category_name',
                 ]);
             })
             ->when(in_array('user', $relations), function ($query) {

@@ -66,8 +66,8 @@ new class extends Component {
     {
         return Order::queryAllByStatusWithRelations(
             status: 'completed',
-            columns: ['orders.id', 'orders.order_number', 'orders.total_amount', 'orders.created_at'],
-            relations: ['user', 'payment'],
+            columns: ['orders.order_number'],
+            relations: 'order_details',
         )
             ->when($this->search !== '', function ($query) {
                 return $query->where('orders.order_number', 'like', '%' . $this->search . '%');
@@ -123,15 +123,19 @@ new class extends Component {
             ],
         );
 
-        $sales = Order::where('status', 'completed')
+        $sales = Order::queryAllByStatusWithRelations(
+            status: 'completed',
+            columns: ['orders.order_number'],
+            relations: 'order_details',
+        )
             ->when($this->search !== '', function ($query) {
-                return $query->where('order_number', 'like', '%' . $this->search . '%');
+                return $query->where('orders.order_number', 'like', '%' . $this->search . '%');
             })
             ->when($this->month !== '', function ($query) {
                 return $query->whereMonth('orders.created_at', $this->month);
             })
             ->when($this->year !== '', function ($query) {
-                return $query->whereYear('created_at', $this->year);
+                return $query->whereYear('orders.created_at', $this->year);
             })
             ->orderBy($this->sortField, $this->sortDirection)
             ->get();
@@ -238,7 +242,7 @@ new class extends Component {
             <x-datatable.heading align="center">No.</x-datatable.heading>
             <x-datatable.heading
                 sortable
-                class="min-w-52"
+                class="min-w-48"
                 :direction="$sortField === 'order_number' ? $sortDirection : null "
                 wire:click="sortBy('order_number')"
                 align="left"
@@ -247,40 +251,57 @@ new class extends Component {
             </x-datatable.heading>
             <x-datatable.heading
                 sortable
-                class="min-w-40"
-                :direction="$sortField === 'user_name' ? $sortDirection : null "
-                wire:click="sortBy('user_name')"
+                class="min-w-48"
+                :direction="$sortField === 'product_name' ? $sortDirection : null "
+                wire:click="sortBy('product_name')"
                 align="left"
             >
-                Nama Pembeli
-            </x-datatable.heading>
-            <x-datatable.heading class="min-w-32" align="center">Status Pesanan</x-datatable.heading>
-            <x-datatable.heading
-                sortable
-                class="min-w-40"
-                :direction="$sortField === 'total_amount' ? $sortDirection : null "
-                wire:click="sortBy('total_amount')"
-                align="left"
-            >
-                Total
+                Nama Produk
             </x-datatable.heading>
             <x-datatable.heading
                 sortable
-                class="min-w-40"
-                :direction="$sortField === 'payment_method' ? $sortDirection : null "
-                wire:click="sortBy('payment_method')"
+                class="min-w-28"
+                :direction="$sortField === 'variation_name' ? $sortDirection : null "
+                wire:click="sortBy('variation_name')"
                 align="left"
             >
-                Metode Pembayaran
+                Variasi
             </x-datatable.heading>
             <x-datatable.heading
                 sortable
-                class="min-w-52"
+                class="min-w-32"
+                :direction="$sortField === 'category_name' ? $sortDirection : null "
+                wire:click="sortBy('category_name')"
+                align="left"
+            >
+                Kategori / Subkategori
+            </x-datatable.heading>
+            <x-datatable.heading
+                sortable
+                class="min-w-32"
+                :direction="$sortField === 'order_detail_quantity' ? $sortDirection : null "
+                wire:click="sortBy('order_detail_quantity')"
+                align="center"
+            >
+                Terjual
+            </x-datatable.heading>
+            <x-datatable.heading
+                sortable
+                class="min-w-36"
+                :direction="$sortField === 'order_detail_price' ? $sortDirection : null "
+                wire:click="sortBy('order_detail_price')"
+                align="left"
+            >
+                Harga Satuan
+            </x-datatable.heading>
+            <x-datatable.heading
+                sortable
+                class="min-w-40"
                 :direction="$sortField === 'created_at' ? $sortDirection : null "
                 wire:click="sortBy('created_at')"
                 align="left"
             >
-                Tanggal Pesanan Dibuat
+                Total Penjualan
             </x-datatable.heading>
             <x-datatable.heading class="px-4 py-2"></x-datatable.heading>
         </x-slot>
@@ -288,7 +309,6 @@ new class extends Component {
             @forelse ($this->sales as $sale)
                 <x-datatable.row
                     valign="middle"
-                    wire:key="{{ $sale->id }}"
                     wire:loading.class="opacity-50"
                     wire:target="search,sortBy,resetSearch,perPage,month,year"
                 >
@@ -298,54 +318,31 @@ new class extends Component {
                     <x-datatable.cell class="text-sm font-medium tracking-tight text-black" align="left">
                         {{ $sale->order_number }}
                     </x-datatable.cell>
-                    <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="left">
-                        {{ $sale->user_name }}
-                    </x-datatable.cell>
-                    <x-datatable.cell align="center">
-                        <span
-                            class="inline-flex items-center gap-x-1.5 rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-medium tracking-tight text-teal-800"
-                        >
-                            <span class="inline-block size-1.5 rounded-full bg-teal-800"></span>
-                            Sukses
-                        </span>
+                    <x-datatable.cell class="text-sm font-medium tracking-tight text-black" align="left">
+                        {{ $sale->product_name }}
                     </x-datatable.cell>
                     <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="left">
-                        Rp {{ formatPrice($sale->total_amount) }}
-                    </x-datatable.cell>
-                    <x-datatable.cell
-                        class="flex items-center gap-x-4 text-sm font-medium tracking-tight text-black/70"
-                        align="center"
-                    >
-                        @if (str_contains($sale->payment_method, 'bank_transfer'))
-                            @php
-                                $paymentMethod = str_replace('bank_transfer_', '', $sale->payment_method);
-                            @endphp
-
-                            <img
-                                src="{{ asset('images/logos/payments/' . $paymentMethod . '.webp') }}"
-                                alt="Logo {{ strtoupper($paymentMethod) }}"
-                                title="{{ strtoupper($paymentMethod) }}"
-                                class="h-8 w-14 object-contain"
-                                loading="lazy"
-                            />
-                            {{ strtoupper($paymentMethod) }}
+                        @if ($sale->variation_name && $sale->variant_name)
+                            {{ ucwords($sale->variation_name) . ' : ' . ucwords($sale->variant_name) }}
                         @else
-                            @php
-                                $paymentMethod = str_replace('ewallet_', '', $sale->payment_method);
-                            @endphp
-
-                            <img
-                                src="{{ asset('images/logos/payments/' . $paymentMethod . '.webp') }}"
-                                alt="Logo {{ strtoupper($paymentMethod) }}"
-                                title="{{ strtoupper($paymentMethod) }}"
-                                class="h-8 w-14 object-contain"
-                                loading="lazy"
-                            />
-                            {{ strtoupper($paymentMethod) }}
+                            -
                         @endif
                     </x-datatable.cell>
                     <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="left">
-                        {{ formatTimestamp($sale->created_at) }}
+                        @if ($sale->subcategory_name && $sale->category_name)
+                            {{ ucwords($sale->subcategory_name) . ' / ' . ucwords($sale->category_name) }}
+                        @else
+                            -
+                        @endif
+                    </x-datatable.cell>
+                    <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="center">
+                        {{ formatPrice($sale->order_detail_quantity) }}
+                    </x-datatable.cell>
+                    <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="left">
+                        Rp {{ formatPrice($sale->order_detail_price) }}
+                    </x-datatable.cell>
+                    <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="left">
+                        Rp {{ formatPrice($sale->order_detail_price * $sale->order_detail_quantity) }}
                     </x-datatable.cell>
                     <x-datatable.cell class="relative">
                         <x-common.dropdown width="60">
