@@ -32,7 +32,7 @@ new class extends Component {
      */
     public function resetForm(): void
     {
-        $this->form->reset('currentPassword', 'password', 'passwordConfirmation');
+        $this->form->reset('current_password', 'password', 'password_confirmation');
 
         $this->form->resetErrorBag();
     }
@@ -124,14 +124,14 @@ new class extends Component {
                         <x-form.input-label for="current-password" value="Password saat ini" />
                         <div class="relative">
                             <x-form.input
-                                wire:model.lazy="form.currentPassword"
+                                wire:model.lazy="form.current_password"
                                 id="current-password"
                                 name="current-password"
                                 x-bind:type="showPassword ? 'text' : 'password'"
                                 class="mt-1 block w-full"
                                 placeholder="Password saat ini..."
                                 autocomplete="current-password"
-                                :hasError="$errors->has('form.currentPassword')"
+                                :hasError="$errors->has('form.current_password')"
                                 x-bind:disabled="!isEditing"
                             />
                             <button
@@ -170,7 +170,7 @@ new class extends Component {
                                 </svg>
                             </button>
                         </div>
-                        <x-form.input-error :messages="$errors->get('form.currentPassword')" class="mt-2" />
+                        <x-form.input-error :messages="$errors->get('form.current_password')" class="mt-2" />
                     </div>
                     <div
                         x-data="{
@@ -354,14 +354,14 @@ new class extends Component {
                         <x-form.input-label for="password-confirmation" value="Konfirmasi password baru" />
                         <div class="relative">
                             <x-form.input
-                                wire:model.lazy="form.passwordConfirmation"
+                                wire:model.lazy="form.password_confirmation"
                                 id="password-confirmation"
                                 name="password-confirmation"
                                 x-bind:type="showPassword ? 'text' : 'password'"
                                 class="mt-1 block w-full"
                                 placeholder="Konfirmasi password baru..."
                                 autocomplete="new-password"
-                                :hasError="$errors->has('form.passwordConfirmation')"
+                                :hasError="$errors->has('form.password_confirmation')"
                                 x-bind:disabled="!isEditing"
                             />
                             <button
@@ -400,7 +400,7 @@ new class extends Component {
                                 </svg>
                             </button>
                         </div>
-                        <x-form.input-error :messages="$errors->get('form.passwordConfirmation')" class="mt-2" />
+                        <x-form.input-error :messages="$errors->get('form.password_confirmation')" class="mt-2" />
                     </div>
                 </div>
             </fieldset>

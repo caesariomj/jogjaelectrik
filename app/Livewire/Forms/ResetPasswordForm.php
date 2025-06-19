@@ -3,13 +3,11 @@
 namespace App\Livewire\Forms;
 
 use Illuminate\Validation\Rules;
-use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
 use Livewire\Form;
 
 class ResetPasswordForm extends Form
 {
-    #[Locked]
     public string $token = '';
 
     #[Validate]

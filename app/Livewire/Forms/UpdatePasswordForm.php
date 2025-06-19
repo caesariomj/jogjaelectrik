@@ -12,18 +12,18 @@ class UpdatePasswordForm extends Form
     public User $user;
 
     #[Validate]
-    public string $currentPassword = '';
+    public string $current_password = '';
 
     #[Validate]
     public string $password = '';
 
     #[Validate]
-    public string $passwordConfirmation = '';
+    public string $password_confirmation = '';
 
     public function rules()
     {
         return [
-            'currentPassword' => [
+            'current_password' => [
                 'required',
                 'string',
                 'current_password',
@@ -32,11 +32,7 @@ class UpdatePasswordForm extends Form
                 'required',
                 'string',
                 Password::defaults(),
-                'confirmed:passwordConfirmation',
-            ],
-            'passwordConfirmation' => [
-                'required',
-                'string',
+                'confirmed',
             ],
         ];
     }
@@ -44,9 +40,9 @@ class UpdatePasswordForm extends Form
     public function validationAttributes()
     {
         return [
-            'currentPassword' => 'Password saat ini',
+            'current_password' => 'Password saat ini',
             'password' => 'Password baru',
-            'passwordConfirmation' => 'Konfirmasi password baru',
+            'password_confirmation' => 'Konfirmasi password baru',
         ];
     }
 

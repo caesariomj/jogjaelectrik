@@ -48,18 +48,24 @@ new #[Layout('layouts.auth')] class extends Component {
         // Here we will attempt to reset the user's password. If it is successful we
         // will update the password on an actual user model and persist it to the
         // database. Otherwise we will parse the error and return the response.
-        $status = Password::reset($this->only('email', 'password', 'password_confirmation', 'token'), function (
-            $user,
-        ) use ($validated) {
-            $user
-                ->forceFill([
-                    'password' => Hash::make($validated['password']),
-                    'remember_token' => Str::random(60),
-                ])
-                ->save();
+        $status = Password::reset(
+            [
+                'email' => $this->form->email,
+                'password' => $this->form->password,
+                'password_confirmation' => $this->form->password_confirmation,
+                'token' => $this->form->token,
+            ],
+            function ($user) use ($validated) {
+                $user
+                    ->forceFill([
+                        'password' => Hash::make($validated['password']),
+                        'remember_token' => Str::random(60),
+                    ])
+                    ->save();
 
-            event(new PasswordReset($user));
-        });
+                event(new PasswordReset($user));
+            },
+        );
 
         // If the password was successfully reset, we will redirect the user back to
         // the application's home authenticated view. If there is an error we can
