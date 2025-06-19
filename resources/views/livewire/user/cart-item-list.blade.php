@@ -39,9 +39,9 @@ new class extends Component {
         if ($this->cart) {
             $this->items = $this->cart->items;
 
-            $this->totalPrice = $this->cart->total_price;
+            $this->totalPrice = $this->cart->total_price ? $this->cart->total_price : 0;
 
-            $this->totalWeight = $this->cart->total_weight;
+            $this->totalWeight = $this->cart->total_weight ? $this->cart->total_weight : 0;
 
             if ($this->cart->discount) {
                 $this->discount = $this->cart->discount;
