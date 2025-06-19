@@ -294,15 +294,7 @@ new class extends Component {
             >
                 Harga Satuan
             </x-datatable.heading>
-            <x-datatable.heading
-                sortable
-                class="min-w-40"
-                :direction="$sortField === 'created_at' ? $sortDirection : null "
-                wire:click="sortBy('created_at')"
-                align="left"
-            >
-                Total Penjualan
-            </x-datatable.heading>
+            <x-datatable.heading class="min-w-40" align="left">Total Penjualan</x-datatable.heading>
             <x-datatable.heading class="px-4 py-2"></x-datatable.heading>
         </x-slot>
         <x-slot name="body">
