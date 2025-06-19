@@ -763,12 +763,20 @@ new class extends Component {
                 @foreach ($form->items as $item)
                     <article wire:key="{{ $item->id }}" class="flex items-start gap-x-4">
                         <div class="size-20 shrink-0 overflow-hidden rounded-md bg-neutral-100">
-                            <img
-                                src="{{ asset('storage/uploads/product-images/' . $item->thumbnail) }}"
-                                alt="Gambar produk {{ strtolower($item->name) }}"
-                                class="aspect-square h-full w-full object-cover"
-                                loading="lazy"
-                            />
+                            @if ($item->thumbnail)
+                                <img
+                                    src="{{ asset('storage/uploads/product-images/' . $item->thumbnail) }}"
+                                    alt="Gambar produk {{ strtolower($item->name) }}"
+                                    class="aspect-square h-full w-full object-cover"
+                                    loading="lazy"
+                                />
+                            @else
+                                <div class="flex h-full w-full items-center justify-center">
+                                    <x-common.application-logo
+                                        class="block h-6 w-auto fill-current text-primary saturate-0 md:h-8"
+                                    />
+                                </div>
+                            @endif
                         </div>
                         <div class="flex flex-col gap-y-1">
                             <h3 class="mb-1 max-w-40 truncate !text-base !font-semibold text-black md:max-w-60">

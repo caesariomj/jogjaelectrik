@@ -746,12 +746,22 @@ new class extends Component {
                                     class="size-32 shrink-0 overflow-hidden rounded-lg bg-neutral-100 md:size-36"
                                     wire:navigate
                                 >
-                                    <img
-                                        src="{{ asset('storage/uploads/product-images/' . $item->thumbnail) }}"
-                                        alt="Gambar produk {{ strtolower($item->name) }}"
-                                        class="aspect-square h-full w-full scale-100 object-cover brightness-100 transition-all ease-in-out hover:scale-105 hover:brightness-95"
-                                        loading="lazy"
-                                    />
+                                    @if ($item->thumbnail)
+                                        <img
+                                            src="{{ asset('storage/uploads/product-images/' . $item->thumbnail) }}"
+                                            alt="Gambar produk {{ strtolower($item->name) }}"
+                                            class="aspect-square h-full w-full scale-100 object-cover brightness-100 transition-all ease-in-out hover:scale-105 hover:brightness-95"
+                                            loading="lazy"
+                                        />
+                                    @else
+                                        <div
+                                            class="flex aspect-square h-full w-full scale-100 items-center justify-center object-cover brightness-100 transition-all ease-in-out hover:scale-105 hover:brightness-95"
+                                        >
+                                            <x-common.application-logo
+                                                class="block h-8 w-auto fill-current text-primary saturate-0 md:h-12"
+                                            />
+                                        </div>
+                                    @endif
                                 </a>
                                 <div class="flex min-h-32 w-full flex-col items-start md:min-h-36">
                                     <a
