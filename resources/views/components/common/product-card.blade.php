@@ -8,12 +8,20 @@
             href="{{ $product->category_slug && $product->subcategory_slug ? route('products.detail', ['category' => $product->category_slug, 'subcategory' => $product->subcategory_slug, 'slug' => $product->slug]) : route('products.detail.without.category.subcategory', ['slug' => $product->slug]) }}"
             wire:navigate
         >
-            <img
-                src="{{ asset('storage/uploads/product-images/' . $product->thumbnail) }}"
-                alt="Gambar produk {{ $product->name }}"
-                class="aspect-square h-full w-full scale-100 object-cover transition-transform group-hover:scale-105"
-                loading="lazy"
-            />
+            @if ($product->thumbnail)
+                <img
+                    src="{{ asset('storage/uploads/product-images/' . $product->thumbnail) }}"
+                    alt="Gambar produk {{ $product->name }}"
+                    class="aspect-square h-full w-full scale-100 object-cover transition-transform group-hover:scale-105"
+                    loading="lazy"
+                />
+            @else
+                <div
+                    class="flex aspect-square h-full w-full scale-100 items-center justify-center bg-neutral-100 transition-transform group-hover:scale-105"
+                >
+                    <x-common.application-logo class="block h-12 w-auto fill-current text-primary saturate-0 md:h-16" />
+                </div>
+            @endif
             <div class="absolute inset-0 z-[1] bg-gradient-to-t from-black to-transparent opacity-5"></div>
         </a>
     </div>
