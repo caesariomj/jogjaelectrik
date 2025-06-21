@@ -24,10 +24,10 @@ new class extends Component {
     public Collection $cities;
 
     #[Validate]
-    public string $password;
+    public string $password = '';
 
     #[Validate]
-    public string $passwordConfirmation;
+    public string $password_confirmation = '';
 
     public function mount(User $user)
     {
@@ -84,17 +84,11 @@ new class extends Component {
         if ($this->password) {
             $this->validate(
                 rules: [
-                    'password' => ['required', 'string', Password::defaults(), 'confirmed:passwordConfirmation'],
-                    'passwordConfirmation' => ['required', 'string'],
-                ],
-                messages: [
-                    'password.required' => 'Password wajib diisi.',
-                    'password.min' => 'Password minimal 8 karakter.',
-                    'passwordConfirmation.same' => 'Konfirmasi password tidak cocok.',
+                    'password' => ['required', 'string', Password::defaults(), 'confirmed'],
                 ],
                 attributes: [
                     'password' => 'Password baru',
-                    'passwordConfirmation' => 'Konfirmasi password baru',
+                    'password_confirmation' => 'Konfirmasi password baru',
                 ],
             );
         }
@@ -541,14 +535,14 @@ new class extends Component {
                 <x-form.input-label for="password-confirmation" value="Konfirmasi password baru" />
                 <div class="relative">
                     <x-form.input
-                        wire:model.lazy="passwordConfirmation"
+                        wire:model.lazy="password_confirmation"
                         id="password-confirmation"
                         name="password-confirmation"
                         x-bind:type="showPassword ? 'text' : 'password'"
                         class="mt-1 block w-full pe-12"
                         placeholder="Konfirmasi password baru..."
                         autocomplete="new-password"
-                        :hasError="$errors->has('passwordConfirmation')"
+                        :hasError="$errors->has('password_confirmation')"
                     />
                     <button
                         type="button"
@@ -595,7 +589,7 @@ new class extends Component {
                         </svg>
                     </button>
                 </div>
-                <x-form.input-error :messages="$errors->get('passwordConfirmation')" class="mt-2" />
+                <x-form.input-error :messages="$errors->get('password_confirmation')" class="mt-2" />
             </div>
         </div>
     </fieldset>

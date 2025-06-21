@@ -8,7 +8,7 @@ use Livewire\Volt\Volt;
 test('confirm password screen can be rendered', function () {
     $user = User::factory()->create();
 
-    $response = $this->actingAs($user)->get('/confirm-password');
+    $response = $this->actingAs($user)->get('/konfirmasi-password');
 
     $response
         ->assertSeeVolt('pages.auth.confirm-password')
@@ -26,7 +26,7 @@ test('password can be confirmed', function () {
     $component->call('confirmPassword');
 
     $component
-        ->assertRedirect('/dashboard')
+        ->assertRedirect('/')
         ->assertHasNoErrors();
 });
 

@@ -45,3 +45,18 @@ function something()
 {
     // ..
 }
+
+
+function seedPermissionsAndRoles()
+{
+    test()->seed(Database\Seeders\RolesSeeder::class);
+    test()->seed(Database\Seeders\UserPermissionsSeeder::class);
+    test()->seed(Database\Seeders\CartPermissionsSeeder::class);
+    test()->seed(Database\Seeders\CheckoutPageAccessSeeder::class);
+    test()->seed(Database\Seeders\OrderPermissionsSeeder::class);
+    test()->seed(Database\Seeders\AdminPageAccessSeeder::class);
+    test()->seed(Database\Seeders\CategoryPermissionsSeeder::class);
+    test()->seed(Database\Seeders\SubcategoryPermissionsSeeder::class);
+    test()->seed(Database\Seeders\DiscountPermissionsSeeder::class);
+    test()->seed(Database\Seeders\ProductPermissionsSeeder::class);
+}

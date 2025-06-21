@@ -5,7 +5,7 @@ namespace Tests\Feature\Auth;
 use Livewire\Volt\Volt;
 
 test('registration screen can be rendered', function () {
-    $response = $this->get('/register');
+    $response = $this->get('/daftar');
 
     $response
         ->assertOk()
@@ -13,15 +13,18 @@ test('registration screen can be rendered', function () {
 });
 
 test('new users can register', function () {
+    seedPermissionsAndRoles();
+
     $component = Volt::test('pages.auth.register')
-        ->set('name', 'Test User')
-        ->set('email', 'test@example.com')
-        ->set('password', 'password')
-        ->set('password_confirmation', 'password');
+        ->set('form.name', 'Test User')
+        ->set('form.email', 'test@example.com')
+        ->set('form.password', 'Password1')
+        ->set('form.password_confirmation', 'Password1')
+        ->set('form.accept_terms_and_conditions', true);
 
     $component->call('register');
 
-    $component->assertRedirect(route('dashboard', absolute: false));
+    $component->assertRedirect(route('home', absolute: false));
 
     $this->assertAuthenticated();
 });
