@@ -76,7 +76,7 @@ class ProductFactory extends Factory
             }
 
             // 5. Hitung base_price dan base_price_discount dari ProductVariant
-            $activeVariants = $productVariants->filter(fn($v) => $v->is_active);
+            $activeVariants = $productVariants->filter(fn ($v) => $v->is_active);
 
             if ($activeVariants->isEmpty()) {
                 $variant = $productVariants->first();
@@ -86,11 +86,12 @@ class ProductFactory extends Factory
                         'base_price_discount' => $variant->price_discount,
                     ]);
                 }
+
                 return;
             }
 
             $discountedVariant = $activeVariants
-                ->filter(fn($v) => $v->price_discount !== null && $v->price_discount > 0)
+                ->filter(fn ($v) => $v->price_discount !== null && $v->price_discount > 0)
                 ->sortBy('price_discount')
                 ->first();
 
@@ -106,6 +107,17 @@ class ProductFactory extends Factory
                     'base_price_discount' => null,
                 ]);
             }
+
+            // 6. Buat ProductImage
+            $imageCount = fake()->numberBetween(2, 4);
+            $productImages = \App\Models\ProductImage::factory()
+                ->count($imageCount)
+                ->for($product)
+                ->create();
+
+            $productImages->random()->update([
+                'is_thumbnail' => true,
+            ]);
         });
     }
 }
