@@ -1,7 +1,7 @@
 <?php
 
-use Database\Factories\ProvinceFactory;
 use Database\Factories\CityFactory;
+use Database\Factories\ProvinceFactory;
 use Livewire\Volt\Volt;
 
 beforeEach(function () {
@@ -37,7 +37,7 @@ test('user can be edited by super_admin', function () {
     ]);
     $user->assignRole('user');
 
-    $response = $this->get('/admin/manajemen-pelanggan/' . $user->id . '/ubah');
+    $response = $this->get('/admin/manajemen-pelanggan/'.$user->id.'/ubah');
 
     $response
         ->assertOk()
@@ -52,7 +52,7 @@ test('user can be edited by super_admin', function () {
             'users.password',
             'users.phone_number',
             'users.address',
-            'users.postal_code'
+            'users.postal_code',
         ])->first()
     );
 
@@ -108,7 +108,7 @@ test('user detail page accessible', function () {
     ]);
     $user->assignRole('user');
 
-    $response = $this->get('/admin/manajemen-pelanggan/' . $user->id . '/detail');
+    $response = $this->get('/admin/manajemen-pelanggan/'.$user->id.'/detail');
 
     $response
         ->assertOk()

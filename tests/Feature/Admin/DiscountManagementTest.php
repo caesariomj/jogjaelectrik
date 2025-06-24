@@ -49,7 +49,7 @@ test('discount can be created', function () {
 test('discount can be updated', function () {
     $discount = \App\Models\Discount::factory()->create();
 
-    $response = $this->get('/admin/manajemen-diskon/' . $discount->code . '/ubah');
+    $response = $this->get('/admin/manajemen-diskon/'.$discount->code.'/ubah');
 
     $response
         ->assertOk()
@@ -113,7 +113,7 @@ test('discount can be deleted', function () {
 
 test('discount usage can be reseted', function () {
     $discount = \App\Models\Discount::factory()->create([
-        'used_count' => 4
+        'used_count' => 4,
     ]);
 
     $response = $this->get('/admin/manajemen-diskon');
@@ -135,7 +135,7 @@ test('discount usage can be reseted', function () {
 test('discount detail page accessible', function () {
     $discount = \App\Models\Discount::factory()->create();
 
-    $response = $this->get('/admin/manajemen-diskon/' . $discount->code . '/detail');
+    $response = $this->get('/admin/manajemen-diskon/'.$discount->code.'/detail');
 
     $response
         ->assertOk()

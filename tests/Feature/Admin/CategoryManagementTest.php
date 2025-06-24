@@ -69,7 +69,7 @@ test('category can be updated', function () {
         'is_primary' => true,
     ]);
 
-    $response = $this->get('/admin/manajemen-kategori/' . $category->slug . '/ubah');
+    $response = $this->get('/admin/manajemen-kategori/'.$category->slug.'/ubah');
 
     $response
         ->assertOk()
@@ -127,7 +127,7 @@ test('category detail page accessible', function () {
 
     $category = \App\Models\Category::factory()->create();
 
-    $response = $this->get('/admin/manajemen-kategori/' . $category->slug . '/detail');
+    $response = $this->get('/admin/manajemen-kategori/'.$category->slug.'/detail');
 
     $response
         ->assertOk()

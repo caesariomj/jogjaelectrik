@@ -57,7 +57,7 @@ test('subcategory can be updated', function () {
         'category_id' => $category->id,
     ]);
 
-    $response = $this->get('/admin/manajemen-subkategori/' . $subcategory->slug . '/ubah');
+    $response = $this->get('/admin/manajemen-subkategori/'.$subcategory->slug.'/ubah');
 
     $response
         ->assertOk()
@@ -121,7 +121,7 @@ test('subcategory detail page accessible', function () {
 
     $subcategory = \App\Models\Subcategory::factory()->create();
 
-    $response = $this->get('/admin/manajemen-subkategori/' . $subcategory->slug . '/detail');
+    $response = $this->get('/admin/manajemen-subkategori/'.$subcategory->slug.'/detail');
 
     $response
         ->assertOk()

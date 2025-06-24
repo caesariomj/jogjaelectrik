@@ -65,7 +65,7 @@ test('admin can be updated by super_admin', function () {
     $admin = \App\Models\User::factory()->create();
     $admin->assignRole('admin');
 
-    $response = $this->get('/admin/manajemen-admin/' . $admin->id . '/ubah');
+    $response = $this->get('/admin/manajemen-admin/'.$admin->id.'/ubah');
 
     $response
         ->assertOk()
@@ -118,7 +118,7 @@ test('admin detail page accessible', function () {
 
     $this->actingAs($admin);
 
-    $response = $this->get('/admin/manajemen-admin/' . $admin->id . '/detail');
+    $response = $this->get('/admin/manajemen-admin/'.$admin->id.'/detail');
 
     $response
         ->assertOk()
