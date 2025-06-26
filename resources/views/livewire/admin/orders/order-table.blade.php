@@ -510,13 +510,13 @@ new class extends Component {
             $this->authorize('cancel', $order);
 
             DB::transaction(function () use ($order, $validated) {
-                if ($order->status === 'waiting_for_payment') {
+                if ($order->status === 'waiting_payment') {
                     $order->payment->update([
-                        'status' => 'cancel',
+                        'status' => 'expired',
                     ]);
                 } else {
                     $order->payment->update([
-                        'status' => 'refund',
+                        'status' => 'refunded',
                     ]);
                 }
 
