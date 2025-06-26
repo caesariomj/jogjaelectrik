@@ -46,7 +46,6 @@ function something()
     // ..
 }
 
-
 function seedPermissionsAndRoles()
 {
     test()->seed(Database\Seeders\RolesSeeder::class);
@@ -59,4 +58,6 @@ function seedPermissionsAndRoles()
     test()->seed(Database\Seeders\SubcategoryPermissionsSeeder::class);
     test()->seed(Database\Seeders\DiscountPermissionsSeeder::class);
     test()->seed(Database\Seeders\ProductPermissionsSeeder::class);
+    test()->seed(Database\Seeders\RefundPermissionsSeeder::class);
+    test()->seed(Database\Seeders\ProductReviewPermissionsSeeder::class);
 }
