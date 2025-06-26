@@ -35,7 +35,7 @@ test('unpaid order can be canceled', function () {
     $order->refresh();
 
     $this->assertSame('canceled', $order->status);
-    $this->assertSame('refunded', $order->payment->status);
+    $this->assertSame('expired', $order->payment->status);
 });
 
 test('paid order can be canceled', function () {
