@@ -7,10 +7,10 @@ use Livewire\Volt\Volt;
 beforeEach(function () {
     seedPermissionsAndRoles();
 
-    $admin = \App\Models\User::factory()->create();
-    $admin->assignRole('super_admin');
+    $superAdmin = \App\Models\User::factory()->create();
+    $superAdmin->assignRole('super_admin');
 
-    $this->actingAs($admin);
+    $this->actingAs($superAdmin);
 });
 
 test('product management page accessible', function () {
