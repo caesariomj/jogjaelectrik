@@ -2,9 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Services\PaymentService;
 use Illuminate\Console\Command;
 
-class UpdateOrderStatusCommand extends Command
+class UpdateUnpaidOrderCommand extends Command
 {
     /**
      * The name and signature of the console command.
@@ -20,6 +21,15 @@ class UpdateOrderStatusCommand extends Command
      */
     protected $description = 'Update unpaid order status after 24 hours of creation';
 
+    protected $paymentService;
+
+    public function __construct(PaymentService $paymentService)
+    {
+        parent::__construct();
+
+        $this->paymentService = $paymentService;
+    }
+
     /**
      * Execute the console command.
      */
@@ -33,9 +43,13 @@ class UpdateOrderStatusCommand extends Command
 
             $payment = $order->payment;
 
-            if ($payment->status === 'pending') {
-                $payment->status = 'expire';
-                $payment->save();
+            if ($payment) {
+                if ($payment->status === 'unpaid') {
+                    $payment->status = 'expired';
+                    $payment->save();
+
+                    $this->paymentService->expireInvoice($payment->xendit_invoice_id);
+                }
             }
 
             \Illuminate\Support\Facades\Log::info("Unpaid order with ID #{$order->id} status updated to failed after 24 hours.");
