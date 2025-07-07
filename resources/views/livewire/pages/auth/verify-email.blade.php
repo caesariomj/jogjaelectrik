@@ -5,12 +5,24 @@ use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
 
 new #[Layout('layouts.auth')] class extends Component {
+    public function mount(): void
+    {
+        if (Auth::user()->hasVerifiedEmail()) {
+            session()->flash('error', 'Email anda telah terverifikasi');
+            $this->redirectIntended(default: route('home', absolute: false), navigate: true);
+
+            return;
+        }
+    }
+
     /**
      * Send an email verification notification to the user.
      */
     public function sendVerification(): void
     {
         if (Auth::user()->hasVerifiedEmail()) {
+            session()->flash('error', 'Email anda telah terverifikasi');
+
             $this->redirectIntended(default: route('home', absolute: false), navigate: true);
 
             return;
