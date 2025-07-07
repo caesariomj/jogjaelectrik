@@ -148,7 +148,7 @@ new class extends Component {
                 ],
             ]);
 
-            session('error', $e->getUserMessage());
+            session()->flash('error', $e->getUserMessage());
             return $this->redirectIntended(route('checkout'), navigate: true);
         } catch (\Exception $e) {
             Log::error('An unexpected error occurred', [
@@ -348,7 +348,7 @@ new class extends Component {
                 ],
             ]);
 
-            session('error', $e->getUserMessage());
+            session()->flash('error', $e->getUserMessage());
             return $this->redirectIntended(route('checkout'), navigate: true);
         } catch (\Exception $e) {
             Log::error('An unexpected error occurred', [
@@ -364,7 +364,7 @@ new class extends Component {
                 ],
             ]);
 
-            session('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
+            session()->flash('error', 'Terjadi kesalahan tidak terduga, silakan coba beberapa saat lagi.');
             return $this->redirectIntended(route('checkout'), navigate: true);
         }
     }
