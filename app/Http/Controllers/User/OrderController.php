@@ -167,6 +167,12 @@ class OrderController extends Controller
             return redirect()->route('orders.index');
         }
 
+        if (! in_array($order->first()->status, ['payment_received', 'processing', 'shipping', 'completed'])) {
+            session()->flash('error', 'Pesanan dengan nomor '.$orderNumber.' belum dibayar.');
+
+            return redirect()->route('orders.index');
+        }
+
         $order = $order
             ->groupBy('id')
             ->map(function ($order) {

@@ -37,7 +37,7 @@ class PaymentController extends Controller
         if (! $payment) {
             session()->flash('error', 'Riwayat transaksi dengan ID '.$id.' tidak ditemukan.');
 
-            return redirect()->route('admin.payments.index');
+            return redirect()->route('transactions.index');
         }
 
         $data = (object) [
@@ -69,7 +69,7 @@ class PaymentController extends Controller
         } catch (AuthorizationException $e) {
             session()->flash('error', $e->getMessage());
 
-            return redirect()->route('payments.index');
+            return redirect()->route('transactions.index');
         }
     }
 }
