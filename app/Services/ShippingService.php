@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Exceptions\ApiRequestException;
 use App\Models\City;
-use Illuminate\Support\Facades\Http;
 
 class ShippingService
 {
@@ -25,11 +24,6 @@ class ShippingService
     {
         $url = 'https://api.rajaongkir.com/'.$this->apiPackage.'/cost';
 
-        $headers = [
-            'key' => $this->apiKey,
-            'Content-Type' => 'application/x-www-form-urlencoded',
-        ];
-
         $params = [
             'origin' => (string) $this->origin->id,
             'destination' => (string) $destination,
@@ -37,36 +31,107 @@ class ShippingService
             'courier' => (string) $courier,
         ];
 
+        $postFields = http_build_query($params);
+
+        $curl = curl_init();
+
+        curl_setopt_array($curl, [
+            CURLOPT_URL => $url,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 30,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => $postFields,
+            CURLOPT_HTTPHEADER => [
+                'content-type: application/x-www-form-urlencoded',
+                'key: '.$this->apiKey,
+            ],
+            CURLOPT_HEADER => true,
+        ]);
+
+        $response = curl_exec($curl);
+        $err = curl_error($curl);
+        $httpCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+        $headerSize = curl_getinfo($curl, CURLINFO_HEADER_SIZE);
+
+        $headers = substr($response, 0, $headerSize);
+        $body = substr($response, $headerSize);
+
+        curl_close($curl);
+
         try {
-            $response = Http::withHeaders($headers)->asForm()->post($url, $params);
+            if ($err) {
+                if (strpos($err, 'timeout') !== false) {
+                    throw new ApiRequestException(
+                        logMessage: 'RajaOngkir cURL timeout: '.$err,
+                        userMessage: 'Koneksi ke layanan pengiriman terputus, silakan coba lagi nanti.',
+                        statusCode: 504
+                    );
+                }
+                throw new ApiRequestException(
+                    logMessage: 'RajaOngkir cURL error: '.$err,
+                    userMessage: 'Terjadi kesalahan tidak terduga pada saat menghitung ongkos kirim, silakan coba beberapa saat lagi.',
+                    statusCode: 500
+                );
+            }
 
-            if ($response->failed()) {
-                $responseBody = $response->json();
+            error_log('RajaOngkir raw response: '.$body);
+            error_log('RajaOngkir response headers: '.$headers);
+            error_log('RajaOngkir HTTP status code: '.$httpCode);
 
-                $errorDescription = $responseBody['rajaongkir']['status']['description'] ?? 'Unknown error';
-                $errorCode = $responseBody['rajaongkir']['status']['code'] ?? $response->status();
+            if (empty($body)) {
+                throw new ApiRequestException(
+                    logMessage: 'RajaOngkir empty response received',
+                    userMessage: 'Tidak ada data dari layanan pengiriman, silakan coba lagi nanti.',
+                    statusCode: 502
+                );
+            }
+
+            if ($httpCode === 500) {
+                throw new ApiRequestException(
+                    logMessage: 'RajaOngkir server error: HTTP 500 Internal Server Error | Raw response: '.substr($body, 0, 500),
+                    userMessage: 'Layanan pengiriman sedang bermasalah, silakan coba lagi nanti.',
+                    statusCode: 500
+                );
+            }
+
+            $result = json_decode($body, true);
+
+            if (json_last_error() !== JSON_ERROR_NONE) {
+                throw new ApiRequestException(
+                    logMessage: 'RajaOngkir invalid JSON response: '.json_last_error_msg().' | Raw response: '.substr($body, 0, 500),
+                    userMessage: 'Terjadi kesalahan dalam memproses data pengiriman, silakan coba lagi nanti.',
+                    statusCode: 500
+                );
+            }
+
+            if ($httpCode >= 400) {
+                $errorDescription = $result['rajaongkir']['status']['description'] ?? 'Unknown error';
+                $errorCode = $result['rajaongkir']['status']['code'] ?? $httpCode;
 
                 if ($errorCode >= 400 && $errorCode <= 499) {
-                    if (str_contains($errorDescription, 'Invalid key')) {
+                    if (stripos($errorDescription, 'Invalid key') !== false) {
                         throw new ApiRequestException(
                             logMessage: 'RajaOngkir invalid API key: '.$errorDescription,
                             userMessage: 'Terjadi kesalahan pada layanan pengiriman, silakan coba beberapa saat lagi.',
-                            statusCode: $errorCode,
+                            statusCode: $errorCode
                         );
                     }
 
-                    if (str_contains($errorDescription, 'Bad request')) {
+                    if (stripos($errorDescription, 'Bad request') !== false) {
                         throw new ApiRequestException(
                             logMessage: 'RajaOngkir invalid parameters: '.$errorDescription,
                             userMessage: 'Terjadi kesalahan dalam menghitung ongkos kirim, silakan periksa alamat Anda dan coba lagi.',
-                            statusCode: $errorCode,
+                            statusCode: $errorCode
                         );
                     }
 
                     throw new ApiRequestException(
                         logMessage: 'RajaOngkir unexpected 4xx error: '.$errorDescription,
                         userMessage: 'Terjadi kesalahan yang tidak terduga, silakan coba beberapa saat lagi.',
-                        statusCode: $errorCode,
+                        statusCode: $errorCode
                     );
                 }
 
@@ -76,8 +141,6 @@ class ShippingService
                     statusCode: $errorCode
                 );
             }
-
-            $result = $response->json();
 
             return $this->transformCourierServicesData($result['rajaongkir']['results']);
         } catch (ApiRequestException $e) {
