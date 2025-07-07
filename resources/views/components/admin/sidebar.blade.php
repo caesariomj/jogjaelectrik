@@ -21,7 +21,7 @@
     <div class="flex items-center justify-between p-4">
         <a href="{{ route('home') }}" class="flex w-fit items-center gap-x-4">
             <x-common.application-logo class="block h-9 w-auto fill-current text-primary" />
-            <span class="text-xl font-semibold tracking-tight">My App</span>
+            <span class="text-xl font-semibold tracking-tight">{{ config('app.name') }}</span>
         </a>
         <button @click="toggleSidebar" class="relative rounded-full p-2 text-black hover:bg-neutral-100 lg:hidden">
             <svg class="size-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -84,11 +84,7 @@
                         Pesanan
                         @if ($ordersCount > 0)
                             <span
-                                @class([
-                                    'ml-auto inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                                    'bg-white text-red-500' => request()->routeIs('admin.orders.*'),
-                                    'bg-red-500 text-white' => ! request()->routeIs('admin.orders.*'),
-                                ])
+                                class="ml-auto inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white"
                             >
                                 {{ $ordersCount }}
                             </span>
@@ -122,11 +118,7 @@
                         Permintaan Refund
                         @if ($refundsCount > 0)
                             <span
-                                @class([
-                                    'ml-auto inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                                    'bg-white text-red-500' => request()->routeIs('admin.refunds.*'),
-                                    'bg-red-500 text-white' => ! request()->routeIs('admin.refunds.*'),
-                                ])
+                                class="ml-auto inline-flex items-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white"
                             >
                                 {{ $refundsCount }}
                             </span>

@@ -1,7 +1,7 @@
 @php
     $ordersCount = \Illuminate\Support\Facades\DB::table('orders')
         ->where('user_id', auth()->id())
-        ->whereIn('status', ['waiting_payment', 'shipping'])
+        ->whereNotIn('status', ['completed', 'failed', 'canceled'])
         ->count();
 @endphp
 
@@ -59,11 +59,7 @@
                     Pesanan Saya
                     @if ($ordersCount > 0)
                         <span
-                            @class([
-                                'ml-auto inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium',
-                                'bg-white text-red-500' => request()->routeIs('orders.*'),
-                                'bg-red-500 text-white' => ! request()->routeIs('orders.*'),
-                            ])
+                            class="ml-auto inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white"
                         >
                             {{ $ordersCount }}
                         </span>
