@@ -274,6 +274,21 @@ class Order extends Model
         return $query->where('status', 'waiting_payment')->where('created_at', '<=', \Carbon\Carbon::now()->subDay());
     }
 
+    public function scopeOverdue($query)
+    {
+        return $query->whereIn('status', ['payment_received', 'processing'])
+            ->where(function ($query) {
+                $query->where(function ($q) {
+                    $q->where('estimated_shipping_max_days', 0)
+                        ->whereRaw('DATE_ADD(created_at, INTERVAL 1 DAY) < ?', [\Carbon\Carbon::now()]);
+                })
+                    ->orWhere(function ($q) {
+                        $q->where('estimated_shipping_max_days', '>', 0)
+                            ->whereRaw('DATE_ADD(created_at, INTERVAL estimated_shipping_max_days DAY) < ?', [\Carbon\Carbon::now()]);
+                    });
+            });
+    }
+
     private static function generateOrderNumber()
     {
         $date = now()->format('Ymd');
