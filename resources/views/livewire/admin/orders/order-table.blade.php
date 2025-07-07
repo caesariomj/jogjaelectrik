@@ -1799,7 +1799,7 @@ new class extends Component {
                                                     <strong class="text-black">
                                                         menghubungi nomor telefon yang tertera pada pesanan ini
                                                     </strong>
-                                                    untuk mengkonfirmasi kepada pelanggan bahwa produk yang dipesan yang
+                                                    untuk mengkonfirmasi kepada pelanggan bahwa produk yang dipesan
                                                     telah diterima.
                                                 </p>
                                                 <div

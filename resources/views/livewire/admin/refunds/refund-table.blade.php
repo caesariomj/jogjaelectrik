@@ -369,7 +369,7 @@ new class extends Component {
             </x-datatable.heading>
             <x-datatable.heading
                 sortable
-                class="min-w-32"
+                class="min-w-40"
                 :direction="$sortField === 'status' ? $sortDirection : null "
                 wire:click="sortBy('status')"
                 align="center"
@@ -473,21 +473,21 @@ new class extends Component {
                     <x-datatable.cell align="center">
                         @if ($refund->status === 'pending')
                             <span
-                                class="inline-flex items-center gap-x-1.5 rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium tracking-tight text-yellow-800"
+                                class="inline-flex items-center gap-x-1.5 text-nowrap rounded-full bg-yellow-100 px-3 py-1 text-xs font-medium tracking-tight text-yellow-800"
                             >
                                 <span class="inline-block size-1.5 rounded-full bg-yellow-800"></span>
                                 Menunggu Diproses
                             </span>
                         @elseif (in_array($refund->status, ['approved', 'succeeded']))
                             <span
-                                class="inline-flex items-center gap-x-1.5 rounded-full bg-teal-100 px-3 py-1 text-xs font-medium tracking-tight text-teal-800"
+                                class="inline-flex items-center gap-x-1.5 text-nowrap rounded-full bg-teal-100 px-3 py-1 text-xs font-medium tracking-tight text-teal-800"
                             >
                                 <span class="inline-block size-1.5 rounded-full bg-teal-800"></span>
                                 {{ $refund->status === 'approved' ? 'Disetujui' : 'Berhasil' }}
                             </span>
                         @elseif (in_array($refund->status, ['failed', 'rejected']))
                             <span
-                                class="inline-flex items-center gap-x-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-medium tracking-tight text-red-800"
+                                class="inline-flex items-center gap-x-1.5 text-nowrap rounded-full bg-red-100 px-3 py-1 text-xs font-medium tracking-tight text-red-800"
                             >
                                 <span class="inline-block size-1.5 rounded-full bg-red-800"></span>
                                 {{ $refund->status === 'failed' ? 'Gagal' : 'Ditolak' }}
