@@ -14,9 +14,9 @@ new class extends Component {
     #[Url(as: 'q', except: '')]
     public string $search = '';
 
-    public string $sortField = 'id';
+    public string $sortField = 'created_at';
 
-    public string $sortDirection = 'asc';
+    public string $sortDirection = 'desc';
 
     public int $perPage = 5;
 
@@ -39,10 +39,12 @@ new class extends Component {
                 'payments.id',
                 'orders.order_number',
                 'orders.total_amount',
+                'payments.method',
                 'payments.created_at',
                 'payments.updated_at',
             ],
         )
+            ->whereIn('payments.status', ['paid', 'settled', 'refunded'])
             ->when($this->search, function ($query) {
                 return $query->where('orders.order_number', 'like', '%' . $this->search . '%');
             })
@@ -181,6 +183,15 @@ new class extends Component {
                     </x-datatable.heading>
                     <x-datatable.heading
                         sortable
+                        class="min-w-48"
+                        :direction="$sortField === 'method' ? $sortDirection : null "
+                        wire:click="sortBy('method')"
+                        align="left"
+                    >
+                        Metode Pembayaran
+                    </x-datatable.heading>
+                    <x-datatable.heading
+                        sortable
                         class="min-w-40"
                         :direction="$sortField === 'total_amount' ? $sortDirection : null "
                         wire:click="sortBy('total_amount')"
@@ -242,6 +253,24 @@ new class extends Component {
                             align="left"
                         >
                             {{ $payment->order_number }}
+                        </x-datatable.cell>
+                        <x-datatable.cell class="flex flex-nowrap items-center gap-x-2" align="left">
+                            @php
+                                $paymentMethod = str_replace(['ewallet_', 'bank_transfer_'], '', $payment->method);
+                            @endphp
+
+                            <div class="h-8 w-14 rounded-md border border-neutral-300 px-2 py-1">
+                                <img
+                                    src="{{ asset('images/logos/payments/' . $paymentMethod . '.webp') }}"
+                                    alt="Logo {{ strtoupper($paymentMethod) }}"
+                                    title="{{ strtoupper($paymentMethod) }}"
+                                    class="h-full w-full object-contain"
+                                    loading="lazy"
+                                />
+                            </div>
+                            <p class="text-nowrap text-sm font-normal tracking-tight text-black/70">
+                                {{ strtoupper($paymentMethod) }}
+                            </p>
                         </x-datatable.cell>
                         <x-datatable.cell
                             class="text-nowrap text-sm font-normal tracking-tight text-black/70"

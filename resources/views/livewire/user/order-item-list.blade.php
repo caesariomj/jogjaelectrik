@@ -809,7 +809,7 @@ new class extends Component {
                                     Dibuat pada: {{ formatTimestamp($order->created_at) }}
                                 </p>
                             </div>
-                            @if (in_array($order->status, ['payment_received', 'processing', 'shipping']))
+                            @if ($order->status === 'shipping')
                                 <div
                                     class="inline-flex items-start md:items-center md:border-l md:border-l-neutral-300 md:ps-2"
                                 >
