@@ -9,25 +9,14 @@
             <h2 class="mb-3 !text-xl text-black md:!text-2xl">Ringkasan</h2>
             <livewire:admin.dashboard.summary-statistics />
         </section>
-        <section
-            class="mx-auto mb-6 flex h-[40rem] w-full flex-col items-center justify-between gap-6 lg:h-96 lg:flex-row"
-        >
-            <div class="h-full w-full rounded-xl bg-white p-4 shadow lg:w-1/2">
+        <section class="mx-auto mb-6 flex h-[40rem] w-full items-center lg:h-96">
+            <div class="h-full w-full rounded-xl bg-white p-4 shadow">
                 <h2 class="!text-xl text-black md:!text-2xl">Statistik Penjualan Mingguan</h2>
                 <p class="mt-1 text-sm font-medium tracking-tight text-black/70">
                     Grafik penjualan setiap hari selama seminggu terakhir
                 </p>
                 <div class="mt-2 h-[calc(100%-4rem)] w-full">
                     <livewire:admin.dashboard.weekly-order-chart />
-                </div>
-            </div>
-            <div class="h-full w-full rounded-xl bg-white p-4 shadow lg:w-1/2">
-                <h2 class="!text-xl text-black md:!text-2xl">Trafik Mingguan</h2>
-                <p class="mt-1 text-sm font-medium tracking-tight text-black/70">
-                    Jumlah pengunjung website setiap hari selama seminggu terakhir
-                </p>
-                <div class="mt-2 h-[calc(100%-4rem)] w-full">
-                    <livewire:admin.dashboard.weekly-traffic />
                 </div>
             </div>
         </section>

@@ -14,7 +14,6 @@ new class extends Component {
     public int $monthlyIncome = 0;
     public int $activeProducts = 0;
     public int $totalUsers = 0;
-    public int $totalVisitors = 0;
 
     public function mount(): void
     {
@@ -23,7 +22,6 @@ new class extends Component {
         $this->countMonthlyIncome();
         $this->countActiveProducts();
         $this->countTotalUsers();
-        $this->countTotalVisitors();
     }
 
     private function countTodaysOrder(): void
@@ -44,7 +42,9 @@ new class extends Component {
 
         $monthlyIncome = (float) Payment::join('orders', 'payments.order_id', '=', 'orders.id')
             ->whereBetween('payments.created_at', [$monthStart, $monthEnd])
-            ->where('payments.status', 'paid')
+            ->where(function ($query) {
+                $query->where('payments.status', 'paid')->orWhere('payments.status', 'settled');
+            })
             ->sum('orders.total_amount');
 
         $this->monthlyIncome = $monthlyIncome;
@@ -58,12 +58,6 @@ new class extends Component {
     private function countTotalUsers(): void
     {
         $this->totalUsers = User::role('user')->count();
-    }
-
-    private function countTotalVisitors(): void
-    {
-        // TODO: Use Google Analytics
-        $this->totalVisitors = 0;
     }
 }; ?>
 
@@ -210,26 +204,4 @@ new class extends Component {
             </svg>
         </div>
     </a>
-    <div class="flex items-center justify-between rounded-xl bg-white p-4 shadow">
-        <div>
-            <p class="text-sm font-medium tracking-tight text-black/70">Jumlah Pengunjung Harian</p>
-            <p class="mt-1 text-xl font-semibold tracking-tight text-black">{{ $totalVisitors }}</p>
-        </div>
-        <div class="flex size-12 items-center justify-center rounded-lg bg-primary-50 text-primary">
-            <svg
-                xmlns="http://www.w3.org/2000/svg"
-                class="size-8 shrink-0"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-            >
-                <circle cx="12" cy="12" r="10" />
-                <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
-                <path d="M2 12h20" />
-            </svg>
-        </div>
-    </div>
 </div>
