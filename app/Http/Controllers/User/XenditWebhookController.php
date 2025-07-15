@@ -183,6 +183,7 @@ class XenditWebhookController extends Controller
 
                 $order->payment->refund->update([
                     'xendit_refund_id' => $refund['id'],
+                    'status' => 'failed',
                     'rejection_reason' => $rejectionReason,
                 ]);
 
