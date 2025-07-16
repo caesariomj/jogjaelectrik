@@ -269,11 +269,6 @@ new class extends Component {
             return;
         }
 
-        if ($newQuantity < 1) {
-            $this->addError('quantity-' . $cartItemId, 'Jumlah produk tidak bisa kurang dari 1.');
-            return;
-        }
-
         if ($newQuantity > $existingCartItem->stock) {
             $this->addError(
                 'quantity-' . $cartItemId,
@@ -282,7 +277,7 @@ new class extends Component {
             return;
         }
 
-        $newQuantity = max(1, min($newQuantity, $existingCartItem->stock));
+        $newQuantity = min($newQuantity, $existingCartItem->stock);
 
         $existingCartItemName = $existingCartItem->name;
 
@@ -292,14 +287,26 @@ new class extends Component {
             $this->authorize('update', $this->cart);
 
             DB::transaction(function () use ($existingCartItem, $newQuantity) {
-                $existingCartItem->update([
-                    'quantity' => $newQuantity,
-                ]);
+                if ($newQuantity < 1) {
+                    $existingCartItem->delete();
+                } else {
+                    $existingCartItem->update([
+                        'quantity' => $newQuantity,
+                    ]);
+                }
             });
 
-            $this->updateItemCollection(cartItemId: $existingCartItem->id, newQuantity: $newQuantity);
+            if ($newQuantity < 1) {
+                session()->flash(
+                    'success',
+                    'Produk ' . $existingCartItemName . ' berhasil dihapus dari keranjang belanja.',
+                );
+                return $this->redirectIntended(route('cart'), navigate: true);
+            } else {
+                $this->updateItemCollection(cartItemId: $existingCartItem->id, newQuantity: $newQuantity);
 
-            return;
+                return;
+            }
         } catch (AuthorizationException $e) {
             session()->flash('error', $e->getMessage());
             return $this->redirectIntended(route('cart'), navigate: true);
@@ -370,11 +377,6 @@ new class extends Component {
 
         $newQuantity = $existingCartItem->quantity - 1;
 
-        if ($newQuantity < 1) {
-            $this->addError('quantity-' . $cartItemId, 'Jumlah produk tidak bisa kurang dari 1.');
-            return;
-        }
-
         $existingCartItemName = $existingCartItem->name;
 
         $existingCartItem = (new CartItem())->newFromBuilder($existingCartItem);
@@ -383,14 +385,25 @@ new class extends Component {
             $this->authorize('update', $this->cart);
 
             DB::transaction(function () use ($existingCartItem, $newQuantity) {
-                $existingCartItem->update([
-                    'quantity' => $newQuantity,
-                ]);
+                if ($newQuantity < 1) {
+                    $existingCartItem->delete();
+                } else {
+                    $existingCartItem->update([
+                        'quantity' => $newQuantity,
+                    ]);
+                }
             });
 
-            $this->updateItemCollection(cartItemId: $existingCartItem->id, newQuantity: $newQuantity);
-
-            return;
+            if ($newQuantity < 1) {
+                session()->flash(
+                    'success',
+                    'Produk ' . $existingCartItemName . ' berhasil dihapus dari keranjang belanja.',
+                );
+                return $this->redirectIntended(route('cart'), navigate: true);
+            } else {
+                $this->updateItemCollection(cartItemId: $existingCartItem->id, newQuantity: $newQuantity);
+                return;
+            }
         } catch (AuthorizationException $e) {
             session()->flash('error', $e->getMessage());
             return $this->redirectIntended(route('cart'), navigate: true);
@@ -800,7 +813,6 @@ new class extends Component {
                                                     class="flex size-8 items-center justify-center rounded-md border border-neutral-300 p-2 text-black disabled:cursor-not-allowed disabled:opacity-50"
                                                     aria-label="Kurangi jumlah produk"
                                                     wire:loading.attr="disabled"
-                                                    @disabled($item->quantity <= 1)
                                                 >
                                                     <svg
                                                         class="size-4 shrink-0"
