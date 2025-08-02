@@ -38,6 +38,7 @@ class Product extends Model
         'slug',
         'description',
         'main_sku',
+        'cost_price',
         'base_price',
         'base_price_discount',
         'is_active',
