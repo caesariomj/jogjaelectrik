@@ -34,6 +34,7 @@ class Order extends Model
         'user_id',
         'discount_id',
         'order_number',
+        'source',
         'status',
         'shipping_address',
         'shipping_courier',
