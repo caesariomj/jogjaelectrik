@@ -186,6 +186,7 @@ class Order extends Model
                     'products.name as product_name',
                     'products.slug as product_slug',
                     'products.main_sku as product_main_sku',
+                    'products.cost_price as product_cost_price',
                     'variation_variants.name as variant_name',
                     'variations.name as variation_name',
                     'product_images.file_name as thumbnail',
