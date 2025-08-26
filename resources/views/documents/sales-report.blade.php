@@ -110,7 +110,7 @@
         {!! $image !!}
 
         <h1>
-            LAPORAN PENJUALAN
+            LAPORAN PENJUALAN TOKO JOGJA ELECTRIK
 
             @if ($month)
                 {{ $month }}
@@ -140,7 +140,12 @@
                 <div class="value total-line">
                     <span class="label">GRAND TOTAL PENJUALAN</span>
                     <br />
-                    <strong>Rp {{ formatPrice($grandTotal) }}</strong>
+                    <strong>Rp {{ formatPrice($grandTotalSales) }}</strong>
+                </div>
+                <div class="value total-line">
+                    <span class="label">GRAND TOTAL PROFIT</span>
+                    <br />
+                    <strong>Rp {{ formatPrice($grandTotalProfit) }}</strong>
                 </div>
             </div>
 
@@ -149,19 +154,21 @@
         <table>
             <thead>
                 <tr>
-                    <th>NO.</th>
+                    <th align="center">NO.</th>
                     <th>NAMA PRODUK</th>
                     <th>VARIASI</th>
-                    <th>KATEGORI / SUBKATEGORI</th>
                     <th align="center">TERJUAL</th>
                     <th>HARGA SATUAN</th>
+                    <th>HARGA MODAL</th>
+                    <th>MARGIN PROFIT</th>
                     <th>TOTAL PENJUALAN</th>
+                    <th>TOTAL PROFIT</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach ($products as $product)
                     <tr>
-                        <td>{{ $loop->iteration }}.</td>
+                        <td align="center">{{ $loop->iteration }}.</td>
                         <td>
                             {{ $product['name'] }}
                         </td>
@@ -172,16 +179,12 @@
                                 -
                             @endif
                         </td>
-                        @if ($product['subcategory_name'] && $product['category_name'])
-                            <td>
-                                {{ ucwords($product['subcategory_name']) . ' / ' . ucwords($product['category_name']) }}
-                            </td>
-                        @else
-                            <td>-</td>
-                        @endif
                         <td align="center">{{ formatPrice($product['total_sold']) }}</td>
                         <td>Rp {{ formatPrice($product['price']) }}</td>
+                        <td>Rp {{ formatPrice($product['cost_price']) }}</td>
+                        <td>Rp {{ formatPrice($product['margin_profit']) }}</td>
                         <td>Rp {{ formatPrice($product['total_sales']) }}</td>
+                        <td>Rp {{ formatPrice($product['total_profit']) }}</td>
                     </tr>
                 @endforeach
             </tbody>

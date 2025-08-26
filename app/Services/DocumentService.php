@@ -37,6 +37,8 @@ class DocumentService
         $products = [];
 
         foreach ($sales as $item) {
+            // dd($item);
+
             $variantId = $item->product_variant_id;
             $price = $item->order_detail_price;
             $quantity = $item->order_detail_quantity;
@@ -52,24 +54,29 @@ class DocumentService
                     'variant_name' => $item->variant_name ? $item->variant_name : null,
                     'category_name' => $item->category_name ? $item->category_name : null,
                     'subcategory_name' => $item->subcategory_name ? $item->subcategory_name : null,
-                    'price' => $price,
                     'total_sold' => $quantity,
+                    'price' => $price,
+                    'cost_price' => $item->product_cost_price,
+                    'margin_profit' => $price - $item->product_cost_price,
                     'total_sales' => $price * $quantity,
+                    'total_profit' => ($price - $item->product_cost_price) * $quantity,
                 ];
             }
         }
 
         $products = array_values($products);
 
-        $grandTotal = array_sum(array_column($products, 'total_sales'));
+        $grandTotalSales = array_sum(array_column($products, 'total_sales'));
 
-        $pdf = Pdf::loadView('documents.sales-report', compact('grandTotal', 'products', 'month', 'year'))
+        $grandTotalProfit = array_sum(array_column($products, 'total_profit'));
+
+        $pdf = Pdf::loadView('documents.sales-report', compact('grandTotalSales', 'grandTotalProfit', 'products', 'month', 'year'))
             ->setPaper('A4', 'landscape')
             ->output();
 
         $year = $year !== '' ? $year : date('Y');
 
-        $fileName = 'Laporan Penjualan';
+        $fileName = 'Laporan Penjualan Website Toko Jogja Electrik';
 
         if ($month !== '') {
             $fileName .= '-'.$month;
