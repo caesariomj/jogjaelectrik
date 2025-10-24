@@ -6,58 +6,61 @@
     <section x-data="{ shown: false }" x-intersect="shown = true" class="min-h-[50svh] md:min-h-[75svh]">
         <x-common.banner-carousel :slides="$bannerSlides" autoplayInterval="6000" />
     </section>
-    <section
-        class="container mx-auto grid h-full max-w-md grid-cols-1 gap-6 p-6 md:max-w-[96rem] md:grid-cols-2 md:gap-12 md:p-12"
-    >
-        @foreach ($primaryCategories as $category)
-            <article class="group relative h-96 w-full overflow-hidden rounded-xl shadow-xl md:h-[40rem]">
-                <a
-                    href="{{ route('products.category', ['category' => $category->slug]) }}"
-                    class="relative block h-full w-full"
-                    wire:navigate
-                >
-                    <div class="absolute inset-0 z-[1] bg-gradient-to-t from-black to-transparent"></div>
-                    <img
-                        src="https://penguinui.s3.amazonaws.com/component-assets/carousel/default-slide-1.webp"
-                        alt="Kategori {{ $category->name }}"
-                        class="h-full w-full object-cover"
-                        loading="lazy"
-                    />
-                    <div class="absolute bottom-0 start-0 z-[2] flex flex-col items-start gap-4 p-8">
-                        <h2 class="w-full text-pretty text-white md:w-2/3">
-                            {{ ucwords($category->name) }}
-                        </h2>
-                        <p class="mb-4 w-full text-base tracking-tight text-white/80 md:w-2/3">
-                            @if ($loop->first)
-                                Temukan berbagai pilihan {{ $category->name }} yang siap melengkapi kebutuhan Anda
-                                dengan kualitas terbaik.
-                            @else
-                                Jelajahi koleksi {{ $category->name }} dengan pilihan terbaik untuk memenuhi kebutuhan
-                                Anda.
-                            @endif
-                        </p>
-                        <x-common.button variant="secondary">
-                            Lihat {{ ucwords($category->name) }}
-                            <svg
-                                class="size-5 shrink-0"
-                                xmlns="http://www.w3.org/2000/svg"
-                                viewBox="0 0 24 24"
-                                fill="none"
-                                stroke="currentColor"
-                                stroke-width="2"
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                aria-hidden="true"
-                            >
-                                <path d="M18 8L22 12L18 16" />
-                                <path d="M2 12H22" />
-                            </svg>
-                        </x-common.button>
-                    </div>
-                </a>
-            </article>
-        @endforeach
-    </section>
+    @if (count($primaryCategories) > 0)
+        <section
+            class="container mx-auto grid h-full max-w-md grid-cols-1 gap-6 p-6 md:max-w-[96rem] md:grid-cols-2 md:gap-12 md:p-12"
+        >
+            @foreach ($primaryCategories as $category)
+                <article class="group relative h-96 w-full overflow-hidden rounded-xl shadow-xl md:h-[40rem]">
+                    <a
+                        href="{{ route('products.category', ['category' => $category->slug]) }}"
+                        class="relative block h-full w-full"
+                        wire:navigate
+                    >
+                        <div class="absolute inset-0 z-[1] bg-gradient-to-t from-black to-transparent"></div>
+                        <img
+                            src="https://penguinui.s3.amazonaws.com/component-assets/carousel/default-slide-1.webp"
+                            alt="Kategori {{ $category->name }}"
+                            class="h-full w-full object-cover"
+                            loading="lazy"
+                        />
+                        <div class="absolute bottom-0 start-0 z-[2] flex flex-col items-start gap-4 p-8">
+                            <h2 class="w-full text-pretty text-white md:w-2/3">
+                                {{ ucwords($category->name) }}
+                            </h2>
+                            <p class="mb-4 w-full text-base tracking-tight text-white/80 md:w-2/3">
+                                @if ($loop->first)
+                                    Temukan berbagai pilihan {{ $category->name }} yang siap melengkapi kebutuhan Anda
+                                    dengan kualitas terbaik.
+                                @else
+                                    Jelajahi koleksi {{ $category->name }} dengan pilihan terbaik untuk memenuhi
+                                    kebutuhan Anda.
+                                @endif
+                            </p>
+                            <x-common.button variant="secondary">
+                                Lihat {{ ucwords($category->name) }}
+                                <svg
+                                    class="size-5 shrink-0"
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    stroke-width="2"
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    aria-hidden="true"
+                                >
+                                    <path d="M18 8L22 12L18 16" />
+                                    <path d="M2 12H22" />
+                                </svg>
+                            </x-common.button>
+                        </div>
+                    </a>
+                </article>
+            @endforeach
+        </section>
+    @endif
+
     <x-common.product-slider-section :products="$bestSellingProducts">
         <x-slot name="header">
             <h2 class="text-pretty text-black">Paling Banyak Dibeli</h2>
