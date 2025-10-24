@@ -18,7 +18,7 @@ class ProvincesAndCitiesSeeder extends Seeder
         $cityUrl = 'https://api.rajaongkir.com/'.config('services.rajaongkir.package').'/city';
 
         $headers = [
-            'key' => env('RAJAONGKIR_API_KEY'),
+            'key' => config('services.rajaongkir.key'),
         ];
 
         $provinceResponse = Http::withHeaders($headers)->get($provinceUrl);
