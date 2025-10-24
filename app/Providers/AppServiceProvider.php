@@ -29,48 +29,48 @@ class AppServiceProvider extends ServiceProvider
                 ->numbers();
         });
 
-        Gate::before(function ($user, $ability) {
-            if ($user->hasRole('super_admin')) {
-                return true;
-            }
-        });
+        // Gate::before(function ($user, $ability) {
+        //     if ($user->hasRole('super_admin')) {
+        //         return true;
+        //     }
+        // });
 
         $currentRoute = $this->app->request->getRequestUri();
 
-        if (! str_contains($currentRoute, 'admin')) {
-            $primaryCategories = Category::queryPrimaryWithSubcategories(
-                columns: [
-                    'categories.id',
-                    'categories.name',
-                    'categories.slug',
-                ])
-                ->orderBy('categories.name')
-                ->get()
-                ->groupBy(function ($category) {
-                    return $category->id;
-                })
-                ->take(2)
-                ->map(function ($grouppedCategories) {
-                    $category = $grouppedCategories->first();
+        // if (! str_contains($currentRoute, 'admin')) {
+        //     $primaryCategories = Category::queryPrimaryWithSubcategories(
+        //         columns: [
+        //             'categories.id',
+        //             'categories.name',
+        //             'categories.slug',
+        //         ])
+        //         ->orderBy('categories.name')
+        //         ->get()
+        //         ->groupBy(function ($category) {
+        //             return $category->id;
+        //         })
+        //         ->take(2)
+        //         ->map(function ($grouppedCategories) {
+        //             $category = $grouppedCategories->first();
 
-                    $subcategories = $grouppedCategories->map(function ($subcategory) {
-                        return (object) [
-                            'id' => $subcategory->subcategory_id,
-                            'name' => $subcategory->subcategory_name,
-                            'slug' => $subcategory->subcategory_slug,
-                        ];
-                    });
+        //             $subcategories = $grouppedCategories->map(function ($subcategory) {
+        //                 return (object) [
+        //                     'id' => $subcategory->subcategory_id,
+        //                     'name' => $subcategory->subcategory_name,
+        //                     'slug' => $subcategory->subcategory_slug,
+        //                 ];
+        //             });
 
-                    return (object) [
-                        'id' => $category->id,
-                        'name' => $category->name,
-                        'slug' => $category->slug,
-                        'subcategories' => $subcategories->values(),
-                    ];
-                })
-                ->values();
+        //             return (object) [
+        //                 'id' => $category->id,
+        //                 'name' => $category->name,
+        //                 'slug' => $category->slug,
+        //                 'subcategories' => $subcategories->values(),
+        //             ];
+        //         })
+        //         ->values();
 
-            View::share('primaryCategories', $primaryCategories);
-        }
+        //     View::share('primaryCategories', $primaryCategories);
+        // }
     }
 }
