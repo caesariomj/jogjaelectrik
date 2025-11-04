@@ -125,6 +125,7 @@ new class extends Component {
                     'name' => $validated['name'],
                     'description' => $validated['description'],
                     'main_sku' => $validated['mainSku'],
+                    'cost_price' => str_replace('.', '', $validated['costPrice']),
                     'base_price' => str_replace('.', '', $price),
                     'base_price_discount' => $priceDiscount ? str_replace('.', '', $priceDiscount) : null,
                     'is_active' => (bool) $validated['isActive'],
@@ -329,7 +330,7 @@ new class extends Component {
                             @if (! $form->thumbnail)
                                 <label
                                     for="thumbnail"
-                                    class="inline-flex cursor-pointer items-center justify-center gap-x-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-600"
+                                    class="inline-flex cursor-pointer items-center justify-center gap-x-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-500"
                                 >
                                     <svg
                                         class="size-4 shrink-0"
@@ -359,9 +360,23 @@ new class extends Component {
                                 </label>
                             @else
                                 <x-common.button
-                                    variant="danger"
+                                    variant="danger-secondary"
                                     x-on:click="removeUpload('{{ $form->thumbnail->getFilename() }}')"
                                 >
+                                    <svg
+                                        class="size-6 shrink-0"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                    >
+                                        <path
+                                            d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0"
+                                        />
+                                    </svg>
                                     Hapus Gambar
                                 </x-common.button>
                             @endif
@@ -474,6 +489,27 @@ new class extends Component {
                 <x-form.input-error :messages="$errors->get('form.mainSku')" class="mt-2" />
             </div>
             <div class="mt-4">
+                <x-form.input-label class="mb-1" for="cost-price" value="Harga Modal Produk" />
+                <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-4">
+                        <span class="text-sm tracking-tight text-black/70">Rp</span>
+                    </div>
+                    <x-form.input
+                        wire:model.lazy="form.costPrice"
+                        id="cost-price"
+                        class="block w-full ps-11"
+                        type="text"
+                        name="cost-price"
+                        placeholder="Isikan harga produk di sini..."
+                        inputmode="numeric"
+                        autocomplete="off"
+                        :hasError="$errors->has('form.costPrice')"
+                        x-mask:dynamic="$money($input, ',')"
+                    />
+                </div>
+                <x-form.input-error :messages="$errors->get('form.costPrice')" class="mt-2" />
+            </div>
+            <div class="mt-4">
                 <x-form.input-label class="mb-1" for="description" value="Deskripsi Produk" />
                 <x-form.textarea
                     wire:model.lazy="form.description"
@@ -559,7 +595,7 @@ new class extends Component {
                         </svg>
                         <label
                             for="product-images"
-                            class="mb-4 inline-flex cursor-pointer items-center justify-center gap-x-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            class="mb-4 inline-flex cursor-pointer items-center justify-center gap-x-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <svg
                                 class="size-4 shrink-0"
@@ -736,7 +772,7 @@ new class extends Component {
                                     </figcaption>
                                     <button
                                         type="button"
-                                        class="absolute right-2 top-2 rounded-full bg-red-500 p-1 text-white transition-opacity duration-150"
+                                        class="absolute right-2 top-2 rounded-full bg-red-100 p-1 text-red-500 transition-colors duration-150 hover:bg-red-600 hover:text-white"
                                         aria-label="Hapus gambar produk {{ $loop->iteration }}"
                                         x-on:click="removeUpload('{{ $image->getFilename() }}')"
                                     >

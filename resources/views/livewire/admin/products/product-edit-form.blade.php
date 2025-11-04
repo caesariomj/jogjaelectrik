@@ -226,6 +226,7 @@ new class extends Component {
                     'name' => $validated['name'],
                     'description' => $validated['description'],
                     'main_sku' => $validated['mainSku'],
+                    'base_price' => str_replace('.', '', $validated['costPrice']),
                     'base_price' => str_replace('.', '', $price),
                     'base_price_discount' => $priceDiscount ? str_replace('.', '', $priceDiscount) : null,
                     'is_active' => (bool) $validated['isActive'],
@@ -488,7 +489,7 @@ new class extends Component {
                         <div class="flex items-center space-x-4">
                             <label
                                 for="thumbnail"
-                                class="inline-flex cursor-pointer items-center justify-center gap-x-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold tracking-tight text-white transition-all hover:bg-primary-600"
+                                class="inline-flex cursor-pointer items-center justify-center gap-x-2 rounded-full bg-primary-100 px-6 py-3 text-sm font-semibold tracking-tight text-primary-500 transition-all hover:bg-primary-500 hover:text-white"
                             >
                                 <svg
                                     class="size-4 shrink-0"
@@ -629,6 +630,27 @@ new class extends Component {
                 <x-form.input-error :messages="$errors->get('form.mainSku')" class="mt-2" />
             </div>
             <div class="mt-4">
+                <x-form.input-label class="mb-1" for="cost-price" value="Harga Modal Produk" />
+                <div class="relative">
+                    <div class="pointer-events-none absolute inset-y-0 start-0 flex items-center ps-4">
+                        <span class="text-sm tracking-tight text-black/70">Rp</span>
+                    </div>
+                    <x-form.input
+                        wire:model.lazy="form.costPrice"
+                        id="cost-price"
+                        class="block w-full ps-11"
+                        type="text"
+                        name="cost-price"
+                        placeholder="Isikan harga produk di sini..."
+                        inputmode="numeric"
+                        autocomplete="off"
+                        :hasError="$errors->has('form.costPrice')"
+                        x-mask:dynamic="$money($input, ',')"
+                    />
+                </div>
+                <x-form.input-error :messages="$errors->get('form.costPrice')" class="mt-2" />
+            </div>
+            <div class="mt-4">
                 <x-form.input-label class="mb-1" for="description" value="Deskripsi Produk" />
                 <x-form.textarea
                     wire:model.lazy="form.description"
@@ -714,7 +736,7 @@ new class extends Component {
                         </svg>
                         <label
                             for="product-images"
-                            class="mb-4 inline-flex cursor-pointer items-center justify-center gap-x-2 rounded-full bg-primary px-6 py-3 text-sm font-semibold text-white transition-all hover:bg-primary-600 focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                            class="mb-4 inline-flex cursor-pointer items-center justify-center gap-x-2 rounded-full bg-primary-100 px-6 py-3 text-sm font-semibold text-primary-500 transition-all hover:bg-primary-500 hover:text-white focus:outline-none focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <svg
                                 class="size-4"
@@ -864,7 +886,7 @@ new class extends Component {
                                     <button
                                         type="button"
                                         x-on:click.prevent="$dispatch('open-modal', 'confirm-product-image-deletion-{{ $image->id }}')"
-                                        class="absolute right-2 top-2 rounded-full bg-red-500 p-1 text-white transition-opacity duration-150"
+                                        class="absolute right-2 top-2 rounded-full bg-red-100 p-1 text-red-500 transition-colors duration-150 hover:bg-red-600 hover:text-white"
                                         aria-label="Hapus gambar produk {{ $loop->iteration }}"
                                         wire:loading.class="opacity-50"
                                         wire:target="deleteImage"
@@ -886,72 +908,75 @@ new class extends Component {
                                         </svg>
                                     </button>
                                 </figure>
-                            </li>
-                            <x-common.modal
-                                name="confirm-product-image-deletion-{{ $image->id }}"
-                                :show="$errors->isNotEmpty()"
-                                focusable
-                            >
-                                <div class="flex flex-col items-center p-6">
-                                    <div class="mb-4 rounded-full bg-red-100 p-4" aria-hidden="true">
-                                        <svg
-                                            xmlns="http://www.w3.org/2000/svg"
-                                            viewBox="0 0 24 24"
-                                            fill="currentColor"
-                                            class="size-16 text-red-500"
-                                        >
-                                            <path
-                                                fill-rule="evenodd"
-                                                d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
-                                                clip-rule="evenodd"
-                                            />
-                                        </svg>
-                                    </div>
-                                    <h2 class="mb-2 text-center !text-2xl text-black">
-                                        Hapus Gambar Produk {{ ucwords($form->product->name) }}
-                                    </h2>
-                                    <p class="mb-8 text-center text-base font-medium tracking-tight text-black/70">
-                                        Apakah anda yakin ingin menghapus gambar produk
-                                        <strong>"{{ $form->product->name }}"</strong>
-                                        ini ? Proses ini tidak dapat dibatalkan, seluruh data yang terkait dengan gambar
-                                        produk ini akan dihapus dari sistem.
-                                    </p>
-                                    <div class="flex justify-end gap-4">
-                                        <x-common.button
-                                            variant="secondary"
-                                            x-on:click="$dispatch('close')"
-                                            wire:loading.class="!pointers-event-none !cursor-wait opacity-50"
-                                            wire:target="deleteImage('{{ $image->id }}')"
-                                        >
-                                            Batal
-                                        </x-common.button>
-                                        <x-common.button
-                                            variant="danger"
-                                            wire:click="deleteImage('{{ $image->id }}')"
-                                            wire:loading.attr="disabled"
-                                            wire:target="deleteImage('{{ $image->id }}')"
-                                        >
-                                            <span wire:loading.remove wire:target="deleteImage('{{ $image->id }}')">
-                                                Hapus Gambar Produk
-                                            </span>
-                                            <span
-                                                wire:loading.flex
-                                                wire:target="deleteImage('{{ $image->id }}')"
-                                                class="items-center gap-x-2"
+                                <x-common.modal
+                                    name="confirm-product-image-deletion-{{ $image->id }}"
+                                    :show="$errors->isNotEmpty()"
+                                    focusable
+                                >
+                                    <div class="flex flex-col items-center p-6">
+                                        <div class="mb-4 rounded-full bg-red-100 p-4" aria-hidden="true">
+                                            <svg
+                                                xmlns="http://www.w3.org/2000/svg"
+                                                viewBox="0 0 24 24"
+                                                fill="currentColor"
+                                                class="size-16 text-red-500"
                                             >
-                                                <div
-                                                    class="inline-block size-4 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
-                                                    role="status"
-                                                    aria-label="loading"
+                                                <path
+                                                    fill-rule="evenodd"
+                                                    d="M9.401 3.003c1.155-2 4.043-2 5.197 0l7.355 12.748c1.154 2-.29 4.5-2.599 4.5H4.645c-2.309 0-3.752-2.5-2.598-4.5L9.4 3.003ZM12 8.25a.75.75 0 0 1 .75.75v3.75a.75.75 0 0 1-1.5 0V9a.75.75 0 0 1 .75-.75Zm0 8.25a.75.75 0 1 0 0-1.5.75.75 0 0 0 0 1.5Z"
+                                                    clip-rule="evenodd"
+                                                />
+                                            </svg>
+                                        </div>
+                                        <h2 class="mb-2 text-center !text-2xl text-black">
+                                            Hapus Gambar Produk {{ ucwords($form->product->name) }}
+                                        </h2>
+                                        <p class="mb-8 text-center text-base font-medium tracking-tight text-black/70">
+                                            Apakah anda yakin ingin menghapus gambar produk
+                                            <strong>"{{ $form->product->name }}"</strong>
+                                            ini ? Proses ini tidak dapat dibatalkan, seluruh data yang terkait dengan
+                                            gambar produk ini akan dihapus dari sistem.
+                                        </p>
+                                        <div class="flex justify-end gap-4">
+                                            <x-common.button
+                                                variant="secondary"
+                                                x-on:click="$dispatch('close')"
+                                                wire:loading.class="!pointers-event-none !cursor-wait opacity-50"
+                                                wire:target="deleteImage('{{ $image->id }}')"
+                                            >
+                                                Batal
+                                            </x-common.button>
+                                            <x-common.button
+                                                variant="danger"
+                                                wire:click="deleteImage('{{ $image->id }}')"
+                                                wire:loading.attr="disabled"
+                                                wire:target="deleteImage('{{ $image->id }}')"
+                                            >
+                                                <span
+                                                    wire:loading.remove
+                                                    wire:target="deleteImage('{{ $image->id }}')"
                                                 >
-                                                    <span class="sr-only">Sedang diproses...</span>
-                                                </div>
-                                                Sedang diproses...
-                                            </span>
-                                        </x-common.button>
+                                                    Hapus Gambar Produk
+                                                </span>
+                                                <span
+                                                    wire:loading.flex
+                                                    wire:target="deleteImage('{{ $image->id }}')"
+                                                    class="items-center gap-x-2"
+                                                >
+                                                    <div
+                                                        class="inline-block size-4 animate-spin rounded-full border-[3px] border-current border-t-transparent align-middle"
+                                                        role="status"
+                                                        aria-label="loading"
+                                                    >
+                                                        <span class="sr-only">Sedang diproses...</span>
+                                                    </div>
+                                                    Sedang diproses...
+                                                </span>
+                                            </x-common.button>
+                                        </div>
                                     </div>
-                                </div>
-                            </x-common.modal>
+                                </x-common.modal>
+                            </li>
                         @endforeach
 
                         @if ($form->newImages)

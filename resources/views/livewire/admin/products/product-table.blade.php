@@ -55,6 +55,7 @@ new class extends Component {
                 'products.name',
                 'products.slug',
                 'products.main_sku',
+                'products.cost_price',
                 'products.base_price',
                 'products.base_price_discount',
                 'products.is_active',
@@ -94,6 +95,7 @@ new class extends Component {
                 'name',
                 'main_sku',
                 'category_name',
+                'cost_price',
                 'base_price',
                 'total_stock',
                 'is_active',
@@ -486,6 +488,15 @@ new class extends Component {
                 <x-datatable.heading
                     sortable
                     class="min-w-36"
+                    :direction="$sortField === 'cost_price' ? $sortDirection : null "
+                    wire:click="sortBy('cost_price')"
+                    align="center"
+                >
+                    Harga Modal
+                </x-datatable.heading>
+                <x-datatable.heading
+                    sortable
+                    class="min-w-36"
                     :direction="$sortField === 'base_price' ? $sortDirection : null "
                     wire:click="sortBy('base_price')"
                     align="center"
@@ -581,6 +592,9 @@ new class extends Component {
                         @else
                             -
                         @endif
+                    </x-datatable.cell>
+                    <x-datatable.cell class="text-sm font-normal tracking-tight text-black/70" align="center">
+                        Rp {{ formatPrice($product->cost_price) }}
                     </x-datatable.cell>
                     <x-datatable.cell class="h-full align-middle" align="center">
                         <div

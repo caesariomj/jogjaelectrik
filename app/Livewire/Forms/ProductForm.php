@@ -23,6 +23,8 @@ class ProductForm extends Form
 
     public string $mainSku = '';
 
+    public ?string $costPrice = null;
+
     public string $description = '';
 
     public bool $isActive = true;
@@ -121,6 +123,12 @@ class ProductForm extends Form
                 'min:5',
                 'max:255',
                 is_null($this->product) ? 'unique:products,main_sku' : 'unique:products,main_sku,'.$this->product->id,
+            ],
+            'costPrice' => [
+                'required',
+                'numeric',
+                'gt:0',
+                'lt:99999999',
             ],
             'description' => [
                 'required',
@@ -317,6 +325,7 @@ class ProductForm extends Form
             'name' => 'Nama produk',
             'subcategoryId' => 'Subkategori produk',
             'mainSku' => 'SKU utama produk',
+            'costPrice' => 'Harga modal produk',
             'description' => 'Deskripsi produk',
             'isActive' => 'Status produk',
             'images' => 'Gambar produk',
@@ -353,6 +362,7 @@ class ProductForm extends Form
         $this->name = $product->name;
         $this->subcategoryId = $product->subcategory ? $product->subcategory_id : '';
         $this->mainSku = $product->main_sku;
+        $this->costPrice = number_format($product->cost_price, 0, ',', '');
         $this->description = $product->description;
         $this->isActive = $product->is_active;
         $this->warranty = $product->warranty;

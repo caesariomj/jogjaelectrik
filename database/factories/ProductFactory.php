@@ -24,6 +24,7 @@ class ProductFactory extends Factory
             'slug' => \Illuminate\Support\Str::slug($name),
             'description' => $this->faker->text(),
             'main_sku' => str_replace(' ', '-', $name),
+            'cost_price' => $this->faker->randomFloat(2, 1000, 1000000),
             'base_price' => $this->faker->randomFloat(2, 1000, 1000000),
             'base_price_discount' => null,
             'is_active' => true,
@@ -40,31 +41,26 @@ class ProductFactory extends Factory
     public function configure()
     {
         return $this->afterCreating(function ($product) {
-            // 1. Buat ProductVariants
             $productVariants = \App\Models\ProductVariant::factory()
                 ->count(fake()->numberBetween(2, 3))
                 ->for($product)
                 ->create();
 
-            // 2. Buat Variations (tanpa relasi ke product)
             $variations = \App\Models\Variation::factory()
                 ->count(fake()->numberBetween(1, 2))
                 ->create();
 
-            // 3. Buat VariationVariants untuk setiap Variation
             $variationVariants = collect();
             foreach ($variations as $variation) {
                 $vv = \App\Models\VariationVariant::factory()
-                    ->count(fake()->numberBetween(2, 3)) // Minimal 2 per variasi agar logis
+                    ->count(fake()->numberBetween(2, 3))
                     ->for($variation)
                     ->create();
 
                 $variationVariants = $variationVariants->merge($vv);
             }
 
-            // 4. Buat VariantCombination: pasangkan ProductVariant × VariationVariant
             foreach ($productVariants as $pv) {
-                // Ambil acak 1–2 VariationVariant untuk tiap varian
                 $sampledVariants = $variationVariants->random(fake()->numberBetween(1, 2));
 
                 foreach ($sampledVariants as $vv) {
@@ -75,7 +71,6 @@ class ProductFactory extends Factory
                 }
             }
 
-            // 5. Hitung base_price dan base_price_discount dari ProductVariant
             $activeVariants = $productVariants->filter(fn ($v) => $v->is_active);
 
             if ($activeVariants->isEmpty()) {
@@ -108,7 +103,6 @@ class ProductFactory extends Factory
                 ]);
             }
 
-            // 6. Buat ProductImage
             $imageCount = fake()->numberBetween(2, 4);
             $productImages = \App\Models\ProductImage::factory()
                 ->count($imageCount)
