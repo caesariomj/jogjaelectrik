@@ -37,7 +37,6 @@ return [
 
     'rajaongkir' => [
         'key' => env('RAJAONGKIR_API_KEY'),
-        'package' => env('RAJAONGKIR_API_PACKAGE'),
     ],
 
     'xendit' => [
