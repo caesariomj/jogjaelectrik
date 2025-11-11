@@ -2,8 +2,6 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
-
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -26,7 +24,7 @@ class User extends Authenticatable implements MustVerifyEmail
      * @var array<int, string>
      */
     protected $fillable = [
-        'city_id',
+        'district_id',
         'name',
         'email',
         'password',
@@ -61,9 +59,9 @@ class User extends Authenticatable implements MustVerifyEmail
     /**
      * Model relations.
      */
-    public function city(): BelongsTo
+    public function district(): BelongsTo
     {
-        return $this->belongsTo(City::class);
+        return $this->belongsTo(District::class);
     }
 
     public function cart(): HasOne
@@ -140,7 +138,8 @@ class User extends Authenticatable implements MustVerifyEmail
     public static function queryUserById(string $id, array $columns = ['users.id', 'users.name', 'users.email', 'users.phone_number', 'users.address', 'users.postal_code', 'users.created_at', 'users.updated_at'])
     {
         return self::queryById(id: $id, columns: $columns)
-            ->leftJoin('cities', 'cities.id', '=', 'users.city_id')
+            ->leftJoin('districts', 'districts.id', '=', 'users.district_id')
+            ->leftJoin('cities', 'cities.id', '=', 'districts.city_id')
             ->leftJoin('provinces', 'provinces.id', '=', 'cities.province_id')
             ->leftJoinSub(
                 DB::table('orders')
@@ -151,6 +150,7 @@ class User extends Authenticatable implements MustVerifyEmail
                 '=',
                 'users.id'
             )
+            ->addSelect('districts.name as district_name')
             ->addSelect('cities.name as city_name')
             ->addSelect('provinces.name as province_name')
             ->addSelect(DB::raw('COALESCE(orders.total_orders, 0) as total_orders'));
