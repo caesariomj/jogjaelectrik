@@ -3,9 +3,12 @@
 @section('title', 'Beranda')
 
 @section('content')
-    <section x-data="{ shown: false }" x-intersect="shown = true" class="min-h-[50svh] md:min-h-[75svh]">
-        <x-common.banner-carousel :slides="$bannerSlides" autoplayInterval="6000" />
-    </section>
+    @if (count($bannerSlides) > 0)
+        <section x-data="{ shown: false }" x-intersect="shown = true" class="min-h-[50svh] md:min-h-[75svh]">
+            <x-common.banner-carousel :slides="$bannerSlides" autoplayInterval="6000" />
+        </section>
+    @endif
+
     @if (count($primaryCategories) > 0)
         <section
             class="container mx-auto grid h-full max-w-md grid-cols-1 gap-6 p-6 md:max-w-[96rem] md:grid-cols-2 md:gap-12 md:p-12"
@@ -61,28 +64,31 @@
         </section>
     @endif
 
-    <x-common.product-slider-section :products="$bestSellingProducts">
-        <x-slot name="header">
-            <h2 class="text-pretty text-black">Paling Banyak Dibeli</h2>
-            <x-common.button variant="secondary" :href="route('products').'?sort=terlaris'" wire:navigate>
-                Selengkapnya
-                <svg
-                    class="size-5 shrink-0"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                >
-                    <path d="M18 8L22 12L18 16" />
-                    <path d="M2 12H22" />
-                </svg>
-            </x-common.button>
-        </x-slot>
-    </x-common.product-slider-section>
+    @if (count($bestSellingProducts) > 0)
+        <x-common.product-slider-section :products="$bestSellingProducts">
+            <x-slot name="header">
+                <h2 class="text-pretty text-black">Paling Banyak Dibeli</h2>
+                <x-common.button variant="secondary" :href="route('products').'?sort=terlaris'" wire:navigate>
+                    Selengkapnya
+                    <svg
+                        class="size-5 shrink-0"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M18 8L22 12L18 16" />
+                        <path d="M2 12H22" />
+                    </svg>
+                </x-common.button>
+            </x-slot>
+        </x-common.product-slider-section>
+    @endif
+
     <section
         class="container mx-auto flex max-w-md flex-col items-center justify-between gap-12 p-6 md:max-w-[96rem] md:p-12 lg:flex-row"
     >
@@ -129,28 +135,32 @@
             </a>
         </figure>
     </section>
-    <x-common.product-slider-section class="pb-6 md:pb-9" :products="$latestProducts" context="latest">
-        <x-slot name="header">
-            <h2 class="text-pretty text-black">Produk Terbaru</h2>
-            <x-common.button variant="secondary" :href="route('products').'?sort=terbaru'" wire:navigate>
-                Selengkapnya
-                <svg
-                    class="size-5 shrink-0"
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    stroke-linejoin="round"
-                    aria-hidden="true"
-                >
-                    <path d="M18 8L22 12L18 16" />
-                    <path d="M2 12H22" />
-                </svg>
-            </x-common.button>
-        </x-slot>
-    </x-common.product-slider-section>
+
+    @if (count($latestProducts) > 0)
+        <x-common.product-slider-section class="pb-6 md:pb-9" :products="$latestProducts" context="latest">
+            <x-slot name="header">
+                <h2 class="text-pretty text-black">Produk Terbaru</h2>
+                <x-common.button variant="secondary" :href="route('products').'?sort=terbaru'" wire:navigate>
+                    Selengkapnya
+                    <svg
+                        class="size-5 shrink-0"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M18 8L22 12L18 16" />
+                        <path d="M2 12H22" />
+                    </svg>
+                </x-common.button>
+            </x-slot>
+        </x-common.product-slider-section>
+    @endif
+
     <section class="border-t border-t-neutral-300">
         <div
             class="container mx-auto grid h-auto max-w-md grid-cols-1 items-start gap-6 p-6 md:max-w-[96rem] md:p-12 lg:grid-cols-3"
