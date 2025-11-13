@@ -23,7 +23,7 @@ class ProductForm extends Form
 
     public string $mainSku = '';
 
-    public ?string $costPrice = null;
+    public string $costPrice = '';
 
     public string $description = '';
 
@@ -73,6 +73,7 @@ class ProductForm extends Form
 
     protected function prepareForValidation($attributes)
     {
+        $attributes['costPrice'] = (int) str_replace('.', '', $attributes['costPrice']);
         $attributes['length'] = (int) str_replace('.', '', $attributes['length']);
         $attributes['width'] = (int) str_replace('.', '', $attributes['width']);
         $attributes['height'] = (int) str_replace('.', '', $attributes['height']);
