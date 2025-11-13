@@ -43,27 +43,7 @@ new #[Layout('layouts.auth')] class extends Component {
 @section('title', 'Lupa Password')
 
 <div class="w-full">
-    <div class="inline-flex items-center gap-x-2">
-        <x-common.button
-            :href="route('home')"
-            variant="secondary"
-            class="!p-2 md:hidden"
-            aria-label="Kembali ke halaman utama"
-            wire:navigate
-        >
-            <svg
-                class="size-4 shrink-0"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.8"
-                stroke="currentColor"
-            >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-            </svg>
-        </x-common.button>
-        <h1 class="text-4xl font-bold text-black">Lupa Password</h1>
-    </div>
+    <h1 class="text-4xl font-bold text-black">Lupa Password</h1>
     <p class="mt-3 text-base tracking-tight text-black/70">
         Lupa password akun Anda? Isikan email akun Anda yang telah terdaftar pada formulir di bawah ini dan kami akan
         mengirimkan link reset password ke email Anda.
@@ -108,7 +88,7 @@ new #[Layout('layouts.auth')] class extends Component {
             />
             <x-form.input-error :messages="$errors->get('email')" class="mt-2" />
         </div>
-        <div class="mt-8 flex items-center justify-end">
+        <div class="mt-8 flex flex-col items-center justify-center gap-4">
             <x-common.button type="submit" variant="primary" class="w-full">
                 <span wire:loading.remove wire:target="sendPasswordResetLink">Kirim Link Reset Password</span>
                 <div
@@ -119,6 +99,9 @@ new #[Layout('layouts.auth')] class extends Component {
                     wire:target="sendPasswordResetLink"
                 ></div>
                 <span wire:loading wire:target="sendPasswordResetLink">Sedang Diproses...</span>
+            </x-common.button>
+            <x-common.button type="button" x-on:click="window.history.back()" variant="secondary" class="w-full">
+                Kembali
             </x-common.button>
         </div>
     </form>

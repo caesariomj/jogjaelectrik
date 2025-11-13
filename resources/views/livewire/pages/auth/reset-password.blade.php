@@ -19,7 +19,18 @@ new #[Layout('layouts.auth')] class extends Component {
     {
         $this->form->token = $token;
 
-        $this->form->email = request()->string('email');
+        $email = trim(request()->string('email'));
+
+        // if (empty($email)) {
+        //     session()->flash(
+        //         'error',
+        //         'Token reset password Anda telah kedaluwarsa atau tidak valid, silakan meminta link reset password baru.',
+        //     );
+
+        //     $this->redirectRoute('home', navigate: true);
+        // }
+
+        $this->form->email = $email;
 
         if ($this->form->token && $this->form->email) {
             $status = Password::broker()->tokenExists(
@@ -85,27 +96,7 @@ new #[Layout('layouts.auth')] class extends Component {
 @section('title', 'Reset Password')
 
 <div class="w-full">
-    <div class="mb-3 inline-flex items-center gap-x-2">
-        <x-common.button
-            :href="route('home')"
-            variant="secondary"
-            class="!p-2 md:hidden"
-            aria-label="Kembali ke halaman utama"
-            wire:navigate
-        >
-            <svg
-                class="size-4 shrink-0"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.8"
-                stroke="currentColor"
-            >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-            </svg>
-        </x-common.button>
-        <h1 class="text-4xl font-bold text-black">Reset Password</h1>
-    </div>
+    <h1 class="mb-3 text-4xl font-bold text-black">Reset Password</h1>
     <p class="mb-6 text-base tracking-tight text-black/70">
         Silakan isi formulir di bawah ini untuk mengubah password akun Anda.
     </p>
@@ -121,7 +112,7 @@ new #[Layout('layouts.auth')] class extends Component {
                 required
                 autofocus
                 autocomplete="username"
-                placeholder="Isikan email anda disini..."
+                placeholder="johndoe@email.com"
                 :hasError="$errors->has('form.email')"
             />
             <x-form.input-error :messages="$errors->get('form.email')" class="mt-2" />
@@ -260,7 +251,7 @@ new #[Layout('layouts.auth')] class extends Component {
                     name="password"
                     required
                     autocomplete="new-password"
-                    placeholder="Isikan password baru anda disini..."
+                    placeholder="••••••••"
                     x-model="password"
                     x-on:focus="show = true"
                     x-on:blur="show = false"
@@ -309,7 +300,7 @@ new #[Layout('layouts.auth')] class extends Component {
                     name="password_confirmation"
                     required
                     autocomplete="new-password"
-                    placeholder="Isikan konfirmasi password baru anda disini..."
+                    placeholder="••••••••"
                     :hasError="$errors->has('form.password_confirmation')"
                 />
                 <button type="button" class="absolute inset-y-0 end-4" x-on:click="showPassword = ! showPassword">
@@ -344,7 +335,7 @@ new #[Layout('layouts.auth')] class extends Component {
             </div>
             <x-form.input-error :messages="$errors->get('form.password_confirmation')" class="mt-2" />
         </div>
-        <div class="mt-8 flex items-center">
+        <div class="mt-8 flex flex-col items-center justify-center gap-4">
             <x-common.button type="submit" variant="primary" class="w-full">
                 <span wire:loading.remove wire:target="resetPassword">Reset Password</span>
                 <div
@@ -355,6 +346,9 @@ new #[Layout('layouts.auth')] class extends Component {
                     wire:target="resetPassword"
                 ></div>
                 <span wire:loading wire:target="resetPassword">Sedang Diproses...</span>
+            </x-common.button>
+            <x-common.button :href="route('home')" variant="secondary" class="w-full">
+                Kembali ke Halaman Utama
             </x-common.button>
         </div>
     </form>

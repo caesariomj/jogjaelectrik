@@ -35,27 +35,7 @@ new #[Layout('layouts.auth')] class extends Component {
 @section('title', 'Daftar')
 
 <div class="w-full">
-    <div class="mb-3 inline-flex items-center gap-x-2">
-        <x-common.button
-            :href="route('home')"
-            variant="secondary"
-            class="!p-2 md:hidden"
-            aria-label="Kembali ke halaman utama"
-            wire:navigate
-        >
-            <svg
-                class="size-4 shrink-0"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.8"
-                stroke="currentColor"
-            >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-            </svg>
-        </x-common.button>
-        <h1 class="text-4xl font-bold text-black">Daftar</h1>
-    </div>
+    <h1 class="mb-3 text-4xl font-bold text-black">Daftar</h1>
     <p class="mb-6 text-base tracking-tight text-black/70">Silakan daftar terlebih dahulu untuk mulai berbelanja.</p>
     <form wire:submit="register">
         <div>
@@ -69,7 +49,7 @@ new #[Layout('layouts.auth')] class extends Component {
                 required
                 autofocus
                 autocomplete="name"
-                placeholder="Isikan nama anda disini..."
+                placeholder="John Doe"
                 :hasError="$errors->has('form.name')"
             />
             <x-form.input-error :messages="$errors->get('form.name')" class="mt-2" />
@@ -84,7 +64,7 @@ new #[Layout('layouts.auth')] class extends Component {
                 name="email"
                 required
                 autocomplete="username"
-                placeholder="Isikan email anda disini..."
+                placeholder="johndoe@email.com"
                 :hasError="$errors->has('form.email')"
             />
             <x-form.input-error :messages="$errors->get('form.email')" class="mt-2" />
@@ -223,7 +203,7 @@ new #[Layout('layouts.auth')] class extends Component {
                     name="password"
                     required
                     autocomplete="new-password"
-                    placeholder="Isikan password anda disini..."
+                    placeholder="••••••••"
                     x-model="password"
                     x-on:focus="show = true"
                     x-on:blur="show = false"
@@ -272,7 +252,7 @@ new #[Layout('layouts.auth')] class extends Component {
                     name="password_confirmation"
                     required
                     autocomplete="new-password"
-                    placeholder="Isikan konfirmasi password anda disini..."
+                    placeholder="••••••••"
                     :hasError="$errors->has('form.password_confirmation')"
                 />
                 <button type="button" class="absolute inset-y-0 end-4" x-on:click="showPassword = ! showPassword">
@@ -316,9 +296,13 @@ new #[Layout('layouts.auth')] class extends Component {
                     required
                     :hasError="$errors->has('form.accept_terms_and_conditions')"
                 />
-                <label for="accept-terms-and-condition" class="ms-2 text-sm text-black">
+                <label for="accept-terms-and-condition" class="ms-2 text-sm text-black/70">
                     Saya telah membaca dan menyetujui
-                    <a href="{{ route('terms-and-conditions') }}" class="font-medium underline" target="_blank">
+                    <a
+                        href="{{ route('terms-and-conditions') }}"
+                        class="font-medium text-black underline transition-colors hover:text-primary"
+                        target="_blank"
+                    >
                         Syarat dan Ketentuan
                     </a>
                     toko.
@@ -338,9 +322,18 @@ new #[Layout('layouts.auth')] class extends Component {
                 ></div>
                 <span wire:loading wire:target="register">Sedang Diproses...</span>
             </x-common.button>
-            <p class="text-center text-sm tracking-tight text-black/70">
+            <x-common.button type="button" x-on:click="window.history.back()" variant="secondary" class="w-full">
+                Kembali
+            </x-common.button>
+            <p class="mt-2 text-center text-sm tracking-tight text-black/70">
                 Sudah mempunyai akun? Silakan klik
-                <a href="{{ route('login') }}" class="font-medium text-black underline" wire:navigate>disini</a>
+                <a
+                    href="{{ route('login') }}"
+                    class="font-medium text-black underline transition-colors hover:text-primary"
+                    wire:navigate
+                >
+                    disini
+                </a>
                 untuk masuk.
             </p>
         </div>

@@ -37,27 +37,7 @@ new #[Layout('layouts.auth')] class extends Component {
 @section('title', 'Konfirmasi Password')
 
 <div>
-    <div class="mb-3 inline-flex items-center gap-x-2">
-        <x-common.button
-            :href="route('home')"
-            variant="secondary"
-            class="!p-2 md:hidden"
-            aria-label="Kembali ke halaman sebelumnya"
-            wire:navigate
-        >
-            <svg
-                class="size-4 shrink-0"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke-width="1.8"
-                stroke="currentColor"
-            >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5 3 12m0 0 7.5-7.5M3 12h18" />
-            </svg>
-        </x-common.button>
-        <h1 class="text-4xl font-bold text-black">Konfirmasi Password</h1>
-    </div>
+    <h1 class="mb-3 text-4xl font-bold text-black">Konfirmasi Password</h1>
     <p class="mb-6 text-base tracking-tight text-black/70">
         Sebelum mengakses halaman ini, mohon konfirmasi password akun Anda saat ini.
     </p>
@@ -108,7 +88,7 @@ new #[Layout('layouts.auth')] class extends Component {
             </div>
             <x-form.input-error :messages="$errors->get('password')" class="mt-2" />
         </div>
-        <div class="mt-8 flex items-center justify-end">
+        <div class="mt-8 flex flex-col items-center justify-center gap-4">
             <x-common.button type="submit" variant="primary" class="w-full">
                 <span wire:loading.remove wire:target="confirmPassword">Konfirmasi Password</span>
                 <div
@@ -119,6 +99,9 @@ new #[Layout('layouts.auth')] class extends Component {
                     wire:target="confirmPassword"
                 ></div>
                 <span wire:loading wire:target="confirmPassword">Sedang Diproses...</span>
+            </x-common.button>
+            <x-common.button type="button" x-on:click="window.history.back()" variant="secondary" class="w-full">
+                Kembali
             </x-common.button>
         </div>
     </form>
