@@ -104,7 +104,7 @@ new class extends Component {
                     class="mt-1 block w-full"
                     type="text"
                     name="name"
-                    placeholder="Isikan nama kategori disini..."
+                    placeholder="Elektronik"
                     minlength="3"
                     maxlength="100"
                     autocomplete="off"

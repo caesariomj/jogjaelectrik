@@ -121,7 +121,7 @@ new class extends Component {
                     class="mt-1 block w-full"
                     type="text"
                     name="name"
-                    placeholder="Isikan nama subkategori disini..."
+                    placeholder="Kipas angin"
                     minlength="3"
                     maxlength="100"
                     autocomplete="off"

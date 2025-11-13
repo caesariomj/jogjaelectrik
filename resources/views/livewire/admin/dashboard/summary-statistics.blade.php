@@ -121,7 +121,7 @@ new class extends Component {
     </a>
     <a
         class="flex items-center justify-between rounded-xl bg-white p-4 shadow transition-shadow hover:shadow-md"
-        href="{{ route('admin.reports.sales') }}"
+        href="{{ route('admin.sales.index') }}"
         wire:navigate
     >
         <div>

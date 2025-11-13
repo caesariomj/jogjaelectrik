@@ -226,7 +226,7 @@ new class extends Component {
                     'name' => $validated['name'],
                     'description' => $validated['description'],
                     'main_sku' => $validated['mainSku'],
-                    'base_price' => str_replace('.', '', $validated['costPrice']),
+                    'cost_price' => str_replace('.', '', $validated['costPrice']),
                     'base_price' => str_replace('.', '', $price),
                     'base_price_discount' => $priceDiscount ? str_replace('.', '', $priceDiscount) : null,
                     'is_active' => (bool) $validated['isActive'],
@@ -589,7 +589,7 @@ new class extends Component {
                     class="block w-full"
                     type="text"
                     name="name"
-                    placeholder="Isikan nama produk di sini..."
+                    placeholder="Kipas Angin Berdiri Advance 16 Inch SF-16A"
                     minlength="5"
                     maxlength="255"
                     autocomplete="off"
@@ -620,7 +620,7 @@ new class extends Component {
                     class="block w-full"
                     type="text"
                     name="main-sku"
-                    placeholder="Isikan sku utama produk di sini..."
+                    placeholder="KIP-ADV-SF16A"
                     minlength="5"
                     maxlength="255"
                     autocomplete="off"
@@ -641,7 +641,7 @@ new class extends Component {
                         class="block w-full ps-11"
                         type="text"
                         name="cost-price"
-                        placeholder="Isikan harga produk di sini..."
+                        placeholder="500.000"
                         inputmode="numeric"
                         autocomplete="off"
                         :hasError="$errors->has('form.costPrice')"
@@ -656,7 +656,7 @@ new class extends Component {
                     wire:model.lazy="form.description"
                     id="description"
                     rows="10"
-                    placeholder="Isikan deskripsi produk di sini..."
+                    placeholder="Kipas angin berdiri dengan desain kokoh, memiliki tiga tingkat kecepatan dan baling-baling berdiameter 16 inci untuk hembusan angin lebih kencang."
                     minlength="10"
                     maxlength="5000"
                     required
@@ -690,7 +690,7 @@ new class extends Component {
         <div class="p-4">
             <span class="mb-1 block cursor-default text-sm font-medium text-black">
                 Gambar Produk
-                <span class="text-red-500">*</span>
+                <span class="text-xs tracking-tight text-black/70">(opsional)</span>
             </span>
             <div
                 x-data="fileInput({
@@ -861,7 +861,7 @@ new class extends Component {
                         </template>
                     </div>
                 </div>
-                @if (count($form->images) > 0 || (! is_null($form->newImages) && count($form->newImages) > 0))
+                @if (($form->images && count($form->images) > 0) || (! is_null($form->newImages) && count($form->newImages) > 0))
                     <span class="mb-1 mt-4 block cursor-default text-sm font-medium tracking-tight text-black">
                         Preview Gambar Produk
                     </span>
@@ -1077,7 +1077,7 @@ new class extends Component {
                         class="block w-full"
                         type="text"
                         name="warranty"
-                        placeholder="Isikan informasi garansi produk di sini..."
+                        placeholder="1 bulan garansi toko, 3 tahun garansi distributor"
                         minlength="5"
                         maxlength="100"
                         autocomplete="off"
@@ -1094,7 +1094,7 @@ new class extends Component {
                         class="block w-full"
                         type="text"
                         name="material"
-                        placeholder="Isikan bahan material produk di sini..."
+                        placeholder="Body dan bilah kipas plastik"
                         minlength="3"
                         maxlength="100"
                         autocomplete="off"
@@ -1187,7 +1187,7 @@ new class extends Component {
                             class="block w-full pe-14"
                             type="text"
                             name="weight"
-                            placeholder="Isikan berat produk di sini..."
+                            placeholder="10.000"
                             inputmode="numeric"
                             autocomplete="off"
                             required
@@ -1210,7 +1210,7 @@ new class extends Component {
                         class="block w-full"
                         type="text"
                         name="package"
-                        placeholder="Isikan apa yang ada di dalam paket produk di sini..."
+                        placeholder="1x unit, 1x kartu garansi, 1x kabel power, 1x buku panduan"
                         minlength="5"
                         maxlength="100"
                         autocomplete="off"
@@ -1231,7 +1231,7 @@ new class extends Component {
                             class="block w-full pe-8"
                             type="text"
                             name="power"
-                            placeholder="Isikan daya produk di sini..."
+                            placeholder="50"
                             inputmode="numeric"
                             autocomplete="off"
                             :hasError="$errors->has('form.power')"
@@ -1257,7 +1257,7 @@ new class extends Component {
                             class="block w-full pe-8"
                             type="text"
                             name="voltage"
-                            placeholder="Isikan tegangan produk di sini..."
+                            placeholder="220-240"
                             inputmode="numeric"
                             autocomplete="off"
                             :hasError="$errors->has('form.voltage')"
@@ -1308,7 +1308,7 @@ new class extends Component {
                             class="block w-full ps-11"
                             type="text"
                             name="price"
-                            placeholder="Isikan harga produk di sini..."
+                            placeholder="600.000"
                             inputmode="numeric"
                             autocomplete="off"
                             :hasError="$errors->has('form.price')"
@@ -1334,7 +1334,7 @@ new class extends Component {
                             class="block w-full ps-11"
                             type="text"
                             name="price-discount"
-                            placeholder="Isikan harga diskon produk di sini..."
+                            placeholder="550.000"
                             inputmode="numeric"
                             autocomplete="off"
                             :hasError="$errors->has('form.priceDiscount')"
@@ -1356,7 +1356,7 @@ new class extends Component {
                     min="1"
                     max="999"
                     inputmode="numeric"
-                    placeholder="Isikan stok produk di sini..."
+                    placeholder="50"
                     autocomplete="off"
                     :hasError="$errors->has('form.stock')"
                     x-bind:required="!hasVariation"
@@ -1377,7 +1377,7 @@ new class extends Component {
                             class="block w-full"
                             type="text"
                             name="variation-name"
-                            placeholder="Isikan nama variasi produk di sini... (contoh: warna)"
+                            placeholder="Warna"
                             minlength="3"
                             maxlength="50"
                             autocomplete="off"
@@ -1427,7 +1427,7 @@ new class extends Component {
                                     class="block w-full"
                                     type="text"
                                     name="variant-{{ $index }}-name"
-                                    placeholder="Isikan nama varian produk di sini... (contoh: hitam)"
+                                    placeholder="Hitam"
                                     minlength="3"
                                     maxlength="50"
                                     autocomplete="off"
@@ -1612,7 +1612,7 @@ new class extends Component {
                                             class="block w-full"
                                             type="text"
                                             name="variant-{{ $index }}-price"
-                                            placeholder="Harga..."
+                                            placeholder="600.000"
                                             inputmode="numeric"
                                             autocomplete="off"
                                             :hasError="$errors->has('form.variation.variants.' . $index . '.price')"
@@ -1627,7 +1627,7 @@ new class extends Component {
                                             class="block w-full"
                                             type="text"
                                             name="variant-{{ $index }}-price-discount"
-                                            placeholder="Harga diskon..."
+                                            placeholder="550.000"
                                             inputmode="numeric"
                                             autocomplete="off"
                                             :hasError="$errors->has('form.variation.variants.' . $index . '.priceDiscount')"
@@ -1641,7 +1641,7 @@ new class extends Component {
                                             class="block w-full [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
                                             type="number"
                                             name="variant-{{ $index }}-stock"
-                                            placeholder="Stok..."
+                                            placeholder="50"
                                             min="1"
                                             max="999"
                                             inputmode="numeric"
@@ -1658,7 +1658,7 @@ new class extends Component {
                                             class="block w-full"
                                             type="text"
                                             name="variant-{{ $index }}-sku"
-                                            placeholder="Kode varian..."
+                                            placeholder="hitam"
                                             minlength="1"
                                             maxlength="255"
                                             autocomplete="off"
