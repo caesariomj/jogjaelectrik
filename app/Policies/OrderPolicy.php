@@ -52,8 +52,8 @@ class OrderPolicy
      */
     public function create(User $user): bool|Response
     {
-        if (! $user->can('create orders')) {
-            return $this->deny('Anda tidak memiliki izin untuk melakukan checkout pesanan.', 403);
+        if (! $user->can('create orders') || ! $user->can('create offline orders')) {
+            return $this->deny('Anda tidak memiliki izin untuk membuat pesanan.', 403);
         }
 
         return true;
@@ -102,7 +102,7 @@ class OrderPolicy
     /**
      * Determine whether the user can delete the order.
      */
-    public function delete(User $user, Order $order): bool
+    public function delete(User $user, Order $order): bool|Response
     {
         if (! $user->can('delete orders')) {
             return $this->deny('Anda tidak memiliki izin untuk menghapus pesanan dengan nomor: '.$order->order_number.'.', 403);

@@ -17,6 +17,7 @@ class OrderPermissionsSeeder extends Seeder
             'view all orders',
             'view own orders',
             'create orders',
+            'create offline orders',
             'cancel all orders',
             'cancel own orders',
             'update all orders',
@@ -41,11 +42,13 @@ class OrderPermissionsSeeder extends Seeder
         $adminRole->givePermissionTo('cancel all orders');
         $adminRole->givePermissionTo('update all orders');
         $adminRole->givePermissionTo('delete orders');
+        $adminRole->givePermissionTo('create offline orders');
 
         $superAdminRole->givePermissionTo('view all orders');
         $superAdminRole->givePermissionTo('cancel all orders');
         $superAdminRole->givePermissionTo('update all orders');
         $superAdminRole->givePermissionTo('delete orders');
+        $superAdminRole->givePermissionTo('create offline orders');
 
         $this->command->info('Order permissions successfully seeded.');
     }
