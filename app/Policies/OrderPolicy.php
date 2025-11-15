@@ -52,7 +52,7 @@ class OrderPolicy
      */
     public function create(User $user): bool|Response
     {
-        if (! $user->can('create orders') || ! $user->can('create offline orders')) {
+        if (! $user->can('create orders') && ! $user->can('create offline orders')) {
             return $this->deny('Anda tidak memiliki izin untuk membuat pesanan.', 403);
         }
 
