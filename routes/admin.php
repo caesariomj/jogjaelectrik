@@ -8,7 +8,7 @@ use App\Http\Controllers\Admin\OrderController;
 use App\Http\Controllers\Admin\ProductController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\RefundController;
-use App\Http\Controllers\Admin\ReportController;
+use App\Http\Controllers\Admin\SaleController;
 use App\Http\Controllers\Admin\SubcategoryController;
 use App\Http\Controllers\Admin\UserController;
 use Illuminate\Support\Facades\Route;
@@ -71,8 +71,9 @@ Route::middleware(['auth', 'admin_page_access'])->prefix('admin')->name('admin.'
         Route::get('/{id}/ubah', [AdminController::class, 'edit'])->name('edit');
     });
 
-    Route::name('reports.')->group(function () {
-        Route::get('/penjualan', [ReportController::class, 'sales'])->name('sales');
+    Route::prefix('penjualan')->name('sales.')->group(function () {
+        Route::get('/', [SaleController::class, 'index'])->name('index');
+        Route::get('/tambah', [SaleController::class, 'create'])->name('create');
     });
 
     Route::get('/profil-saya', [ProfileController::class, 'index'])->middleware('password.confirm')->name('profile');

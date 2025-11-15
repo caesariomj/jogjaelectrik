@@ -107,7 +107,7 @@ new class extends Component {
         ) {
             session()->flash('error', 'Anda tidak memiliki izin untuk mengunduh laporan penjualan.');
 
-            return redirect()->route('admin.reports.sales');
+            return redirect()->route('admin.sales.index');
         }
 
         $this->validate(
@@ -161,7 +161,7 @@ new class extends Component {
                 session()->flash('error', 'Data penjualan tidak ditemukan.');
             }
 
-            return redirect()->route('admin.reports.sales');
+            return redirect()->route('admin.sales.index');
         }
 
         return $this->documentService->generateSalesReport(
@@ -174,7 +174,7 @@ new class extends Component {
 
 <div>
     <div class="flex flex-col items-center justify-end gap-4 pb-4 md:flex-row md:items-start">
-        <div class="flex items-start gap-x-4">
+        <div class="flex flex-col items-start gap-4 sm:flex-row">
             <div class="flex items-center gap-x-2">
                 <x-form.input-label for="sales-month" value="Bulan :" :required="false" class="w-fit shrink-0" />
                 <select
@@ -213,7 +213,7 @@ new class extends Component {
         </div>
         @can('download reports')
             <x-common.button
-                variant="primary"
+                variant="primary-light"
                 wire:click="download"
                 :disabled="empty($this->sales)"
                 class="w-full md:w-fit"
@@ -236,19 +236,34 @@ new class extends Component {
                 Unduh Laporan
             </x-common.button>
         @endcan
+
+        @can('create offline orders')
+            <x-common.button
+                :href="route('admin.sales.create')"
+                variant="primary"
+                class="w-full md:w-fit"
+                wire:navigate
+            >
+                <svg
+                    class="size-5"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                >
+                    <path d="M5 12h14" />
+                    <path d="M12 5v14" />
+                </svg>
+                Tambah Penjualan
+            </x-common.button>
+        @endcan
     </div>
     <x-datatable.table searchable="report">
         <x-slot name="head">
             <x-datatable.heading align="center">No.</x-datatable.heading>
-            <x-datatable.heading
-                sortable
-                class="min-w-48"
-                :direction="$sortField === 'order_number' ? $sortDirection : null "
-                wire:click="sortBy('order_number')"
-                align="left"
-            >
-                Nomor Pesanan
-            </x-datatable.heading>
             <x-datatable.heading
                 sortable
                 class="min-w-48"
@@ -260,21 +275,12 @@ new class extends Component {
             </x-datatable.heading>
             <x-datatable.heading
                 sortable
-                class="min-w-28"
+                class="min-w-48"
                 :direction="$sortField === 'variation_name' ? $sortDirection : null "
                 wire:click="sortBy('variation_name')"
                 align="left"
             >
                 Variasi
-            </x-datatable.heading>
-            <x-datatable.heading
-                sortable
-                class="min-w-32"
-                :direction="$sortField === 'category_name' ? $sortDirection : null "
-                wire:click="sortBy('category_name')"
-                align="left"
-            >
-                Kategori / Subkategori
             </x-datatable.heading>
             <x-datatable.heading
                 sortable
@@ -294,7 +300,18 @@ new class extends Component {
             >
                 Harga Satuan
             </x-datatable.heading>
+            <x-datatable.heading
+                sortable
+                class="min-w-36"
+                :direction="$sortField === 'product_cost_price' ? $sortDirection : null "
+                wire:click="sortBy('product_cost_price')"
+                align="left"
+            >
+                Harga Modal
+            </x-datatable.heading>
+            <x-datatable.heading class="min-w-36" align="left">Margin Profit</x-datatable.heading>
             <x-datatable.heading class="min-w-40" align="left">Total Penjualan</x-datatable.heading>
+            <x-datatable.heading class="min-w-40" align="left">Total Profit</x-datatable.heading>
             <x-datatable.heading class="px-4 py-2"></x-datatable.heading>
         </x-slot>
         <x-slot name="body">
@@ -308,21 +325,11 @@ new class extends Component {
                         {{ $loop->iteration . '.' }}
                     </x-datatable.cell>
                     <x-datatable.cell class="text-sm font-medium tracking-tight text-black" align="left">
-                        {{ $sale->order_number }}
-                    </x-datatable.cell>
-                    <x-datatable.cell class="text-sm font-medium tracking-tight text-black" align="left">
                         {{ $sale->product_name }}
                     </x-datatable.cell>
                     <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="left">
                         @if ($sale->variation_name && $sale->variant_name)
                             {{ ucwords($sale->variation_name) . ' : ' . ucwords($sale->variant_name) }}
-                        @else
-                            -
-                        @endif
-                    </x-datatable.cell>
-                    <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="left">
-                        @if ($sale->subcategory_name && $sale->category_name)
-                            {{ ucwords($sale->subcategory_name) . ' / ' . ucwords($sale->category_name) }}
                         @else
                             -
                         @endif
@@ -334,7 +341,17 @@ new class extends Component {
                         Rp {{ formatPrice($sale->order_detail_price) }}
                     </x-datatable.cell>
                     <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="left">
+                        Rp {{ formatPrice($sale->product_cost_price) }}
+                    </x-datatable.cell>
+                    <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="left">
+                        Rp {{ formatPrice($sale->order_detail_price - $sale->product_cost_price) }}
+                    </x-datatable.cell>
+                    <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="left">
                         Rp {{ formatPrice($sale->order_detail_price * $sale->order_detail_quantity) }}
+                    </x-datatable.cell>
+                    <x-datatable.cell class="text-sm font-medium tracking-tight text-black/70" align="left">
+                        Rp
+                        {{ formatPrice(($sale->order_detail_price - $sale->product_cost_price) * $sale->order_detail_quantity) }}
                     </x-datatable.cell>
                     <x-datatable.cell class="relative">
                         <x-common.dropdown width="60">
