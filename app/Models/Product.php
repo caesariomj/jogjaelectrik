@@ -242,6 +242,32 @@ class Product extends Model
                     'order_details.total_sold',
                 ]);
             })
+            ->when(in_array('variations', $relations), function ($query) use (&$groupByFields) {
+                $query->leftJoin('product_variants', 'products.id', '=', 'product_variants.product_id')
+                    ->leftJoin('variant_combinations', 'product_variants.id', '=', 'variant_combinations.product_variant_id')
+                    ->leftJoin('variation_variants', 'variant_combinations.variation_variant_id', '=', 'variation_variants.id')
+                    ->leftJoin('variations', 'variation_variants.variation_id', '=', 'variations.id');
+
+                $query->addSelect([
+                    'variations.name as variation_name',
+                    DB::raw("GROUP_CONCAT(DISTINCT variation_variants.name ORDER BY variation_variants.id SEPARATOR '||') as variant_names"),
+                    DB::raw("GROUP_CONCAT(product_variants.id ORDER BY product_variants.id SEPARATOR '||') as variant_ids"),
+                    DB::raw("GROUP_CONCAT(product_variants.variant_sku ORDER BY product_variants.id SEPARATOR '||') as variant_skus"),
+                    DB::raw("GROUP_CONCAT(product_variants.price ORDER BY product_variants.id SEPARATOR '||') as variant_prices"),
+                    DB::raw("GROUP_CONCAT(COALESCE(product_variants.price_discount, 0) ORDER BY product_variants.id SEPARATOR '||') as variant_price_discounts"),
+                    DB::raw("GROUP_CONCAT(product_variants.stock ORDER BY product_variants.id SEPARATOR '||') as variant_stocks"),
+                ]);
+
+                $groupByFields = array_merge($groupByFields, [
+                    'products.id',
+                    'products.name',
+                    'products.main_sku',
+                    'products.is_active',
+                    'variations.name',
+                ]);
+
+                $query->groupBy($groupByFields);
+            })
             ->groupBy($groupByFields);
     }
 
