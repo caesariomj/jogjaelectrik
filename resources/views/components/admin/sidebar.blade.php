@@ -258,8 +258,8 @@
                 </li>
                 <li>
                     <x-admin.side-link
-                        :href="route('admin.reports.sales')"
-                        :active="request()->routeIs('admin.reports.sales')"
+                        :href="route('admin.sales.index')"
+                        :active="request()->routeIs('admin.sales.*')"
                         wire:navigate
                     >
                         <svg

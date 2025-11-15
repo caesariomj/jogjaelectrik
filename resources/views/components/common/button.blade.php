@@ -14,6 +14,8 @@
         "danger" => "bg-red-500 text-white hover:bg-red-600 focus:ring-2 focus:ring-red-400 focus:ring-offset-2 disabled:hover:!bg-red-500",
         "success" => "bg-teal-500 text-white hover:bg-teal-600 focus:ring-2 focus:ring-teal-400 focus:ring-offset-2 disabled:hover:!bg-teal-500",
         "outline" => "border border-black bg-white text-black hover:bg-neutral-100 disabled:hover:!bg-white",
+        "danger-light" => "bg-red-100 text-red-500 hover:bg-red-600 hover:text-white focus:ring-2 focus:ring-red-400 focus:ring-offset-2 disabled:hover:!bg-red-500",
+        "primary-light" => "bg-primary-100 text-primary hover:bg-primary hover:text-white focus:ring-2 focus:ring-primary-400 focus:ring-offset-2 disabled:hover:!bg-primary",
     ];
 
     $disabledClasses = $disabled ? "cursor-not-allowed opacity-50" : "cursor-pointer";
