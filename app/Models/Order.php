@@ -196,12 +196,14 @@ class Order extends Model
             })
             ->when(in_array('user', $relations), function ($query) {
                 $query->leftJoin('users', 'users.id', '=', 'orders.user_id');
-                $query->leftJoin('cities', 'cities.id', '=', 'users.city_id');
+                $query->leftJoin('districts', 'districts.id', '=', 'users.district_id');
+                $query->leftJoin('cities', 'cities.id', '=', 'districts.city_id');
                 $query->leftJoin('provinces', 'provinces.id', '=', 'cities.province_id');
                 $query->addSelect([
                     'users.name as user_name',
                     'users.phone_number as user_phone_number',
                     'users.postal_code as user_postal_code',
+                    'districts.name as district',
                     'cities.name as city',
                     'provinces.name as province',
                 ]);

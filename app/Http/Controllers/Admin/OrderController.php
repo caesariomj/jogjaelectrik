@@ -29,6 +29,7 @@ class OrderController extends Controller
         $order = Order::queryByOrderNumber(orderNumber: $orderNumber, columns: [
             'orders.id',
             'orders.order_number',
+            'orders.source',
             'orders.status',
             'orders.shipping_address',
             'orders.shipping_courier',
@@ -105,8 +106,9 @@ class OrderController extends Controller
                 return (object) [
                     'id' => $firstOrder->id,
                     'order_number' => $firstOrder->order_number,
+                    'source' => $firstOrder->source,
                     'status' => $firstOrder->status,
-                    'shipping_address' => Crypt::decryptString($firstOrder->shipping_address),
+                    'shipping_address' => $firstOrder->shipping_address ? Crypt::decryptString($firstOrder->shipping_address) : null,
                     'shipping_courier' => $firstOrder->shipping_courier,
                     'estimated_shipping_min_days' => $firstOrder->estimated_shipping_min_days,
                     'estimated_shipping_max_days' => $firstOrder->estimated_shipping_max_days,

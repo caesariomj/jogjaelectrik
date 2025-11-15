@@ -165,6 +165,7 @@ new class extends Component {
             ],
             relations: ['order_details', 'user'],
         )
+            ->where('orders.source', '=', 'ecommerce')
             ->whereIn('orders.id', $currentPageOrderIds)
             ->when($this->search, function ($query) {
                 return $query->where('orders.order_number', 'like', '%' . $this->search . '%');
