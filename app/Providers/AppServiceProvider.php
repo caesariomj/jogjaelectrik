@@ -6,6 +6,7 @@ use App\Models\Category;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Opcodes\LogViewer\Facades\LogViewer;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -67,5 +68,15 @@ class AppServiceProvider extends ServiceProvider
                 View::share('primaryCategories', $primaryCategories);
             }
         }
+
+        LogViewer::auth(function ($request) {
+            $role = $request->user()?->roles->pluck('name')->first();
+
+            if ($role === null) {
+                return false;
+            }
+
+            return $role === 'admin' || $role === 'super_admin';
+        });
     }
 }
