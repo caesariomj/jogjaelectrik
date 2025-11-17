@@ -37,6 +37,7 @@ return [
 
     'rajaongkir' => [
         'key' => env('RAJAONGKIR_API_KEY'),
+        'courier_codes' => env('RAJAONGKIR_COURIER_CODES'),
     ],
 
     'xendit' => [
