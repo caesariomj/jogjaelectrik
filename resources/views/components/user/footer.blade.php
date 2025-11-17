@@ -342,7 +342,7 @@
                 </h2>
                 <ul class="flex flex-row flex-wrap gap-1.5">
                     @php
-                        $supportedExpeditions = ['jne', 'pos', 'tiki'];
+                        $supportedExpeditions = explode(':', config('services.rajaongkir.courier_codes'));
                     @endphp
 
                     @foreach ($supportedExpeditions as $expedition)
