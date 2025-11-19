@@ -789,7 +789,7 @@ new class extends Component {
                             </button>
                             <div
                                 x-show="open"
-                                class="container absolute start-0 top-full mx-auto w-full max-w-screen-2xl rounded-b-lg bg-white px-12 py-6 shadow-lg"
+                                class="absolute start-0 top-full mx-auto w-full rounded-b-lg bg-white px-12 py-6 shadow-lg"
                                 x-transition:enter="transition-opacity"
                                 x-transition:enter-start="opacity-0"
                                 x-transition:enter-end="opacity-100"
@@ -799,7 +799,7 @@ new class extends Component {
                                 x-cloak
                                 x-on:click.stop
                             >
-                                <div class="flex items-start justify-between gap-4">
+                                <div class="mx-auto flex w-full max-w-screen-2xl items-start justify-between gap-4">
                                     <ul class="grid w-2/3 grid-cols-3 gap-2">
                                         @foreach ($category->subcategories as $subcategory)
                                             <li>
