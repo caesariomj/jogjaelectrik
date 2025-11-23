@@ -21,12 +21,22 @@ new class extends Component {
     #[Locked]
     public $searchResults = null;
 
+    #[Locked]
+    public ?int $ordersCount = null;
+
     public function mount(): void
     {
         $this->role = auth()->check()
             ? auth()
                 ->user()
                 ->roles->first()->name
+            : null;
+
+        $this->ordersCount = auth()->check()
+            ? DB::table('orders')
+                ->where('user_id', auth()->id())
+                ->whereNotIn('status', ['completed', 'failed', 'canceled'])
+                ->count()
             : null;
     }
 
@@ -588,6 +598,13 @@ new class extends Component {
                                                     <path d="m7.5 4.27 9 5.15" />
                                                 </svg>
                                                 Pesanan Saya
+                                                @if (! is_null($ordersCount) && $ordersCount > 0)
+                                                    <span
+                                                        class="ml-auto inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white"
+                                                    >
+                                                        {{ $ordersCount }}
+                                                    </span>
+                                                @endif
                                             </x-user.side-link>
                                         </li>
                                     @endcan
@@ -705,7 +722,7 @@ new class extends Component {
                                         </li>
                                         <li>
                                             <a
-                                                href="#"
+                                                href="{{ route('help') }}#cara pemesanan"
                                                 class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
                                                 wire:navigate
                                             >
@@ -714,7 +731,7 @@ new class extends Component {
                                         </li>
                                         <li>
                                             <a
-                                                href="#"
+                                                href="{{ route('help') }}#kebijakan pengiriman"
                                                 class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
                                                 wire:navigate
                                             >
@@ -723,7 +740,7 @@ new class extends Component {
                                         </li>
                                         <li>
                                             <a
-                                                href="#"
+                                                href="{{ route('help') }}#kebijakan pengembalian barang"
                                                 class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
                                                 wire:navigate
                                             >
@@ -741,7 +758,7 @@ new class extends Component {
                                     <ul class="flex flex-col gap-y-2">
                                         <li>
                                             <a
-                                                href="#"
+                                                href="{{ route('terms-and-conditions') }}"
                                                 class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
                                                 wire:navigate
                                             >
@@ -750,7 +767,7 @@ new class extends Component {
                                         </li>
                                         <li>
                                             <a
-                                                href="#"
+                                                href="{{ route('privacy-policy') }}"
                                                 class="text-sm font-medium leading-tight tracking-tight text-black transition-colors hover:text-primary"
                                                 wire:navigate
                                             >
@@ -1271,6 +1288,13 @@ new class extends Component {
                                             <path d="m7.5 4.27 9 5.15" />
                                         </svg>
                                         Pesanan Saya
+                                        @if (! is_null($ordersCount) && $ordersCount > 0)
+                                            <span
+                                                class="ml-auto inline-flex items-center justify-center rounded-full bg-red-500 px-2 py-0.5 text-xs font-medium text-white"
+                                            >
+                                                {{ $ordersCount }}
+                                            </span>
+                                        @endif
                                     </x-common.dropdown-link>
                                 @endcan
 
