@@ -7,7 +7,7 @@
         <h1 class="mb-4 text-black">Bantuan</h1>
         <div class="flex flex-col-reverse justify-between gap-6 md:flex-row">
             <div class="relative h-full w-full text-center md:sticky md:top-20 md:w-1/2">
-                <div class="mx-auto mb-6 h-auto w-[28rem]">
+                <div class="mx-auto mb-6 h-auto w-60 md:w-[28rem]">
                     {!! file_get_contents(public_path('images/illustrations/help.svg')) !!}
                 </div>
                 <p
