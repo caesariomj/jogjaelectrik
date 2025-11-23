@@ -54,7 +54,7 @@
                         type="text"
                         name="search-question"
                         id="search-question"
-                        placeholder="Apa yang ingin anda cari?"
+                        placeholder="Apa yang ingin anda cari? (contoh: refund, pembayaran, resi)"
                         autocomplete="off"
                     />
                 </div>
@@ -72,7 +72,7 @@
                             </x-slot>
                             <p
                                 class="mb-4 text-pretty text-sm font-medium tracking-tight text-black lg:text-base"
-                                x-text="item.content"
+                                x-html="item.content"
                             ></p>
                         </x-common.accordion>
                     </div>
