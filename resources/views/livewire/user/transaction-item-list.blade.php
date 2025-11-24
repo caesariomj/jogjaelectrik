@@ -37,11 +37,13 @@ new class extends Component {
             userId: auth()->id(),
             columns: [
                 'payments.id',
-                'orders.order_number',
-                'orders.total_amount',
                 'payments.method',
+                'payments.status',
                 'payments.created_at',
                 'payments.updated_at',
+                'refunds.status as refund_status',
+                'orders.order_number',
+                'orders.total_amount',
             ],
         )
             ->whereIn('payments.status', ['paid', 'settled', 'refunded'])
@@ -202,11 +204,11 @@ new class extends Component {
                     <x-datatable.heading
                         sortable
                         class="min-w-40"
-                        :direction="$sortField === 'refunded' ? $sortDirection : null "
-                        wire:click="sortBy('refunded')"
+                        :direction="$sortField === 'status' ? $sortDirection : null "
+                        wire:click="sortBy('status')"
                         align="center"
                     >
-                        Direfund
+                        Status
                     </x-datatable.heading>
                     <x-datatable.heading
                         sortable
@@ -279,19 +281,40 @@ new class extends Component {
                             Rp {{ formatPrice($payment->total_amount) }}
                         </x-datatable.cell>
                         <x-datatable.cell align="center">
-                            @if ($payment->refunded)
+                            @if (in_array($payment->status, ['paid', 'settled']))
                                 <span
                                     class="inline-flex items-center gap-x-1.5 rounded-full bg-teal-100 px-3 py-1 text-xs font-medium tracking-tight text-teal-800"
                                 >
                                     <span class="inline-block size-1.5 rounded-full bg-teal-800"></span>
-                                    Ya
+                                    Berhasil
                                 </span>
-                            @else
+                            @elseif ($payment->status === 'refunded' && $payment->refund_status === 'pending')
                                 <span
-                                    class="inline-flex items-center gap-x-1.5 rounded-full bg-neutral-100 px-3 py-1 text-xs font-medium tracking-tight text-neutral-800"
+                                    class="inline-flex items-center gap-x-1.5 rounded-full bg-blue-100 px-3 py-1 text-xs font-medium tracking-tight text-blue-800"
                                 >
-                                    <span class="inline-block size-1.5 rounded-full bg-neutral-800"></span>
-                                    Tidak
+                                    <span class="inline-block size-1.5 rounded-full bg-blue-800"></span>
+                                    Mengajukan Refund
+                                </span>
+                            @elseif ($payment->status === 'refunded' && $payment->refund_status === 'succeeded')
+                                <span
+                                    class="inline-flex items-center gap-x-1.5 rounded-full bg-teal-100 px-3 py-1 text-xs font-medium tracking-tight text-teal-800"
+                                >
+                                    <span class="inline-block size-1.5 rounded-full bg-teal-800"></span>
+                                    Berhasil Direfund
+                                </span>
+                            @elseif ($payment->status === 'refunded' && $payment->refund_status === 'rejected')
+                                <span
+                                    class="inline-flex items-center gap-x-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-medium tracking-tight text-red-800"
+                                >
+                                    <span class="inline-block size-1.5 rounded-full bg-red-800"></span>
+                                    Refund Ditolak
+                                </span>
+                            @elseif ($payment->status === 'refunded' && $payment->refund_status === 'failed')
+                                <span
+                                    class="inline-flex items-center gap-x-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-medium tracking-tight text-red-800"
+                                >
+                                    <span class="inline-block size-1.5 rounded-full bg-red-800"></span>
+                                    Refund Gagal
                                 </span>
                             @endif
                         </x-datatable.cell>

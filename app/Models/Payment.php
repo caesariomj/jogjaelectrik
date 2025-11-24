@@ -56,26 +56,18 @@ class Payment extends Model
      */
     public static function baseQuery(array $columns = ['*'])
     {
-        return DB::table('payments')->select($columns)->leftJoin('orders', 'orders.id', '=', 'payments.order_id');
+        return DB::table('payments')->select($columns)
+            ->leftJoin('orders', 'orders.id', '=', 'payments.order_id')
+            ->leftJoin('refunds', 'refunds.payment_id', '=', 'payments.id');
     }
 
     public static function queryById(string $id, array $columns = ['*'])
     {
-        return self::baseQuery(columns: $columns)
-            ->leftJoin('refunds', 'refunds.payment_id', '=', 'payments.id')
-            ->where('payments.id', $id);
+        return self::baseQuery(columns: $columns)->where('payments.id', $id);
     }
 
     public static function queryByUserId(string $userId, array $columns = ['*'])
     {
-        return self::baseQuery(columns: $columns)
-            ->selectRaw('
-                EXISTS (
-                    SELECT 1 
-                    FROM refunds 
-                    WHERE refunds.payment_id = payments.id
-                ) AS refunded
-            ')
-            ->where('orders.user_id', $userId);
+        return self::baseQuery(columns: $columns)->where('orders.user_id', $userId);
     }
 }
