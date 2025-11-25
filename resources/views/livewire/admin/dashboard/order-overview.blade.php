@@ -28,7 +28,7 @@ new class extends Component {
     <div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
         <a
             class="group flex flex-row rounded-xl border bg-white p-4 shadow transition-all hover:border-primary hover:shadow-md"
-            href="{{ route('admin.orders.index') }}?status=menunggu-pembayaran"
+            href="{{ route('admin.orders.index') }}?status=waiting_payment"
             wire:navigate
         >
             <div class="flex flex-col">
@@ -38,7 +38,7 @@ new class extends Component {
                 </p>
             </div>
             <svg
-                class="ms-auto size-5 text-black/70 group-hover:text-primary"
+                class="ms-auto size-5 text-black/70 transition-colors group-hover:text-primary"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2"
@@ -49,7 +49,7 @@ new class extends Component {
         </a>
         <a
             class="group flex flex-row rounded-xl border bg-white p-4 shadow transition-all hover:border-primary hover:shadow-md"
-            href="{{ route('admin.orders.index') }}?status=menunggu-diproses"
+            href="{{ route('admin.orders.index') }}?status=payment_received"
             wire:navigate
         >
             <div class="flex flex-col">
@@ -59,7 +59,7 @@ new class extends Component {
                 </p>
             </div>
             <svg
-                class="ms-auto size-5 text-black/70 group-hover:text-primary"
+                class="ms-auto size-5 text-black/70 transition-colors group-hover:text-primary"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2"
@@ -70,7 +70,7 @@ new class extends Component {
         </a>
         <a
             class="group flex flex-row rounded-xl border bg-white p-4 shadow transition-all hover:border-primary hover:shadow-md"
-            href="{{ route('admin.orders.index') }}?status=menunggu-dikirim"
+            href="{{ route('admin.orders.index') }}?status=processing"
             wire:navigate
         >
             <div class="flex flex-col">
@@ -80,7 +80,7 @@ new class extends Component {
                 </p>
             </div>
             <svg
-                class="ms-auto size-5 text-black/70 group-hover:text-primary"
+                class="ms-auto size-5 text-black/70 transition-colors group-hover:text-primary"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2"
@@ -91,7 +91,7 @@ new class extends Component {
         </a>
         <a
             class="group flex flex-row rounded-xl border bg-white p-4 shadow transition-all hover:border-primary hover:shadow-md"
-            href="{{ route('admin.orders.index') }}?status=dalam-pengiriman"
+            href="{{ route('admin.orders.index') }}?status=shipping"
             wire:navigate
         >
             <div class="flex flex-col">
@@ -101,7 +101,7 @@ new class extends Component {
                 </p>
             </div>
             <svg
-                class="ms-auto size-5 text-black/70 group-hover:text-primary"
+                class="ms-auto size-5 text-black/70 transition-colors group-hover:text-primary"
                 fill="none"
                 stroke="currentColor"
                 stroke-width="2"
