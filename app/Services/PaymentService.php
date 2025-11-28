@@ -41,10 +41,10 @@ class PaymentService
             'mobile_number' => '+62'.str_replace('-', '', $decryptedUserPhoneNumber),
             'addresses' => [
                 [
-                    'city' => $user->city->name,
+                    'city' => $user->district->city->name,
                     'country' => 'Indonesia',
                     'postal_code' => $decryptedUserPostalCode,
-                    'state' => $user->city->province->name,
+                    'province' => $user->district->city->province->name,
                     'street_line1' => $decryptedUserAddress,
                 ],
             ],
@@ -195,7 +195,7 @@ class PaymentService
             if ($e->getCode() === 400) {
                 $userMessage = 'Gagal memproses permintaan refund karena total belanja melebihi batas maksimal yang diizinkan untuk pengembalian dana.';
             } elseif ($e->getCode() === 403) {
-                $userMessage = 'Gagal memproses permintaan refund karena tidak ada API key yang valid.';
+                $userMessage = 'Gagal memproses permintaan refund, silakan coba beberapa saat lagi.';
             } elseif ($e->getCode() === 404) {
                 $userMessage = 'Gagal memproses permintaan refund karena data yang diminta tidak ditemukan.';
             } elseif ($e->getCode() === 409) {
