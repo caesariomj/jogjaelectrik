@@ -1,6 +1,8 @@
 <?php
 
+use App\Models\Order;
 use App\Models\Payment;
+use App\Services\DocumentService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
@@ -11,6 +13,8 @@ use Livewire\WithPagination;
 new class extends Component {
     use WithPagination;
 
+    protected DocumentService $documentService;
+
     #[Url(as: 'q', except: '')]
     public string $search = '';
 
@@ -19,6 +23,11 @@ new class extends Component {
     public string $sortDirection = 'desc';
 
     public int $perPage = 5;
+
+    public function boot(DocumentService $documentService): void
+    {
+        $this->documentService = $documentService;
+    }
 
     /**
      * Lazy loading that displays the table skeleton with dynamic table rows.
@@ -37,6 +46,7 @@ new class extends Component {
             userId: auth()->id(),
             columns: [
                 'payments.id',
+                'payments.order_id',
                 'payments.method',
                 'payments.status',
                 'payments.created_at',
@@ -74,6 +84,26 @@ new class extends Component {
         }
 
         $this->sortField = $field;
+    }
+
+    /**
+     * Download order invoice.
+     *
+     * @param   string  $id - The ID of the order invoice to download.
+     *
+     * @return  redirect if the order is not found.
+     * @return  void
+     */
+    public function downloadInvoice(string $id)
+    {
+        $order = Order::find($id);
+
+        if (! $order) {
+            session()->flash('error', 'Pesanan tidak dapat ditemukan.');
+            return $this->redirectIntended(route('orders.index'), navigate: true);
+        }
+
+        return $this->documentService->generateInvoice($order);
     }
 }; ?>
 
@@ -372,6 +402,28 @@ new class extends Component {
                                             <path d="M10 18h11" />
                                         </svg>
                                         Detail
+                                    </x-common.dropdown-link>
+                                    <x-common.dropdown-link
+                                        x-on:click.prevent.stop="$wire.downloadInvoice('{{ $payment->order_id }}')"
+                                        wire:loading.class="!pointers-event-none !cursor-wait opacity-50"
+                                        wire:target="downloadInvoice('{{ $payment->order_id }}')"
+                                    >
+                                        <svg
+                                            class="size-4 shrink-0"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="currentColor"
+                                            stroke-width="2"
+                                            stroke-linecap="round"
+                                            stroke-linejoin="round"
+                                            aria-hidden="true"
+                                        >
+                                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                            <polyline points="7 10 12 15 17 10" />
+                                            <line x1="12" x2="12" y1="15" y2="3" />
+                                        </svg>
+                                        Unduh Invoice
                                     </x-common.dropdown-link>
                                 </x-slot>
                             </x-common.dropdown>
