@@ -31,6 +31,9 @@ class UpdateProfileForm extends Form
     public ?int $city = null;
 
     #[Validate]
+    public ?int $district = null;
+
+    #[Validate]
     public ?string $address = null;
 
     #[Validate]
@@ -50,6 +53,8 @@ class UpdateProfileForm extends Form
     public ?int $originalProvince = null;
 
     public ?int $originalCity = null;
+
+    public ?int $originalDistrict = null;
 
     public ?string $originalAddress = null;
 
@@ -86,6 +91,11 @@ class UpdateProfileForm extends Form
                 'numeric',
                 'exists:cities,id',
             ],
+            'district' => [
+                ! in_array($this->role, ['admin', 'super_admin']) ? 'required' : 'nullable',
+                'numeric',
+                'exists:districts,id',
+            ],
             'address' => [
                 ! in_array($this->role, ['admin', 'super_admin']) ? 'required' : 'nullable',
                 'string',
@@ -108,6 +118,7 @@ class UpdateProfileForm extends Form
             'phone' => 'Nomor telefon',
             'province' => 'Provinsi',
             'city' => 'Kabupaten/Kota',
+            'district' => 'Kecamatan',
             'address' => 'Alamat lengkap',
             'postalCode' => 'Kode pos',
         ];
@@ -122,8 +133,9 @@ class UpdateProfileForm extends Form
         $this->phone = $user->phone_number ? Crypt::decryptString($user->phone_number) : null;
 
         if (! in_array($this->role, ['admin', 'super_admin'])) {
-            $this->province = $user->city_id ? $user->city->province_id : null;
-            $this->city = $user->city_id ? $user->city_id : null;
+            $this->province = $user->district_id ? $user->district->city->province_id : null;
+            $this->city = $user->district_id ? $user->district->city_id : null;
+            $this->district = $user->district_id ? $user->district_id : null;
             $this->address = $user->address ? Crypt::decryptString($user->address) : null;
             $this->postalCode = $user->postal_code ? Crypt::decryptString($user->postal_code) : null;
         }
@@ -141,6 +153,7 @@ class UpdateProfileForm extends Form
         if (! in_array($this->originalRole, ['admin', 'super_admin'])) {
             $this->originalProvince = $this->province;
             $this->originalCity = $this->city;
+            $this->originalDistrict = $this->district;
             $this->originalAddress = $this->address;
             $this->originalPostalCode = $this->postalCode;
         }

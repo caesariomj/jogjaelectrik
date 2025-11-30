@@ -22,6 +22,9 @@ new class extends Component {
     #[Locked]
     public Collection $cities;
 
+    #[Locked]
+    public Collection $districts;
+
     public function mount(): void
     {
         $this->form->setUser(auth()->user());
@@ -34,6 +37,13 @@ new class extends Component {
             ? DB::table('cities')
                 ->select('id as value', 'name as label')
                 ->where('province_id', $this->form->province)
+                ->get()
+            : collect();
+
+        $this->districts = $this->form->city
+            ? DB::table('districts')
+                ->select('id as value', 'name as label')
+                ->where('city_id', $this->form->city)
                 ->get()
             : collect();
     }
@@ -54,6 +64,7 @@ new class extends Component {
         if ($comboboxInstanceName == 'provinsi') {
             $this->form->province = $value;
             $this->form->city = null;
+            $this->form->district = null;
 
             $this->cities = DB::table('cities')
                 ->select('id as value', 'name as label')
@@ -61,11 +72,14 @@ new class extends Component {
                 ->get();
         } elseif ($comboboxInstanceName == 'kabupaten/kota') {
             $this->form->city = $value;
+            $this->form->district = null;
 
-            $this->cities = DB::table('cities')
+            $this->districts = DB::table('districts')
                 ->select('id as value', 'name as label')
-                ->where('province_id', $this->form->province)
+                ->where('city_id', $this->form->city)
                 ->get();
+        } elseif ($comboboxInstanceName == 'kecamatan') {
+            $this->form->district = $value;
         }
     }
 
@@ -323,8 +337,8 @@ new class extends Component {
                 </legend>
                 <div class="grid grid-cols-1 gap-4 pb-8 pt-4 md:grid-cols-2">
                     <template x-if="isEditing">
-                        <div class="flex w-full flex-col gap-4 md:col-span-2 md:flex-row">
-                            <div class="w-full md:w-1/2">
+                        <div class="col-span-2 flex w-full flex-col gap-4">
+                            <div class="w-full">
                                 <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
                                     Pilih Provinsi
                                     <span class="text-red-500">*</span>
@@ -339,7 +353,7 @@ new class extends Component {
                                 />
                                 <x-form.input-error :messages="$errors->get('form.province')" class="mt-2" />
                             </div>
-                            <div class="w-full md:w-1/2">
+                            <div class="w-full">
                                 <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
                                     Pilih Kabupaten/Kota
                                     <span class="text-red-500">*</span>
@@ -391,61 +405,141 @@ new class extends Component {
                                 @endif
                                 <x-form.input-error :messages="$errors->get('form.city')" class="mt-2" />
                             </div>
+                            <div class="w-full">
+                                <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
+                                    Pilih Kecamatan
+                                    <span class="text-red-500">*</span>
+                                </p>
+                                @if (! $form->city)
+                                    <button
+                                        type="button"
+                                        class="inline-flex w-full items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-tight text-black transition hover:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:cursor-not-allowed disabled:opacity-50"
+                                        disabled
+                                    >
+                                        <span
+                                            wire:loading.remove
+                                            wire:target="handleComboboxChange"
+                                            class="text-sm font-medium capitalize tracking-tight text-black"
+                                        >
+                                            Silakan pilih kabupaten/kota anda terlebih dahulu
+                                        </span>
+                                        <span
+                                            wire:loading
+                                            wire:target="handleComboboxChange"
+                                            class="text-sm font-medium capitalize tracking-tight text-black"
+                                        >
+                                            Sedang diproses...
+                                        </span>
+                                        <svg
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            viewBox="0 0 20 20"
+                                            fill="currentColor"
+                                            class="size-5"
+                                            aria-hidden="true"
+                                        >
+                                            <path
+                                                fill-rule="evenodd"
+                                                d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+                                                clip-rule="evenodd"
+                                            />
+                                        </svg>
+                                    </button>
+                                @else
+                                    <div wire:key="select-district-container-{{ $form->city }}">
+                                        <x-form.combobox
+                                            :options="$districts"
+                                            :selectedOption="$form->district ?? null"
+                                            name="kecamatan"
+                                            id="select-district"
+                                            wire:ignore.self
+                                        />
+                                    </div>
+                                @endif
+                                <x-form.input-error :messages="$errors->get('form.district')" class="mt-2" />
+                            </div>
                         </div>
                     </template>
                     <template x-if="!isEditing">
-                        <div class="flex w-full flex-col gap-4 md:col-span-2 md:flex-row">
-                            <div class="w-full md:w-1/2">
-                                <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
-                                    Pilih Provinsi
-                                    <span class="text-red-500">*</span>
-                                </p>
-                                <div
-                                    class="inline-flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-tight text-black opacity-50 shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                        <div class="md:col-span-2">
+                            <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
+                                Pilih Provinsi
+                                <span class="text-red-500">*</span>
+                            </p>
+                            <div
+                                class="inline-flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-tight text-black opacity-50 shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                            >
+                                <span class="text-sm font-normal capitalize text-black">
+                                    {{ auth()->user()->district ? auth()->user()->district->city->province->name : 'Silakan Pilih Provinsi' }}
+                                </span>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                    class="size-5"
+                                    aria-hidden="true"
                                 >
-                                    <span class="text-sm font-normal capitalize text-black">
-                                        {{ auth()->user()->city ? auth()->user()->city->province->name : 'Silakan Pilih Provinsi' }}
-                                    </span>
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                        class="size-5"
-                                        aria-hidden="true"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                </div>
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+                                        clip-rule="evenodd"
+                                    />
+                                </svg>
                             </div>
-                            <div class="w-full md:w-1/2">
-                                <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
-                                    Pilih Kabupaten/Kota
-                                    <span class="text-red-500">*</span>
-                                </p>
-                                <div
-                                    class="inline-flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-tight text-black opacity-50 shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                        </div>
+                    </template>
+                    <template x-if="!isEditing">
+                        <div class="md:col-span-2">
+                            <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
+                                Pilih Kabupaten/Kota
+                                <span class="text-red-500">*</span>
+                            </p>
+                            <div
+                                class="inline-flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-tight text-black opacity-50 shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                            >
+                                <span class="text-sm font-normal capitalize text-black">
+                                    {{ auth()->user()->district ? auth()->user()->district->city->name : 'Silakan Pilih Kabupaten/Kota' }}
+                                </span>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                    class="size-5"
+                                    aria-hidden="true"
                                 >
-                                    <span class="text-sm font-normal capitalize text-black">
-                                        {{ auth()->user()->city ? auth()->user()->city->name : 'Silakan Pilih Kabupaten/Kota' }}
-                                    </span>
-                                    <svg
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        viewBox="0 0 20 20"
-                                        fill="currentColor"
-                                        class="size-5"
-                                        aria-hidden="true"
-                                    >
-                                        <path
-                                            fill-rule="evenodd"
-                                            d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
-                                            clip-rule="evenodd"
-                                        />
-                                    </svg>
-                                </div>
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+                                        clip-rule="evenodd"
+                                    />
+                                </svg>
+                            </div>
+                        </div>
+                    </template>
+                    <template x-if="!isEditing">
+                        <div class="md:col-span-2">
+                            <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
+                                Pilih Kecamatan
+                                <span class="text-red-500">*</span>
+                            </p>
+                            <div
+                                class="inline-flex w-full cursor-not-allowed items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-tight text-black opacity-50 shadow-sm transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black"
+                            >
+                                <span class="text-sm font-normal capitalize text-black">
+                                    {{ auth()->user()->district ? auth()->user()->district->name : 'Silakan Pilih Kecamatan' }}
+                                </span>
+                                <svg
+                                    xmlns="http://www.w3.org/2000/svg"
+                                    viewBox="0 0 20 20"
+                                    fill="currentColor"
+                                    class="size-5"
+                                    aria-hidden="true"
+                                >
+                                    <path
+                                        fill-rule="evenodd"
+                                        d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+                                        clip-rule="evenodd"
+                                    />
+                                </svg>
                             </div>
                         </div>
                     </template>
