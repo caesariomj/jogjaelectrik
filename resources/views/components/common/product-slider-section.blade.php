@@ -95,38 +95,40 @@
             </article>
         </template>
     </div>
-    <div
-        class="container mx-auto flex max-w-md items-center justify-end gap-x-3 px-6 pb-3 pt-6 md:max-w-[96rem] md:px-12"
-    >
-        <x-common.button variant="secondary" class="!p-2" aria-label="Slide sebelumya" x-on:click="previous">
-            <svg
-                class="size-6 shrink-0"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-            >
-                <path d="m15 18-6-6 6-6" />
-            </svg>
-        </x-common.button>
-        <x-common.button variant="secondary" class="!p-2" aria-label="Slide selanjutnya" x-on:click="next">
-            <svg
-                class="size-6 shrink-0"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                stroke-width="2"
-                stroke-linecap="round"
-                stroke-linejoin="round"
-                aria-hidden="true"
-            >
-                <path d="m9 18 6-6-6-6" />
-            </svg>
-        </x-common.button>
-    </div>
+    @if (count($products) > 2)
+        <div
+            class="container mx-auto flex max-w-md items-center justify-end gap-x-3 px-6 pb-3 pt-6 md:max-w-[96rem] md:px-12"
+        >
+            <x-common.button variant="secondary" class="!p-2" aria-label="Slide sebelumya" x-on:click="previous">
+                <svg
+                    class="size-6 shrink-0"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    <path d="m15 18-6-6 6-6" />
+                </svg>
+            </x-common.button>
+            <x-common.button variant="secondary" class="!p-2" aria-label="Slide selanjutnya" x-on:click="next">
+                <svg
+                    class="size-6 shrink-0"
+                    xmlns="http://www.w3.org/2000/svg"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    aria-hidden="true"
+                >
+                    <path d="m9 18 6-6-6-6" />
+                </svg>
+            </x-common.button>
+        </div>
+    @endif
 </section>
