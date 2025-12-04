@@ -223,7 +223,9 @@ class Product extends Model
                 $query->leftJoinSub(
                     DB::table('order_details')
                         ->join('product_variants', 'product_variants.id', '=', 'order_details.product_variant_id')
+                        ->join('orders', 'orders.id', '=', 'order_details.order_id')
                         ->select('product_variants.product_id', DB::raw('COALESCE(SUM(order_details.quantity), 0) as total_sold'))
+                        ->where('orders.status', '=', 'completed')
                         ->groupBy('product_variants.product_id'),
                     'order_details',
                     'order_details.product_id',
