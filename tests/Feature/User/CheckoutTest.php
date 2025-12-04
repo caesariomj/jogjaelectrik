@@ -12,6 +12,7 @@ beforeEach(function () {
 
     \Database\Factories\ProvinceFactory::resetCount();
     \Database\Factories\CityFactory::resetCount();
+    \Database\Factories\DistrictFactory::resetCount();
 
     $user = User::factory()->create([
         'email_verified_at' => now(),
@@ -100,7 +101,9 @@ beforeEach(function () {
             'users.phone_number as user_phone_number',
             'users.address as user_address',
             'users.postal_code as user_postal_code',
-            'users.city_id as user_city_id',
+            'users.district_id as user_district_id',
+            'districts.name as district_name',
+            'districts.city_id as district_city_id',
             'cities.name as city_name',
             'cities.province_id as city_province_id',
             'provinces.name as province_name',
@@ -131,7 +134,9 @@ beforeEach(function () {
             'phone_number' => $cartData->user_phone_number ? Crypt::decryptString($cartData->user_phone_number) : null,
             'address' => $cartData->user_address ? Crypt::decryptString($cartData->user_address) : null,
             'postal_code' => $cartData->user_postal_code ? Crypt::decryptString($cartData->user_postal_code) : null,
-            'city_id' => $cartData->user_city_id,
+            'district_id' => $cartData->user_district_id,
+            'district_name' => $cartData->district_name,
+            'city_id' => $cartData->district_city_id,
             'city_name' => $cartData->city_name,
             'province_id' => $cartData->city_province_id,
             'province_name' => $cartData->province_name,
@@ -182,6 +187,7 @@ beforeEach(function () {
 
     \App\Models\Province::factory()->count(4)->create();
     \App\Models\City::factory()->count(7)->create();
+    \App\Models\District::factory()->count(7)->create();
 });
 
 test('checkout screen can be rendered', function () {
@@ -200,22 +206,28 @@ test('checkout can be done', function () {
         ->set('form.phone', '0899-9999-9999')
         ->set('form.province', '1')
         ->set('form.city', '1')
+        ->set('form.district', '1')
         ->set('form.address', 'Jl. Testing Checkout')
         ->set('form.postalCode', '12345')
-        ->set('form.shippingCourier', 'jne')
-        ->set('selectedCourierServices', [
+        ->set('form.availableCourierServices', [
             [
-                'courier_code' => 'jne',
-                'courier_name' => 'Jalur Nugraha Ekakurir (JNE)',
-                'service' => 'CTC',
-                'description' => 'JNE City Courier',
-                'cost_value' => 20000.0,
-                'etd' => '2-3',
-                'note' => '',
+                'name' => 'J&T Express',
+                'code' => 'jnt',
+                'service' => 'EZ',
+                'description' => 'Reguler',
+                'cost' => 14000,
+                'etd' => 'N/A',
             ],
         ])
-        ->set('form.shippingCourierService', 'ctc')
-        ->set('form.shippingCourierServiceTax', 20000.0)
+        ->set('form.shippingIndex', '0')
+        ->set('form.shippingCourier', [
+            'name' => 'J&T Express',
+            'code' => 'jnt',
+            'service' => 'EZ',
+            'description' => 'Reguler',
+            'cost' => 14000,
+            'etd' => 'N/A',
+        ])
         ->set('form.note', 'Tolong kirim secepatnya')
         ->set('form.acceptTermsAndCondition', true)
         ->call('checkout')

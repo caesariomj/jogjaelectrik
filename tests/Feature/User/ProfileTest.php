@@ -10,12 +10,14 @@ beforeEach(function () {
 
     \Database\Factories\ProvinceFactory::resetCount();
     \Database\Factories\CityFactory::resetCount();
+    \Database\Factories\DistrictFactory::resetCount();
 
     \App\Models\Province::factory()->count(4)->create();
     \App\Models\City::factory()->count(7)->create();
+    \App\Models\District::factory()->count(7)->create();
 
     $user = User::factory()->create([
-        'city_id' => '1',
+        'district_id' => '1',
         'phone_number' => Crypt::encryptString(ltrim('0811-1111-1111', '0')),
         'address' => Crypt::encryptString('Jl. Testing Alamat'),
         'postal_code' => Crypt::encryptString('12345'),

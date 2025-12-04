@@ -60,4 +60,5 @@ function seedPermissionsAndRoles()
     test()->seed(Database\Seeders\ProductPermissionsSeeder::class);
     test()->seed(Database\Seeders\RefundPermissionsSeeder::class);
     test()->seed(Database\Seeders\ProductReviewPermissionsSeeder::class);
+    test()->seed(Database\Seeders\ReportPermissionsSeeder::class);
 }

@@ -10,12 +10,14 @@ beforeEach(function () {
 
     \Database\Factories\ProvinceFactory::resetCount();
     \Database\Factories\CityFactory::resetCount();
+    \Database\Factories\DistrictFactory::resetCount();
 
     \App\Models\Province::factory()->count(4)->create();
     \App\Models\City::factory()->count(7)->create();
+    \App\Models\District::factory()->count(7)->create();
 
     $admin = User::factory()->create([
-        'city_id' => '1',
+        'district_id' => '1',
         'phone_number' => Crypt::encryptString(ltrim('0811-1111-1111', '0')),
         'address' => Crypt::encryptString('Jl. Testing Alamat'),
         'postal_code' => Crypt::encryptString('12345'),
@@ -30,8 +32,9 @@ beforeEach(function () {
 });
 
 test('profile page is displayed', function () {
-    $response = $this->get('admin/profil-saya');
+    $this->actingAs($this->admin);
 
+    $response = $this->get('admin/profil-saya');
     $response->assertRedirect('/konfirmasi-password');
 
     Volt::test('pages.auth.confirm-password')
@@ -39,6 +42,9 @@ test('profile page is displayed', function () {
         ->call('confirmPassword')
         ->assertHasNoErrors()
         ->assertRedirect('admin/profil-saya');
+
+    // pastikan session menandakan password sudah dikonfirmasi
+    session()->put('auth.password_confirmed_at', time());
 
     $finalResponse = $this->get('admin/profil-saya');
 
@@ -48,6 +54,9 @@ test('profile page is displayed', function () {
 });
 
 test('profile information can be updated', function () {
+    $this->actingAs($this->admin);
+
+    // set agar middleware confirmed dilewati
     session()->put('auth.password_confirmed_at', time());
 
     $component = Volt::test('admin.profile.update-profile-information-form')

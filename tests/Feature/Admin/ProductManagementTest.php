@@ -46,6 +46,7 @@ test('product can be created', function () {
         ->set('form.name', 'Testing Product')
         ->set('form.subcategoryId', $subcategory->id)
         ->set('form.mainSku', 'testing-product')
+        ->set('form.costPrice', 40000)
         ->set('form.description', 'Testing Product Description')
         ->set('form.isActive', true)
         ->set('form.images', $images)
@@ -108,6 +109,7 @@ test('product can be updated', function () {
             'products.slug',
             'products.description',
             'products.main_sku',
+            'products.cost_price',
             'products.base_price',
             'products.base_price_discount',
             'products.is_active',
@@ -145,6 +147,7 @@ test('product can be updated', function () {
         ->set('form.name', 'Testing Product')
         ->set('form.subcategoryId', $newSubcategory->id)
         ->set('form.mainSku', 'testing-product')
+        ->set('form.costPrice', 40000)
         ->set('form.description', 'Testing Product Description')
         ->set('form.isActive', true)
         ->set('form.newImages', $images)

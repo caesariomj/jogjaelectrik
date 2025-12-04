@@ -1,6 +1,7 @@
 <?php
 
 use Database\Factories\CityFactory;
+use Database\Factories\DistrictFactory;
 use Database\Factories\ProvinceFactory;
 use Livewire\Volt\Volt;
 
@@ -24,12 +25,14 @@ test('user management page accessible', function () {
 test('user can be edited by super_admin', function () {
     ProvinceFactory::resetCount();
     CityFactory::resetCount();
+    DistrictFactory::resetCount();
 
     \App\Models\Province::factory()->count(4)->create();
     \App\Models\City::factory()->count(7)->create();
+    \App\Models\District::factory()->count(7)->create();
 
     $user = \App\Models\User::factory()->create([
-        'city_id' => '1',
+        'district_id' => '1',
         'phone_number' => \Illuminate\Support\Facades\Crypt::encryptString(ltrim('0811-1111-1111', '0')),
         'address' => \Illuminate\Support\Facades\Crypt::encryptString('Jl. Testing Alamat'),
         'postal_code' => \Illuminate\Support\Facades\Crypt::encryptString('12345'),
@@ -46,7 +49,7 @@ test('user can be edited by super_admin', function () {
     $user = (new \App\Models\User)->newFromBuilder(
         \App\Models\User::queryById(id: $user->id, columns: [
             'users.id',
-            'users.city_id',
+            'users.district_id',
             'users.name',
             'users.email',
             'users.password',
@@ -95,12 +98,14 @@ test('user can be deleted by super_admin', function () {
 test('user detail page accessible', function () {
     ProvinceFactory::resetCount();
     CityFactory::resetCount();
+    DistrictFactory::resetCount();
 
     \App\Models\Province::factory()->count(4)->create();
     \App\Models\City::factory()->count(7)->create();
+    \App\Models\District::factory()->count(7)->create();
 
     $user = \App\Models\User::factory()->create([
-        'city_id' => '1',
+        'district_id' => '1',
         'phone_number' => \Illuminate\Support\Facades\Crypt::encryptString(ltrim('0811-1111-1111', '0')),
         'address' => \Illuminate\Support\Facades\Crypt::encryptString('Jl. Testing Alamat'),
         'postal_code' => \Illuminate\Support\Facades\Crypt::encryptString('12345'),
