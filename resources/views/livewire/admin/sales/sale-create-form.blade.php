@@ -496,6 +496,12 @@ new class extends Component {
                                         scope="col"
                                         class="w-40 border-r border-neutral-300 px-6 py-3 text-center text-sm font-medium tracking-tight text-black/70"
                                     >
+                                        Harga
+                                    </th>
+                                    <th
+                                        scope="col"
+                                        class="w-20 border-r border-neutral-300 px-6 py-3 text-center text-sm font-medium tracking-tight text-black/70"
+                                    >
                                         Kuantitas
                                     </th>
                                     <th
@@ -529,6 +535,11 @@ new class extends Component {
                                                 class="w-40 whitespace-nowrap border-r border-neutral-300 px-6 py-3 text-center text-sm tracking-tight text-black"
                                             >
                                                 {{ $variant['name'] ?? '-' }}
+                                            </td>
+                                            <td
+                                                class="w-40 whitespace-nowrap border-r border-neutral-300 px-6 py-3 text-center text-sm tracking-tight text-black"
+                                            >
+                                                Rp {{ formatPrice($variant['price']) }}
                                             </td>
                                             <td
                                                 x-data="{
