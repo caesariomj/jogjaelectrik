@@ -16,7 +16,7 @@ class DocumentService
 
         return response()->streamDownload(
             fn () => print ($pdf),
-            'Invoice-'.$order->order_number.'.pdf'
+            'Jogjaelectrik-Invoice-'.$order->order_number.'.pdf'
         );
     }
 
