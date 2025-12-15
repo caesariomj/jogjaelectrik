@@ -21,7 +21,7 @@ class HomeController extends Controller
 
         $bannerSlides = $primaryCategories->map(function ($category, $key) {
             return (object) [
-                'imgSrc' => $key % 2 === 0 ? 'https://penguinui.s3.amazonaws.com/component-assets/carousel/default-slide-1.webp' : 'https://penguinui.s3.amazonaws.com/component-assets/carousel/default-slide-2.webp',
+                'imgSrc' => $key % 2 === 0 ? asset('images/backgrounds/banner-1.webp') : asset('images/backgrounds/banner-2.webp'),
                 'imgAlt' => 'Banner kategori '.$category->name.'.',
                 'title' => ucwords($category->name),
                 'description' => $key % 2 === 0 ? 'Jelajahi koleksi '.$category->name.' dengan pilihan terbaik untuk memenuhi kebutuhan Anda.' : 'Temukan berbagai pilihan '.$category->name.' yang siap melengkapi kebutuhan Anda dengan kualitas terbaik.',
@@ -29,6 +29,15 @@ class HomeController extends Controller
                 'ctaText' => 'Jelajahi Produk '.ucwords($category->name),
             ];
         });
+
+        $bannerSlides[] = (object) [
+            'imgSrc' => asset('images/backgrounds/banner-kontak.webp'),
+            'imgAlt' => 'Banner kontak toko.',
+            'title' => 'Butuh Bantuan?',
+            'description' => 'Kami siap menjawab semua pertanyaan Anda seputar produk, pesanan, pengiriman, maupun kerjasama. Jangan ragu untuk menghubungi kami kapan saja!',
+            'ctaUrl' => route('contact'),
+            'ctaText' => 'Hubungi Kami Sekarang',
+        ];
 
         $bestSellingProducts = Product::queryAllWithRelations(columns: [
             'products.id',

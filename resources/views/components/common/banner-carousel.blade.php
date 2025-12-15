@@ -47,7 +47,7 @@
                         ></p>
                     </template>
                     <p
-                        class="mb-8 w-full text-pretty text-lg text-white/80 md:mb-16 md:w-1/2 md:text-xl"
+                        class="mb-8 w-full text-pretty text-lg text-white/80 md:mb-16 md:w-3/4 md:text-xl"
                         x-bind:id="'slide' + (index + 1) + 'Description'"
                         x-text="slide.description"
                     ></p>
