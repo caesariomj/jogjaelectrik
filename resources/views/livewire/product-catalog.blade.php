@@ -84,6 +84,14 @@ new class extends Component {
                             ->selectRaw('COALESCE(SUM(order_details.quantity), 0)')
                             ->whereColumn('product_variants.product_id', 'products.id'),
                     );
+                } elseif ($this->sortField === 'products.average_rating') {
+                    return $query->orderByDesc(
+                        DB::table('product_reviews')
+                            ->join('order_details', 'order_details.id', '=', 'product_reviews.order_detail_id')
+                            ->join('product_variants', 'product_variants.id', '=', 'order_details.product_variant_id')
+                            ->selectRaw('COALESCE(AVG(product_reviews.rating), 0)')
+                            ->whereColumn('product_variants.product_id', 'products.id'),
+                    );
                 } else {
                     return $query->orderBy($this->sortField, $this->sortDirection);
                 }
