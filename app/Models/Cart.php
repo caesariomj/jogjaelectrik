@@ -116,7 +116,8 @@ class Cart extends Model
             })
             ->when(in_array('user', $relations), function ($query) {
                 $query->leftJoin('users', 'users.id', '=', 'carts.user_id');
-                $query->leftJoin('cities', 'cities.id', '=', 'users.city_id');
+                $query->leftJoin('districts', 'districts.id', '=', 'users.district_id');
+                $query->leftJoin('cities', 'cities.id', '=', 'districts.city_id');
                 $query->leftJoin('provinces', 'provinces.id', '=', 'cities.province_id');
             });
     }
