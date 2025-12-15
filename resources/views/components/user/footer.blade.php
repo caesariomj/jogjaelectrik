@@ -197,7 +197,7 @@
                             Sedang Diskon
                         </a>
                     </li>
-                    @if ($primaryCategories->isNotEmpty())
+                    @isset($primaryCategories)
                         @foreach ($primaryCategories as $category)
                             <li>
                                 <a
@@ -209,7 +209,7 @@
                                 </a>
                             </li>
                         @endforeach
-                    @endif
+                    @endisset
                 </ul>
             </nav>
             <nav aria-label="Link Informasi Perusahaan">
