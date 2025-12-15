@@ -94,6 +94,7 @@ new class extends Component {
         $this->form->phone = $this->form->originalPhone;
         $this->form->province = $this->form->originalProvince;
         $this->form->city = $this->form->originalCity;
+        $this->form->district = $this->form->originalDistrict;
         $this->form->address = $this->form->originalAddress;
         $this->form->postalCode = $this->form->originalPostalCode;
 
@@ -128,10 +129,10 @@ new class extends Component {
                 $encryptedPostalCode = Crypt::encryptString($validated['postalCode']);
 
                 $this->form->user->update([
+                    'district_id' => (int) $validated['district'],
                     'name' => $validated['name'],
                     'email' => $validated['email'],
                     'phone_number' => $encryptedPhoneNumber,
-                    'city_id' => (int) $validated['city'],
                     'address' => $encryptedAddress,
                     'postal_code' => $encryptedPostalCode,
                 ]);

@@ -50,8 +50,6 @@ new class extends Component {
             return $this->redirectIntended(route('setting'), navigate: true);
         }
 
-        dd($this->form->user->orders());
-
         try {
             $this->authorize('delete', $this->form->user);
 
