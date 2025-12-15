@@ -3,7 +3,6 @@
 use App\Exceptions\ApiRequestException;
 use App\Livewire\Forms\CheckoutForm;
 use App\Models\Cart;
-use App\Models\City;
 use App\Models\Order;
 use App\Models\ProductVariant;
 use App\Services\PaymentService;
@@ -31,22 +30,7 @@ new class extends Component {
     public Collection $cities;
 
     #[Locked]
-    public array $supportedCourierExpeditions = [
-        [
-            'name' => 'jalur nugraha ekakurir',
-            'code' => 'jne',
-        ],
-        [
-            'name' => 'pos indonesia',
-            'code' => 'pos',
-        ],
-        [
-            'name' => 'titipan kilat',
-            'code' => 'tiki',
-        ],
-    ];
-
-    public array $selectedCourierServices = [];
+    public Collection $districts;
 
     public function boot(ShippingService $shippingService, PaymentService $paymentService)
     {
@@ -69,6 +53,13 @@ new class extends Component {
                 ->where('province_id', $this->form->province)
                 ->get()
             : collect();
+
+        $this->districts = $this->form->city
+            ? DB::table('districts')
+                ->select('id as value', 'name as label')
+                ->where('city_id', $this->form->city)
+                ->get()
+            : collect();
     }
 
     public function updated($name, $value)
@@ -80,60 +71,51 @@ new class extends Component {
     public function handleComboboxChange($value, $comboboxInstanceName)
     {
         if ($comboboxInstanceName == 'provinsi') {
-            $this->form->province = $value;
+            $this->form->availableCourierServices = [];
 
+            $this->form->province = $value;
             $this->form->city = null;
+            $this->form->district = null;
+            $this->form->shippingIndex = null;
+            $this->form->shippingCourier = [];
 
             $this->cities = DB::table('cities')
                 ->select('id as value', 'name as label')
                 ->where('province_id', $this->form->province)
                 ->get();
         } elseif ($comboboxInstanceName == 'kabupaten/kota') {
+            $this->form->availableCourierServices = [];
+
             $this->form->city = $value;
+            $this->form->district = null;
+            $this->form->shippingIndex = null;
+            $this->form->shippingCourier = [];
 
-            $this->cities = DB::table('cities')
+            $this->districts = DB::table('districts')
                 ->select('id as value', 'name as label')
-                ->where('province_id', $this->form->province)
+                ->where('city_id', $this->form->city)
                 ->get();
+        } elseif ($comboboxInstanceName == 'kecamatan') {
+            $this->form->availableCourierServices = [];
 
-            $this->getSelectedCourierServices();
+            $this->form->district = $value;
+            $this->form->shippingIndex = null;
+            $this->form->shippingCourier = [];
+
+            $this->getAvailableCourierServices();
         }
-
-        $this->selectedCourierServices = [];
-
-        $this->form->shippingCourier = null;
-        $this->form->shippingCourierService = null;
-        $this->form->shippingCourierServiceTax = 0;
     }
 
-    public function updatedFormShippingCourier()
+    public function getAvailableCourierServices()
     {
-        $this->selectedCourierServices = [];
-
-        $this->form->shippingCourierService = null;
-        $this->form->shippingCourierServiceTax = 0;
-
-        $this->getSelectedCourierServices();
-    }
-
-    public function getSelectedCourierServices()
-    {
-        if (! $this->form->city || ! $this->form->totalWeight || ! $this->form->shippingCourier) {
+        if (! $this->form->district || ! $this->form->totalWeight) {
             return;
         }
 
         try {
-            $result = $this->shippingService->calculateShippingCost(
-                $this->form->city,
-                $this->form->totalWeight,
-                $this->form->shippingCourier,
-            );
+            $result = $this->shippingService->calculateShippingCost($this->form->district, $this->form->totalWeight);
 
-            if (isset($result['error']) && $result['error']) {
-                throw new \Exception($result['message']);
-            }
-
-            $this->selectedCourierServices = $result;
+            $this->form->availableCourierServices = $result;
         } catch (ApiRequestException $e) {
             Log::error('RajaOngkir API request exception', [
                 'error_type' => 'ApiRequestException',
@@ -169,62 +151,33 @@ new class extends Component {
         }
     }
 
-    public function updatedFormShippingCourierService()
+    public function updatedFormShippingIndex()
     {
-        $selectedCourierServiceData = array_filter($this->selectedCourierServices, function ($service) {
-            return strtolower($service['service']) === $this->form->shippingCourierService;
-        });
+        if (! array_key_exists($this->form->shippingIndex, $this->form->availableCourierServices)) {
+            $this->form->shippingIndex = null;
 
-        if (empty($selectedCourierServiceData)) {
-            $this->form->shippingCourierService = null;
-
-            $this->addError(
-                'form.shippingCourierService',
-                'Mohon pilih salah satu layanan kurir yang tersedia di atas ini.',
-            );
+            $this->addError('form.shippingIndex', 'Mohon pilih salah satu layanan kurir yang tersedia di atas ini.');
             return;
         }
 
-        $selectedCourierServiceData = reset($selectedCourierServiceData);
-
-        $this->form->shippingCourierServiceTax = $selectedCourierServiceData['cost_value'];
+        $this->form->shippingCourier = $this->form->availableCourierServices[$this->form->shippingIndex];
     }
 
     public function checkout()
     {
         $validated = $this->form->validate();
 
-        if (! in_array($this->form->shippingCourier, array_column($this->supportedCourierExpeditions, 'code'))) {
-            $this->addError(
-                'form.shippingCourier',
-                'Kurir ekspedisi ' . $this->form->shippingCourier . ' tidak didukung.',
-            );
-            return;
-        }
-
-        $selectedCourierServiceData = array_filter($this->selectedCourierServices, function ($service) {
-            return strtolower($service['service']) === $this->form->shippingCourierService;
+        $isCourierServiceExists = collect($this->form->availableCourierServices)->contains(function ($courier) use (
+            $validated,
+        ) {
+            return $courier == $validated['shippingCourier'];
         });
 
-        if (empty($selectedCourierServiceData)) {
-            $this->addError(
-                'form.shippingCourierService',
-                'Mohon pilih salah satu layanan kurir yang tersedia di atas ini.',
-            );
-            $this->form->shippingCourierService = null;
-            return;
-        }
+        if (! $isCourierServiceExists) {
+            $this->form->shippingIndex = null;
+            $this->form->shippingCourier = [];
 
-        $selectedCourierServiceData = reset($selectedCourierServiceData);
-
-        if (
-            $this->form->shippingCourierService !== strtolower($selectedCourierServiceData['service']) ||
-            (float) $this->form->shippingCourierServiceTax !== (float) $selectedCourierServiceData['cost_value']
-        ) {
-            $this->addError(
-                'form.shippingCourierService',
-                'Layanan kurir ekspedisi yang dipilih tidak sesuai dengan data yang tersedia.',
-            );
+            $this->addError('form.shippingIndex', 'Mohon pilih salah satu layanan kurir yang tersedia di atas ini.');
             return;
         }
 
@@ -233,7 +186,7 @@ new class extends Component {
 
             $invoiceUrl = null;
 
-            DB::transaction(function () use ($validated, $selectedCourierServiceData, &$invoiceUrl) {
+            DB::transaction(function () use ($validated, &$invoiceUrl) {
                 $encryptedPhoneNumber = Crypt::encryptString(ltrim($validated['phone'], '0'));
                 $encryptedAddress = Crypt::encryptString($validated['address']);
                 $encryptedPostalCode = Crypt::encryptString($validated['postalCode']);
@@ -241,7 +194,7 @@ new class extends Component {
                 $this->form->user->update([
                     'name' => $validated['name'],
                     'phone_number' => $encryptedPhoneNumber,
-                    'city_id' => (int) $validated['city'],
+                    'district_id' => (int) $validated['district'],
                     'address' => $encryptedAddress,
                     'postal_code' => $encryptedPostalCode,
                 ]);
@@ -251,14 +204,19 @@ new class extends Component {
                     ', ' .
                     $validated['postalCode'] .
                     ' - ' .
-                    $this->form->user->city->name .
+                    $this->form->user->district->name .
                     ', ' .
-                    $this->form->user->city->province->name;
+                    $this->form->user->district->city->name .
+                    ', ' .
+                    $this->form->user->district->city->province->name;
 
-                $estimatedShippingDays = $selectedCourierServiceData['etd'];
+                $estimatedShippingDays = $validated['shippingCourier']['etd'];
 
                 if (strpos($estimatedShippingDays, '-') !== false) {
                     [$minDays, $maxDays] = explode('-', $estimatedShippingDays);
+                } elseif ($estimatedShippingDays === 'N/A') {
+                    $minDays = null;
+                    $maxDays = null;
                 } else {
                     $minDays = $estimatedShippingDays;
                     $maxDays = $estimatedShippingDays;
@@ -267,18 +225,18 @@ new class extends Component {
                 $order = $this->form->user->orders()->create([
                     'shipping_address' => Crypt::encryptString($shippingAddress),
                     'shipping_courier' => strtolower(
-                        $this->form->shippingCourier . '-' . $this->form->shippingCourierService,
+                        $validated['shippingCourier']['name'] . '-' . $validated['shippingCourier']['service'],
                     ),
-                    'estimated_shipping_min_days' => (int) $minDays,
-                    'estimated_shipping_max_days' => (int) $maxDays,
-                    'note' => $this->form->note !== '' ? $this->form->note : null,
+                    'estimated_shipping_min_days' => $minDays,
+                    'estimated_shipping_max_days' => $maxDays,
+                    'note' => $validated['note'] !== '' ? $validated['note'] : null,
                     'subtotal_amount' => $this->form->totalPrice,
                     'discount_amount' => $this->form->discountAmount > 0 ? -$this->form->discountAmount : 0.0,
-                    'shipping_cost_amount' => $this->form->shippingCourierServiceTax,
+                    'shipping_cost_amount' => $validated['shippingCourier']['cost'],
                     'total_amount' =>
                         (float) $this->form->totalPrice -
                         (float) ($this->form->discountAmount > 0 ? $this->form->discountAmount : 0) +
-                        (float) $this->form->shippingCourierServiceTax,
+                        (float) $validated['shippingCourier']['cost'],
                 ]);
 
                 foreach ($this->form->items as $item) {
@@ -299,6 +257,8 @@ new class extends Component {
                     $order->update([
                         'discount_id' => $this->form->discount->id,
                     ]);
+
+                    $this->form->discount->increment('used_count');
                 }
 
                 $invoice = $this->paymentService->createInvoice($order);
@@ -467,7 +427,7 @@ new class extends Component {
                     tersedia agar pesanan Anda dapat segera kami proses.
                 </p>
             </legend>
-            <div class="grid grid-cols-1 gap-4 pb-8 pt-4 md:grid-cols-2">
+            <div class="space-y-4 pb-8 pt-4">
                 <div class="w-full">
                     <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
                         Pilih Provinsi
@@ -523,7 +483,48 @@ new class extends Component {
                     @endif
                     <x-form.input-error :messages="$errors->get('form.city')" class="mt-2" />
                 </div>
-                <div class="md:col-span-2">
+                <div class="w-full">
+                    <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
+                        Pilih Kecamatan
+                        <span class="text-red-500">*</span>
+                    </p>
+                    @if (! $form->city)
+                        <button
+                            type="button"
+                            class="inline-flex w-full items-center justify-between gap-2 rounded-md border border-neutral-300 bg-white px-4 py-3 text-sm font-medium tracking-tight text-black transition hover:opacity-75 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-black disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled
+                        >
+                            <span class="text-sm font-medium capitalize tracking-tight text-black">
+                                Silakan pilih kabupaten/kota anda terlebih dahulu
+                            </span>
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 20 20"
+                                fill="currentColor"
+                                class="size-5"
+                                aria-hidden="true"
+                            >
+                                <path
+                                    fill-rule="evenodd"
+                                    d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z"
+                                    clip-rule="evenodd"
+                                />
+                            </svg>
+                        </button>
+                    @else
+                        <div wire:key="select-district-container-{{ $form->city }}">
+                            <x-form.combobox
+                                :options="$districts"
+                                :selectedOption="$form->district ?? null"
+                                name="kecamatan"
+                                id="select-district"
+                                wire:ignore.self
+                            />
+                        </div>
+                    @endif
+                    <x-form.input-error :messages="$errors->get('form.district')" class="mt-2" />
+                </div>
+                <div>
                     <x-form.input-label for="address" value="Alamat Lengkap" class="mb-1" />
                     <x-form.textarea
                         wire:model.lazy="form.address"
@@ -539,7 +540,7 @@ new class extends Component {
                     ></x-form.textarea>
                     <x-form.input-error :messages="$errors->get('form.address')" class="mt-2" />
                 </div>
-                <div class="md:col-span-2">
+                <div>
                     <x-form.input-label for="postal-code" value="Kode Pos" class="mb-1" />
                     <x-form.input
                         wire:model.lazy="form.postalCode"
@@ -563,78 +564,13 @@ new class extends Component {
                         Pilih Kurir Ekspedisi
                         <span class="text-red-500">*</span>
                     </p>
-                    <ul class="grid grid-cols-1 gap-4 md:grid-cols-3">
-                        @foreach ($supportedCourierExpeditions as $expedition)
-                            <li class="relative w-full">
-                                <x-form.radio
-                                    :inputAttributes="
-                                        [
-                                            'wire:model.lazy' => 'form.shippingCourier',
-                                            'id' => 'expedition-' . $expedition['code'],
-                                            'name' => 'select-courier-expedition',
-                                            'value' => $expedition['code'],
-                                            'x-on:input' => 'selected = \'' . $expedition['code'] . '\'',
-                                        ]
-                                    "
-                                    :labelAttributes="
-                                        [
-                                            'for' => 'expedition-' . $expedition['code'],
-                                            'wire:loading.class' => 'opacity-50 !cursor-wait hover:bg-white',
-                                            'wire:target' => 'form.shippingCourier, form.city, handleComboboxChange',
-                                        ]
-                                    "
-                                    :hasError="$errors->has('form.shippingCourier')"
-                                >
-                                    <img
-                                        src="{{ asset('images/logos/shipping/' . $expedition['code'] . '.webp') }}"
-                                        alt="Logo {{ strtoupper($expedition['code']) }}"
-                                        class="h-auto w-12"
-                                        loading="lazy"
-                                    />
-                                    <p class="inline-flex flex-col items-start gap-y-1 text-sm">
-                                        <span class="font-semibold tracking-tight text-black">
-                                            {{ $expedition['code'] === 'pos' ? 'POSIND' : strtoupper($expedition['code']) }}
-                                        </span>
-                                        <span class="font-medium tracking-tight text-black/50">
-                                            {{ ucwords($expedition['name']) }}
-                                        </span>
-                                    </p>
-                                </x-form.radio>
-                                @if ($form->shippingCourier === $expedition['code'])
-                                    <svg
-                                        class="absolute end-4 top-3 size-5 shrink-0 fill-primary stroke-primary-50"
-                                        xmlns="http://www.w3.org/2000/svg"
-                                        width="24"
-                                        height="24"
-                                        viewBox="0 0 24 24"
-                                        fill="currentColor"
-                                        stroke="currentColor"
-                                        stroke-width="2"
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        aria-hidden="true"
-                                    >
-                                        <circle cx="12" cy="12" r="10" />
-                                        <path d="m9 12 2 2 4-4" />
-                                    </svg>
-                                @endif
-                            </li>
-                        @endforeach
-                    </ul>
-                    <x-form.input-error :messages="$errors->get('form.shippingCourier')" class="mt-2" />
-                </div>
-                <div class="md:col-span-2">
-                    <p class="pointer-events-none mb-1 block text-sm font-medium tracking-tight text-black">
-                        Pilih Layanan Ekspedisi
-                        <span class="text-red-500">*</span>
-                    </p>
 
-                    @if (empty($this->selectedCourierServices))
+                    @if (empty($form->availableCourierServices))
                         <div
                             class="mb-4 flex items-start rounded-lg border border-yellow-300 bg-yellow-50 p-4 text-yellow-800"
                             role="alert"
                             wire:loading.remove
-                            wire:target="form.shippingCourier, form.city"
+                            wire:target="form.shippingCourier, form.district, handleComboboxChange"
                             x-cloak
                         >
                             <svg
@@ -651,13 +587,13 @@ new class extends Component {
                             <span class="sr-only">Informasi</span>
                             <p class="text-sm tracking-tight">
                                 <span class="font-medium">Perhatian!</span>
-                                Silakan pilih provinsi, kabupaten/kota, dan salah satu kurir ekspedisi pengiriman diatas
-                                terlebih dahulu sebelum memilih layanan pengiriman ekspedisi.
+                                Silakan pilih provinsi, kabupaten/kota, dan kecamatan diatas terlebih dahulu sebelum
+                                memilih layanan pengiriman ekspedisi.
                             </p>
                         </div>
                         <div
                             wire:loading.flex
-                            wire:target="form.shippingCourier, form.city"
+                            wire:target="form.shippingCourier, form.district, handleComboboxChange"
                             class="items-center rounded-lg border border-neutral-300 p-4 text-sm font-medium text-black shadow-sm"
                             x-cloak
                         >
@@ -683,52 +619,59 @@ new class extends Component {
                             Sedang diproses...
                         </div>
                     @else
-                        <ul class="grid grid-cols-1 gap-4">
-                            @foreach ($this->selectedCourierServices as $service)
+                        <ul class="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            @foreach ($form->availableCourierServices as $courierService)
                                 <li class="relative">
                                     <x-form.radio
                                         :inputAttributes="
                                             [
-                                                'wire:model.lazy' => 'form.shippingCourierService',
-                                                'id' => 'expedition-' . strtolower($service['courier_code']) . '-service-' . strtolower($service['service']),
+                                                'wire:model.lazy' => 'form.shippingIndex',
+                                                'id' => 'expedition-' . strtolower($courierService['code']) . '-service-' . strtolower($courierService['service']),
                                                 'name' => 'select-courier-expedition-service',
-                                                'value' => strtolower($service['service']),
-                                                'x-on:input' => 'selected = \'' . strtolower($service['service']) . '\'',
+                                                'value' => $loop->index,
+                                                'x-on:input' => 'selected = \'' . $loop->index . '\'',
                                             ]
                                         "
                                         :labelAttributes="
                                             [
-                                                'for' => 'expedition-' . strtolower($service['courier_code']) . '-service-' . strtolower($service['service']),
+                                                'for' => 'expedition-' . strtolower($courierService['code']) . '-service-' . strtolower($courierService['service']),
                                                 'wire:loading.class' => 'opacity-50 !cursor-wait hover:bg-white',
-                                                'wire:target' => 'form.shippingCourier, form.city, form.shippingCourierService, handleComboboxChange',
+                                                'wire:target' => 'form.district, form.shippingIndex, handleComboboxChange',
                                             ]
                                         "
-                                        :hasError="$errors->has('form.shippingCourierService')"
+                                        :hasError="$errors->has('form.shippingIndex')"
                                     >
                                         <img
-                                            src="{{ asset('images/logos/shipping/' . $service['courier_code'] . '.webp') }}"
-                                            alt="Logo {{ strtoupper($service['courier_code']) }}"
-                                            class="h-auto w-12"
+                                            src="{{ asset('images/logos/shipping/' . $courierService['code'] . '.webp') }}"
+                                            alt="Logo {{ strtoupper($courierService['code']) }}"
+                                            class="h-auto w-12 md:w-20"
                                             loading="lazy"
                                         />
-                                        <p class="inline-flex flex-col items-start gap-y-1 text-sm">
-                                            <span class="font-semibold tracking-tight text-black">
-                                                {{ strtoupper($service['courier_code'] . '-' . $service['service']) }}
-                                            </span>
-                                            <span class="font-medium tracking-tight text-black/50">
-                                                {{ $service['description'] }}
-                                            </span>
-                                            <span class="w-full tracking-tight text-black">
-                                                Estimasi waktu pengiriman: ± {{ $service['etd'] }} hari kerja (setelah
-                                                pesanan telah dibayar)
-                                            </span>
-                                            <span class="w-full tracking-tight text-black">
-                                                Ongkir: Rp
-                                                {{ formatPrice($service['cost_value']) }}
-                                            </span>
-                                        </p>
+                                        <div class="ms-4 inline-flex flex-col items-start gap-y-1">
+                                            <p class="mb-1 text-base font-semibold tracking-tight text-black">
+                                                {{ $courierService['name'] }}
+                                            </p>
+                                            <p class="text-sm tracking-tight text-black">
+                                                <span class="font-medium text-black/70">Layanan:</span>
+                                                {{ $courierService['service'] . ' — ' . $courierService['description'] }}
+                                            </p>
+                                            <p class="text-sm tracking-tight text-black">
+                                                <span class="font-medium text-black/70">Estimasi tiba:</span>
+                                                @if ($courierService['etd'] === 'N/A')
+                                                    Belum tersedia
+                                                @elseif ($courierService['etd'] === '0')
+                                                    Hari ini
+                                                @else
+                                                    ± {{ $courierService['etd'] }} hari kerja
+                                                @endif
+                                            </p>
+                                            <p class="mt-1 text-sm font-semibold tracking-tight text-black">
+                                                <span class="font-medium text-black/70">Ongkir:</span>
+                                                Rp {{ formatPrice($courierService['cost']) }}
+                                            </p>
+                                        </div>
                                     </x-form.radio>
-                                    @if ($form->shippingCourierService === strtolower($service['service']))
+                                    @if (isset($form->shippingCourier['service']) && $form->shippingCourier['service'] === strtolower($courierService['service']))
                                         <svg
                                             class="absolute end-4 top-3 size-5 shrink-0 fill-primary stroke-primary-50"
                                             xmlns="http://www.w3.org/2000/svg"
@@ -751,7 +694,7 @@ new class extends Component {
                         </ul>
                     @endif
 
-                    <x-form.input-error :messages="$errors->get('form.shippingCourierService')" class="mt-2" />
+                    <x-form.input-error :messages="$errors->get('form.shippingIndex')" class="mt-2" />
                 </div>
             </div>
         </fieldset>
@@ -820,7 +763,8 @@ new class extends Component {
                 </dd>
                 <dt class="inline-flex gap-x-2 text-start tracking-tight text-black/70">Ongkos Kirim</dt>
                 <dd class="text-end font-medium tracking-tight text-black">
-                    + Rp {{ $form->shippingCourierServiceTax ? formatPrice($form->shippingCourierServiceTax) : '0' }}
+                    + Rp
+                    {{ isset($form->shippingCourier['cost']) ? formatPrice($form->shippingCourier['cost']) : '0' }}
                 </dd>
             </dl>
             <hr class="my-4 border-neutral-300" />
@@ -828,7 +772,7 @@ new class extends Component {
                 <dt class="text-start tracking-tight text-black/70">Total</dt>
                 <dd class="text-end font-medium tracking-tight text-black">
                     Rp
-                    {{ formatPrice($form->totalPrice - $form->discountAmount + $form->shippingCourierServiceTax) }}
+                    {{ formatPrice($form->totalPrice - $form->discountAmount + ($form->shippingCourier['cost'] ?? 0)) }}
                 </dd>
             </dl>
             <hr class="my-4 border-neutral-300" />
@@ -870,7 +814,23 @@ new class extends Component {
             </div>
             <hr class="my-4 border-neutral-300" />
             <div class="px-4">
-                <x-common.button type="submit" variant="primary" class="w-full">Checkout</x-common.button>
+                <x-common.button type="submit" variant="primary" class="w-full">
+                    Checkout
+                    <svg
+                        class="size-5 shrink-0"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        stroke-width="2"
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        aria-hidden="true"
+                    >
+                        <path d="M18 8L22 12L18 16" />
+                        <path d="M2 12H22" />
+                    </svg>
+                </x-common.button>
             </div>
         </div>
     </aside>

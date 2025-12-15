@@ -6,6 +6,7 @@ use App\Models\Cart;
 use App\Models\Discount;
 use App\Models\User;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Validate;
 use Livewire\Form;
@@ -42,15 +43,17 @@ class CheckoutForm extends Form
 
     public ?string $city = null;
 
+    public ?string $district = null;
+
     public ?string $address = null;
 
     public ?string $postalCode = null;
 
-    public ?string $shippingCourier = null;
+    public array $availableCourierServices = [];
 
-    public ?string $shippingCourierService = null;
+    public ?int $shippingIndex = null;
 
-    public float $shippingCourierServiceTax = 0;
+    public array $shippingCourier = [];
 
     public string $note = '';
 
@@ -82,6 +85,11 @@ class CheckoutForm extends Form
                 'numeric',
                 'exists:cities,id',
             ],
+            'district' => [
+                'required',
+                'numeric',
+                'exists:districts,id',
+            ],
             'address' => [
                 'required',
                 'string',
@@ -93,19 +101,41 @@ class CheckoutForm extends Form
                 'numeric',
                 'digits:5',
             ],
+            'shippingIndex' => [
+                'required',
+                'integer',
+                Rule::in(array_keys($this->availableCourierServices)),
+            ],
             'shippingCourier' => [
                 'required',
-                'string',
-                'in:jne,pos,tiki',
+                'array',
+                'size:6',
             ],
-            'shippingCourierService' => [
+            'shippingCourier.name' => [
                 'required',
                 'string',
             ],
-            'shippingCourierServiceTax' => [
+            'shippingCourier.code' => [
+                'required',
+                'string',
+                Rule::in(explode(':', config('services.rajaongkir.courier_codes'))),
+            ],
+            'shippingCourier.service' => [
+                'required',
+                'string',
+            ],
+            'shippingCourier.description' => [
+                'required',
+                'string',
+            ],
+            'shippingCourier.cost' => [
                 'required',
                 'numeric',
                 'gt:0',
+            ],
+            'shippingCourier.etd' => [
+                'required',
+                'string',
             ],
             'note' => [
                 'nullable',
@@ -127,11 +157,17 @@ class CheckoutForm extends Form
             'phone' => 'Nomor telefon',
             'province' => 'Provinsi',
             'city' => 'Kabupaten/Kota',
+            'district' => 'Kecamatan',
             'address' => 'Alamat lengkap',
             'postalCode' => 'Kode pos',
+            'shippingIndex' => 'Kurir ekspedisi',
             'shippingCourier' => 'Kurir ekspedisi',
-            'shippingCourierService' => 'Layanan ekspedisi',
-            'shippingCourierServiceTax' => 'Biaya pengiriman',
+            'shippingCourier.name' => 'Nama kurir ekspedisi',
+            'shippingCourier.code' => 'Kode kurir ekspedisi',
+            'shippingCourier.service' => 'Layanan kurir ekspedisi',
+            'shippingCourier.description' => 'Deskripsi kurir ekspedisi',
+            'shippingCourier.cost' => 'Ongkos kirim',
+            'shippingCourier.etd' => 'Estimasi pengiriman',
             'note' => 'Catatan pesanan',
             'acceptTermsAndCondition' => 'Syarat dan Ketentuan toko',
         ];
@@ -160,6 +196,7 @@ class CheckoutForm extends Form
         $this->phone = $user->phone_number;
         $this->province = $user->province_id;
         $this->city = $user->city_id;
+        $this->district = $user->district_id;
         $this->address = $user->address;
         $this->postalCode = $user->postal_code;
     }
