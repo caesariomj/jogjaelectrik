@@ -30,7 +30,7 @@ if (! function_exists('formatTimestamp')) {
 
         $hourMinute = $datetime->format('H:i');
 
-        return "$day $month $year - $hourMinute";
+        return "$day $month $year - $hourMinute WIB";
     }
 }
 
@@ -68,5 +68,26 @@ if (! function_exists('formatPrice')) {
     function formatPrice(string $price): string
     {
         return number_format($price, 0, ',', '.');
+    }
+}
+
+if (! function_exists('extractCourierCode')) {
+    function extractCourierCode(string $courier): string
+    {
+        $courierCodes = explode(':', config('services.rajaongkir.courier_codes'));
+
+        if (in_array('jnt', $courierCodes) && str_contains($courier, 'j&t')) {
+            $courier = 'jnt';
+        }
+
+        $result = null;
+
+        foreach ($courierCodes as $code) {
+            if (stripos($courier, $code) !== false) {
+                $result = $code;
+            }
+        }
+
+        return $result;
     }
 }

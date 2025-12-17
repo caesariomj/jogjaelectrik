@@ -75,6 +75,21 @@
                 border-bottom: 1px solid #0c0c0c;
             }
 
+            main table.order-detail tbody tr td.courier {
+                width: 100%;
+                padding: 0.5rem;
+                text-align: center;
+                border-bottom: 1px solid #0c0c0c;
+                border-right: 1px solid #0c0c0c;
+            }
+
+            main table.order-detail tbody tr td.service {
+                width: 100%;
+                padding: 0.5rem;
+                text-align: center;
+                border-bottom: 1px solid #0c0c0c;
+            }
+
             main table.order-detail tbody tr td.receiver {
                 width: 50%;
                 padding: 0.5rem;
@@ -153,7 +168,22 @@
     <body>
         <div class="wrapper">
             <header>
-                <div class="logo"></div>
+                @php
+                    $svg = '
+                                            <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 316 316" fill="#fd5722">
+                                                <polygon
+                                                    points="215.24 70.31 316.24 105.47 316.24 52.84 165.24 0.3 165.24 18.92 165.24 53.02 165.24 105.37 165.24 158.09 165.24 210.44 165.24 221.13 165.24 263.16 316.24 315.69 316.24 262.86 215.24 227.7 215.24 175.42 316.24 210.4 316.24 157.94 215.24 122.78 215.24 70.31"
+                                                />
+                                                <polygon
+                                                    points="0 52.64 0 105.27 101.33 70 101.33 70 101.33 227.9 51.02 245.45 51.02 210.73 0 227.9 0 263.18 0 316 151.29 263.36 151.29 221.25 151.29 210.54 151.29 52.82 151.29 18.65 151.29 0 0 52.64"
+                                                />
+                                            </svg>
+                                        ';
+
+                    $image = '<img src="data:image/svg+xml;base64,' . base64_encode($svg) . '"  width="25" height="25" />';
+                @endphp
+
+                {!! $image !!}
                 <h1>Toko Jogja Electrik</h1>
             </header>
             <main>
@@ -163,6 +193,20 @@
                             <td class="order-number" colspan="2">
                                 Nomor Pesanan:
                                 <strong>{{ $order->order_number }}</strong>
+                            </td>
+                        </tr>
+                        <tr>
+                            @php
+                                [$courier, $service] = explode('-', $order->shipping_courier);
+                            @endphp
+
+                            <td class="courier">
+                                Kurir:
+                                <strong>{{ strtoupper($courier) }}</strong>
+                            </td>
+                            <td class="service">
+                                Layanan:
+                                <strong>{{ strtoupper($service) }}</strong>
                             </td>
                         </tr>
                         <tr>
@@ -180,8 +224,8 @@
                             <td class="sender">
                                 <h2>Pengirim:</h2>
                                 <strong class="receiver-name">Toko Jogja Electrik</strong>
-                                <p class="receiver-address">Alamat</p>
-                                <p class="receiver-phone-number">Nomor Telefon</p>
+                                <p class="receiver-address">{{ config('business.address') }}</p>
+                                <p class="receiver-phone-number">{{ config('business.phone') }}</p>
                             </td>
                         </tr>
                         <tr>

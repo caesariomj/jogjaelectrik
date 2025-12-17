@@ -2,6 +2,7 @@
 
 use App\Models\Order;
 use App\Models\ProductReview;
+use App\Models\ProductVariant;
 use App\Models\Refund;
 use App\Services\DocumentService;
 use App\Services\PaymentService;
@@ -101,6 +102,7 @@ new class extends Component {
     private function countOrdersByStatuses(): void
     {
         $statusCounts = DB::table('orders')
+            ->where('user_id', '=', auth()->id())
             ->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->pluck('count', 'status')
@@ -318,6 +320,16 @@ new class extends Component {
                     Refund::create([
                         'payment_id' => $order->payment->id,
                     ]);
+                }
+
+                foreach ($order->details as $item) {
+                    $productVariant = ProductVariant::find($item->product_variant_id);
+
+                    if (! $productVariant) {
+                        continue;
+                    }
+
+                    $productVariant->increment('stock', $item->quantity);
                 }
 
                 $cancelationReason = 'Dibatalkan oleh pelanggan: ';
@@ -832,28 +844,32 @@ new class extends Component {
                                         <circle cx="7" cy="18" r="2" />
                                     </svg>
                                     <p class="text-sm font-semibold tracking-tight text-teal-800">
-                                        @php
-                                            $paidAt = Carbon\Carbon::parse($order->payment->paid_at);
-                                            $minDate = $paidAt->copy()->addDays($order->estimated_shipping_min_days);
-                                            $maxDate = $paidAt->copy()->addDays($order->estimated_shipping_max_days);
-                                        @endphp
-
                                         Estimasi tiba:
 
-                                        @if ($order->estimated_shipping_min_days === 0 && $order->estimated_shipping_max_days === 0)
-                                            <time datetime="{{ $paidAt->toDateTimeString() }}">Hari Ini</time>
-                                        @elseif ($order->estimated_shipping_min_days === $order->estimated_shipping_max_days)
-                                            <time datetime="{{ $minDate->toDateTimeString() }}">
-                                                {{ formatDate($minDate->toDateTimeString()) }}
-                                            </time>
+                                        @if (! is_null($order->estimated_shipping_min_days) && ! is_null($order->estimated_shipping_max_days))
+                                            @php
+                                                $paidAt = Carbon\Carbon::parse($order->payment->paid_at);
+                                                $minDate = $paidAt->copy()->addDays($order->estimated_shipping_min_days);
+                                                $maxDate = $paidAt->copy()->addDays($order->estimated_shipping_max_days);
+                                            @endphp
+
+                                            @if ($order->estimated_shipping_min_days === 0 && $order->estimated_shipping_max_days === 0)
+                                                <time datetime="{{ $paidAt->toDateTimeString() }}">Hari Ini</time>
+                                            @elseif ($order->estimated_shipping_min_days === $order->estimated_shipping_max_days)
+                                                <time datetime="{{ $minDate->toDateTimeString() }}">
+                                                    {{ formatDate($minDate->toDateTimeString()) }}
+                                                </time>
+                                            @else
+                                                <time datetime="{{ $minDate->toDateTimeString() }}">
+                                                    {{ formatDate($minDate->toDateTimeString()) }}
+                                                </time>
+                                                &mdash;
+                                                <time datetime="{{ $maxDate->toDateTimeString() }}">
+                                                    {{ formatDate($maxDate->toDateTimeString()) }}
+                                                </time>
+                                            @endif
                                         @else
-                                            <time datetime="{{ $minDate->toDateTimeString() }}">
-                                                {{ formatDate($minDate->toDateTimeString()) }}
-                                            </time>
-                                            &mdash;
-                                            <time datetime="{{ $maxDate->toDateTimeString() }}">
-                                                {{ formatDate($maxDate->toDateTimeString()) }}
-                                            </time>
+                                            Belum tersedia
                                         @endif
                                     </p>
                                 </div>
@@ -1031,9 +1047,9 @@ new class extends Component {
                             class="z-[60] w-72"
                         />
                     </div>
-                    <div class="flex w-full flex-col items-center gap-2 md:w-fit md:flex-row">
+                    <div class="flex w-full flex-col items-center gap-4 md:w-fit md:flex-row">
                         @if ($order->payment->status === 'refunded' && $order->payment->refund()->exists())
-                            <div class="inline-flex items-center gap-x-1">
+                            <div class="inline-flex items-center gap-x-2">
                                 <svg
                                     class="size-5 shrink-0 text-black/70"
                                     xmlns="http://www.w3.org/2000/svg"
@@ -1048,7 +1064,15 @@ new class extends Component {
                                     />
                                 </svg>
                                 <p class="text-sm font-medium tracking-tight text-black/70">
-                                    Permintaan refund telah diajukan
+                                    @if ($order->payment->refund->status === 'pending')
+                                        Permintaan refund telah diajukan
+                                    @elseif (in_array($order->payment->refund->status, ['approved', 'succeeded']))
+                                        Permintaan refund diterima
+                                    @elseif ($order->payment->refund->status === 'rejected')
+                                        Permintaan refund ditolak
+                                    @elseif ($order->payment->refund->status === 'failed')
+                                        Permintaan refund gagal
+                                    @endif
                                 </p>
                             </div>
                         @endif
@@ -1124,7 +1148,11 @@ new class extends Component {
                                         <strong>Catatan:</strong>
                                         Jika anda telah melakukan pembayaran, permintaan refund akan diproses oleh admin
                                         dan memerlukan waktu sesuai ketentuan yang berlaku.
-                                        <a href="#" class="inline-flex items-center gap-x-1 underline">
+                                        <a
+                                            href="{{ route('help') }}#refund"
+                                            class="inline-flex items-center gap-x-1 underline"
+                                            target="_blank"
+                                        >
                                             Klik disini untuk mempelajari lebih lanjut
                                             <svg
                                                 class="size-3 shrink-0"
@@ -1155,11 +1183,7 @@ new class extends Component {
                                             <optgroup label="Alasan Terkait Produk">
                                                 <option value="kesalahan_pemesanan">Kesalahan Pemesanan</option>
                                                 <option value="harga_tidak_sesuai">Harga Tidak Sesuai</option>
-                                                <option value="kualitas_produk_tidak_memenuhi">
-                                                    Kualitas Produk Tidak Memenuhi Harapan
-                                                </option>
                                                 <option value="produk_tidak_tersedia">Produk Tidak Tersedia</option>
-                                                <option value="produk_rusak_cacat">Produk Rusak atau Cacat</option>
                                                 <option value="masalah_dengan_varian_produk">
                                                     Masalah dengan Varian Produk
                                                 </option>
@@ -1202,7 +1226,9 @@ new class extends Component {
                                                 </option>
                                             </optgroup>
                                             <optgroup label="Alasan Lainnya">
-                                                <option value="alasan_lainnya">Alasan Lainnya</option>
+                                                <option value="alasan_lainnya">
+                                                    Alasan Lainnya (isikan alasan anda secara manual)
+                                                </option>
                                             </optgroup>
                                         </select>
                                         <x-form.input-error

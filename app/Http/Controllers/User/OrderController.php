@@ -109,7 +109,7 @@ class OrderController extends Controller
                     'shipment_tracking_number' => $firstOrder->shipment_tracking_number,
                     'note' => $firstOrder->note,
                     'subtotal_amount' => $firstOrder->subtotal_amount,
-                    'discount_amount' => $firstOrder->discount_amount ? str_replace('-', '', $firstOrder->discount_amount) : null,
+                    'discount_amount' => $firstOrder->discount_amount < 0 ? str_replace('-', '', $firstOrder->discount_amount) : null,
                     'shipping_cost_amount' => $firstOrder->shipping_cost_amount,
                     'total_amount' => $firstOrder->total_amount,
                     'cancelation_reason' => $firstOrder->cancelation_reason,

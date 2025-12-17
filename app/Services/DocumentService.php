@@ -32,61 +32,94 @@ class DocumentService
         );
     }
 
-    public function generateSalesReport(Collection $sales, string $month = '', string $year = '')
+    public function generateSalesReport(Collection $sales, string $month, string $year, string $options)
     {
-        $products = [];
+        if ($options === 'products') {
+            $products = [];
 
-        foreach ($sales as $item) {
-            // dd($item);
+            foreach ($sales as $item) {
+                $variantId = $item->product_variant_id;
+                $price = $item->order_detail_price;
+                $quantity = $item->order_detail_quantity;
 
-            $variantId = $item->product_variant_id;
-            $price = $item->order_detail_price;
-            $quantity = $item->order_detail_quantity;
-
-            if (isset($products[$variantId])) {
-                $products[$variantId]['total_sold'] += $quantity;
-                $products[$variantId]['total_sales'] += $price * $quantity;
-            } else {
-                $products[$variantId] = [
-                    'variant_id' => $variantId,
-                    'name' => $item->product_name,
-                    'variation_name' => $item->variation_name ? $item->variation_name : null,
-                    'variant_name' => $item->variant_name ? $item->variant_name : null,
-                    'category_name' => $item->category_name ? $item->category_name : null,
-                    'subcategory_name' => $item->subcategory_name ? $item->subcategory_name : null,
-                    'total_sold' => $quantity,
-                    'price' => $price,
-                    'cost_price' => $item->product_cost_price,
-                    'margin_profit' => $price - $item->product_cost_price,
-                    'total_sales' => $price * $quantity,
-                    'total_profit' => ($price - $item->product_cost_price) * $quantity,
-                ];
+                if (isset($products[$variantId])) {
+                    $products[$variantId]['total_sold'] += $quantity;
+                    $products[$variantId]['total_sales'] += $price * $quantity;
+                } else {
+                    $products[$variantId] = [
+                        'variant_id' => $variantId,
+                        'name' => $item->product_name,
+                        'variation_name' => $item->variation_name ? $item->variation_name : null,
+                        'variant_name' => $item->variant_name ? $item->variant_name : null,
+                        'category_name' => $item->category_name ? $item->category_name : null,
+                        'subcategory_name' => $item->subcategory_name ? $item->subcategory_name : null,
+                        'total_sold' => $quantity,
+                        'price' => $price,
+                        'cost_price' => $item->product_cost_price,
+                        'margin_profit' => $price - $item->product_cost_price,
+                        'total_sales' => $price * $quantity,
+                        'total_profit' => ($price - $item->product_cost_price) * $quantity,
+                    ];
+                }
             }
+
+            $products = array_values($products);
+
+            $grandTotalSales = array_sum(array_column($products, 'total_sales'));
+
+            $grandTotalProfit = array_sum(array_column($products, 'total_profit'));
+
+            $pdf = Pdf::loadView('documents.product-sales-report', compact('grandTotalSales', 'grandTotalProfit', 'products', 'month', 'year'))
+                ->setPaper('A4', 'landscape')
+                ->output();
+
+            $year = $year !== '' ? $year : date('Y');
+
+            $fileName = 'Laporan Penjualan Per-Produk Website Toko Jogja Electrik';
+
+            if ($month !== '') {
+                $fileName .= '-'.$month;
+            }
+
+            $fileName .= '-'.$year.'.pdf';
+
+            return response()->streamDownload(
+                fn () => print ($pdf),
+                $fileName
+            );
+        } elseif ($options === 'transactions') {
+            $grandTotalSales = 0;
+
+            $grandTotalProfit = 0;
+
+            foreach ($sales as $sale) {
+                foreach ($sale['order_details'] as $detail) {
+                    $revenue = (float) $detail['order_detail_price'] * (int) $detail['order_detail_quantity'];
+                    $cost = (float) $detail['product_cost_price'] * (int) $detail['order_detail_quantity'];
+
+                    $grandTotalSales += $revenue;
+                    $grandTotalProfit += $revenue - $cost;
+                }
+            }
+
+            $pdf = Pdf::loadView('documents.transaction-sales-report', compact('sales', 'grandTotalSales', 'grandTotalProfit', 'month', 'year'))
+                ->setPaper('A4', 'landscape')
+                ->output();
+
+            $year = $year !== '' ? $year : date('Y');
+
+            $fileName = 'Laporan Penjualan Per-Transaksi Website Toko Jogja Electrik';
+
+            if ($month !== '') {
+                $fileName .= '-'.$month;
+            }
+
+            $fileName .= '-'.$year.'.pdf';
+
+            return response()->streamDownload(
+                fn () => print ($pdf),
+                $fileName
+            );
         }
-
-        $products = array_values($products);
-
-        $grandTotalSales = array_sum(array_column($products, 'total_sales'));
-
-        $grandTotalProfit = array_sum(array_column($products, 'total_profit'));
-
-        $pdf = Pdf::loadView('documents.sales-report', compact('grandTotalSales', 'grandTotalProfit', 'products', 'month', 'year'))
-            ->setPaper('A4', 'landscape')
-            ->output();
-
-        $year = $year !== '' ? $year : date('Y');
-
-        $fileName = 'Laporan Penjualan Website Toko Jogja Electrik';
-
-        if ($month !== '') {
-            $fileName .= '-'.$month;
-        }
-
-        $fileName .= '-'.$year.'.pdf';
-
-        return response()->streamDownload(
-            fn () => print ($pdf),
-            $fileName
-        );
     }
 }

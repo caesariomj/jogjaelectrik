@@ -947,6 +947,7 @@ new class extends Component {
                                     '!bg-primary-50 !text-primary' => $discountCode !== null,
                                 ])
                                 x-on:click.prevent.stop="$dispatch('open-modal', 'discount-selection')"
+                                disabled="{{ count($this->discounts) <= 0 }}"
                             >
                                 <svg
                                     class="size-5 shrink-0"

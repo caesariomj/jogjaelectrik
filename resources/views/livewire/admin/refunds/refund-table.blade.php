@@ -8,7 +8,6 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
-use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Volt\Component;
 use Livewire\WithoutUrlPagination;
@@ -613,7 +612,7 @@ new class extends Component {
                                                         </x-common.button>
                                                         <x-common.button
                                                             wire:click="processRefund('{{ $refund->id }}')"
-                                                            variant="primary"
+                                                            variant="success"
                                                             wire:loading.attr="disabled"
                                                             wire:target="processRefund('{{ $refund->id }}')"
                                                         >
@@ -743,7 +742,9 @@ new class extends Component {
                                                                 <option value="masalah_teknis">
                                                                     Masalah teknis dalam memproses refund
                                                                 </option>
-                                                                <option value="alasan_lainnya">Alasan lainnya</option>
+                                                                <option value="alasan_lainnya">
+                                                                    Alasan lainnya (isikan alasan anda secara manual)
+                                                                </option>
                                                             </select>
                                                             <x-form.input-error
                                                                 :messages="$errors->get('rejectionReason')"

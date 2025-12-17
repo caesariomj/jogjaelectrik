@@ -110,6 +110,11 @@
                 padding: 8px 4px;
             }
 
+            main table tbody tr td.number-column {
+                text-align: center;
+                width: 5%;
+            }
+
             main table tbody tr td.product-column {
                 text-align: left;
                 width: 50%;
@@ -157,6 +162,20 @@
                 margin: 4px 0;
             }
 
+            section.refund-info {
+                margin: 40px 0;
+            }
+
+            section.refund-info h3 {
+                font-size: 16px;
+                font-weight: bold;
+                margin-bottom: 8px;
+            }
+
+            section.refund-info p {
+                margin: 4px 0;
+            }
+
             section.terms {
                 margin-bottom: 40px;
             }
@@ -186,15 +205,15 @@
             <section class="company-details">
                 @php
                     $svg = '
-                    <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 316 316" fill="#fd5722">
-                        <polygon
-                            points="215.24 70.31 316.24 105.47 316.24 52.84 165.24 0.3 165.24 18.92 165.24 53.02 165.24 105.37 165.24 158.09 165.24 210.44 165.24 221.13 165.24 263.16 316.24 315.69 316.24 262.86 215.24 227.7 215.24 175.42 316.24 210.4 316.24 157.94 215.24 122.78 215.24 70.31"
-                        />
-                        <polygon
-                            points="0 52.64 0 105.27 101.33 70 101.33 70 101.33 227.9 51.02 245.45 51.02 210.73 0 227.9 0 263.18 0 316 151.29 263.36 151.29 221.25 151.29 210.54 151.29 52.82 151.29 18.65 151.29 0 0 52.64"
-                        />
-                    </svg>
-                    ';
+                                            <svg id="Layer_1" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 316 316" fill="#fd5722">
+                                                <polygon
+                                                    points="215.24 70.31 316.24 105.47 316.24 52.84 165.24 0.3 165.24 18.92 165.24 53.02 165.24 105.37 165.24 158.09 165.24 210.44 165.24 221.13 165.24 263.16 316.24 315.69 316.24 262.86 215.24 227.7 215.24 175.42 316.24 210.4 316.24 157.94 215.24 122.78 215.24 70.31"
+                                                />
+                                                <polygon
+                                                    points="0 52.64 0 105.27 101.33 70 101.33 70 101.33 227.9 51.02 245.45 51.02 210.73 0 227.9 0 263.18 0 316 151.29 263.36 151.29 221.25 151.29 210.54 151.29 52.82 151.29 18.65 151.29 0 0 52.64"
+                                                />
+                                            </svg>
+                                        ';
 
                     $image = '<img src="data:image/svg+xml;base64,' . base64_encode($svg) . '"  width="50" height="50" />';
                 @endphp
@@ -231,16 +250,25 @@
         <main>
             <section class="bill-to">
                 <h3>PEMBELI:</h3>
-                <p>Nama: <strong>{{ $order->user->name }}</strong></p>
-                <p>Alamat: <strong>{{ \Illuminate\Support\Facades\Crypt::decryptString($order->shipping_address) }}</strong></p>
+                <p>
+                    Nama:
+                    <strong>{{ $order->user->name }}</strong>
+                </p>
+                <p>
+                    Alamat:
+                    <strong>{{ \Illuminate\Support\Facades\Crypt::decryptString($order->shipping_address) }}</strong>
+                </p>
                 <p>
                     Nomor Telefon:
-                    <strong>+62 {{ \Illuminate\Support\Facades\Crypt::decryptString($order->user->phone_number) }}</strong>
+                    <strong>
+                        +62 {{ \Illuminate\Support\Facades\Crypt::decryptString($order->user->phone_number) }}
+                    </strong>
                 </p>
             </section>
             <table cellspacing="0" cellpadding="0">
                 <thead>
                     <tr>
+                        <th>NO.</th>
                         <th>PRODUK</th>
                         <th>HARGA</th>
                         <th style="text-align: center">JUMLAH</th>
@@ -254,6 +282,9 @@
                                 $variant = $item->productVariant->combinations->first()->variationVariant ?? null;
                             @endphp
 
+                            <td class="number-column">
+                                {{ $loop->iteration . '.' }}
+                            </td>
                             <td class="product-column">
                                 {{ $item->productVariant->product->name }}
                                 @if ($variant)
@@ -267,32 +298,39 @@
                     @endforeach
 
                     <tr class="summary-row">
-                        <td colspan="3" style="text-align: right" class="amount-column"><span>Subtotal:</span></td>
+                        <td colspan="4" style="text-align: right" class="amount-column"><span>Subtotal :</span></td>
                         <td>Rp {{ formatPrice($order->subtotal_amount) }}</td>
                     </tr>
                     <tr class="summary-row">
-                        <td colspan="3" style="text-align: right" class="amount-column"><span>Diskon:</span></td>
+                        <td colspan="4" style="text-align: right" class="amount-column"><span>Diskon :</span></td>
                         <td>- Rp {{ formatPrice(str_replace('-', '', $order->discount_amount)) }}</td>
                     </tr>
                     <tr class="summary-row">
-                        <td colspan="3" style="text-align: right" class="amount-column"><span>Ongkos Kirim:</span></td>
+                        <td colspan="4" style="text-align: right" class="amount-column"><span>Ongkos Kirim :</span></td>
                         <td>+ Rp {{ formatPrice($order->shipping_cost_amount) }}</td>
                     </tr>
                     <tr class="summary-row">
-                        <td colspan="3" style="text-align: right" class="amount-column total-label">
-                            <span>TOTAL:</span>
+                        <td colspan="4" style="text-align: right" class="amount-column total-label">
+                            <span>TOTAL :</span>
                         </td>
                         <td class="total-label">Rp {{ formatPrice($order->total_amount) }}</td>
                     </tr>
                 </tbody>
             </table>
-            <section class="payment-info">
-                <h3>INFORMASI PEMBAYARAN:</h3>
-                @if ($order->payment->exists() && $order->payment->method)
+            @if ($order->payment->exists() && $order->payment->method)
+                <section class="payment-info">
+                    <h3>INFORMASI PEMBAYARAN:</h3>
+                    <p>
+                        <span>Status Pembayaran:</span>
+                        <strong>Berhasil</strong>
+                    </p>
+
                     @if (str_contains($order->payment->method, 'bank_transfer_'))
                         <p>
                             <span>Metode Pembayaran:</span>
-                            <strong>{{ strtoupper(str_replace('bank_transfer_', '', $order->payment->method)) }} VA</strong>
+                            <strong>
+                                {{ strtoupper(str_replace('bank_transfer_', '', $order->payment->method)) }} VA
+                            </strong>
                         </p>
                         <p>
                             <span>Nomor Referensi Pembayaran:</span>
@@ -305,27 +343,98 @@
                         </p>
                     @endif
                     <p>
-                        <span>Status Pembayaran:</span>
-                        <strong>Berhasil</strong>
+                        <span>Tanggal Pembayaran:</span>
+                        <strong>{{ formatTimestamp($order->payment->paid_at) }}</strong>
                     </p>
-                @else
-                    <p>Anda belum membayar pesanan ini.</p>
+                </section>
+
+                @if ($order->payment->refund && $order->payment->refund->exists())
+                    <section class="refund-info">
+                        <h3>INFORMASI REFUND:</h3>
+                        <p>
+                            <span>Status Refund:</span>
+                            <strong>
+                                @switch($order->payment->refund->status)
+                                    @case('pending')
+                                        Menunggu Persetujuan
+
+                                        @break
+                                    @case('approved')
+                                        Disetujui (Menunggu Proses Pengembalian Dana)
+
+                                        @break
+                                    @case('rejected')
+                                        Ditolak
+
+                                        @break
+                                    @case('succeeded')
+                                        Berhasil
+
+                                        @break
+                                    @case('failed')
+                                        Gagal Diproses
+
+                                        @break
+                                    @default
+                                        -
+                                @endswitch
+                            </strong>
+                        </p>
+
+                        @if ($order->payment->refund->status === 'rejected' && $order->payment->refund->rejection_reason)
+                            <p>
+                                <span>Alasan Penolakan:</span>
+                                <strong>{{ $order->payment->refund->rejection_reason }}</strong>
+                            </p>
+                        @endif
+
+                        @if ($order->payment->refund->xendit_refund_id)
+                            <p>
+                                <span>Nomor Referensi Refund:</span>
+                                <strong>{{ $order->payment->refund->xendit_refund_id }}</strong>
+                            </p>
+                        @endif
+
+                        <p>
+                            <span>Tanggal Pengajuan:</span>
+                            <strong>{{ formatTimestamp($order->payment->refund->created_at) }}</strong>
+                        </p>
+
+                        @if ($order->payment->refund->approved_at && $order->payment->refund->status !== 'rejected')
+                            <p>
+                                <span>Tanggal Disetujui:</span>
+                                <strong>{{ formatTimestamp($order->payment->refund->approved_at) }}</strong>
+                            </p>
+                        @endif
+
+                        @if ($order->payment->refund->succeeded_at && $order->payment->refund->status !== 'rejected')
+                            <p>
+                                <span>Tanggal Refund Berhasil:</span>
+                                <strong>{{ formatTimestamp($order->payment->refund->succeeded_at) }}</strong>
+                            </p>
+                        @endif
+                    </section>
                 @endif
-            </section>
-            <section class="terms">
-                <h3>SYARAT DAN KETENTUAN:</h3>
-                <ul>
-                    <li>Pembayaran harus diselesaikan maksimal 1 hari setelah pesanan dibuat.</li>
-                    <li>Pesanan yang belum dibayar akan dibatalkan secara otomatis.</li>
-                    <li>Anda dapat menghubungi kami untuk mengajukan pengembalian barang.</li>
-                    <li>Waktu pengiriman tergantung pada lokasi tujuan dan jasa pengiriman yang dipilih.</li>
-                    <li>
-                        Untuk lebih lengkapnya, anda dapat mengakses halaman
-                        <a href="{{ route('terms-and-conditions') }}">syarat dan ketentuan</a>
-                        kami.
-                    </li>
-                </ul>
-            </section>
+            @else
+                <section class="payment-info">
+                    <h3>INFORMASI PEMBAYARAN:</h3>
+                    <p>Anda belum membayar pesanan ini.</p>
+                </section>
+                <section class="terms">
+                    <h3>SYARAT DAN KETENTUAN:</h3>
+                    <ul>
+                        <li>Pembayaran harus diselesaikan maksimal 1 hari setelah pesanan dibuat.</li>
+                        <li>Pesanan yang belum dibayar akan dibatalkan secara otomatis.</li>
+                        <li>Anda dapat menghubungi kami untuk mengajukan pengembalian barang.</li>
+                        <li>Waktu pengiriman tergantung pada lokasi tujuan dan jasa pengiriman yang dipilih.</li>
+                        <li>
+                            Untuk lebih lengkapnya, anda dapat mengakses halaman
+                            <a href="{{ route('terms-and-conditions') }}">syarat dan ketentuan</a>
+                            kami.
+                        </li>
+                    </ul>
+                </section>
+            @endif
         </main>
     </body>
 </html>

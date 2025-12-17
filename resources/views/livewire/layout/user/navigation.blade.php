@@ -403,19 +403,21 @@ new class extends Component {
                                             </svg>
                                             <p class="mr-auto text-base">Produk</p>
                                         </x-slot>
-                                        <ul class="mt-2 flex flex-col gap-y-2 ps-8">
-                                            @foreach ($primaryCategories as $category)
-                                                <li>
-                                                    <x-user.side-link
-                                                        href="{{ route('products.category', ['category' => $category->slug]) }}"
-                                                        class="!bg-neutral-50 !text-base"
-                                                        wire:navigate
-                                                    >
-                                                        {{ ucwords($category->name) }}
-                                                    </x-user.side-link>
-                                                </li>
-                                            @endforeach
-                                        </ul>
+                                        @isset($primaryCategories)
+                                            <ul class="mt-2 flex flex-col gap-y-2 ps-8">
+                                                @foreach ($primaryCategories as $category)
+                                                    <li>
+                                                        <x-user.side-link
+                                                            href="{{ route('products.category', ['category' => $category->slug]) }}"
+                                                            class="!bg-neutral-50 !text-base"
+                                                            wire:navigate
+                                                        >
+                                                            {{ ucwords($category->name) }}
+                                                        </x-user.side-link>
+                                                    </li>
+                                                @endforeach
+                                            </ul>
+                                        @endisset
                                     </x-common.accordion>
                                 </li>
                                 <li>
@@ -781,97 +783,99 @@ new class extends Component {
                     </template>
                 </div>
                 <ul class="hidden lg:flex lg:h-full lg:w-full lg:items-center lg:justify-start lg:gap-x-8">
-                    @foreach ($primaryCategories as $category)
-                        <li x-data="{ open: false }" class="h-full">
-                            <button
-                                type="button"
-                                class="inline-flex h-full w-full items-center gap-x-2 text-nowrap text-sm font-semibold leading-none tracking-tight text-black transition-colors hover:text-primary"
-                                x-on:click="open = !open"
-                                x-on:click.away="open = false"
-                            >
-                                {{ ucwords($category->name) }}
-                                <svg
-                                    class="size-4 shrink-0 transition-transform"
-                                    :class="{ 'rotate-180' : open }"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    stroke-width="2"
-                                    stroke-linecap="round"
-                                    stroke-linejoin="round"
+                    @isset($primaryCategories)
+                        @foreach ($primaryCategories as $category)
+                            <li x-data="{ open: false }" class="h-full">
+                                <button
+                                    type="button"
+                                    class="inline-flex h-full w-full items-center gap-x-2 text-nowrap text-sm font-semibold leading-none tracking-tight text-black transition-colors hover:text-primary"
+                                    x-on:click="open = !open"
+                                    x-on:click.away="open = false"
                                 >
-                                    <path d="m6 9 6 6 6-6" />
-                                </svg>
-                            </button>
-                            <div
-                                x-show="open"
-                                class="absolute start-0 top-full mx-auto w-full rounded-b-lg bg-white px-12 py-6 shadow-lg"
-                                x-transition:enter="transition-opacity"
-                                x-transition:enter-start="opacity-0"
-                                x-transition:enter-end="opacity-100"
-                                x-transition:leave="transition-opacity"
-                                x-transition:leave-start="opacity-100"
-                                x-transition:leave-end="opacity-0"
-                                x-cloak
-                                x-on:click.stop
-                            >
-                                <div class="mx-auto flex w-full max-w-screen-2xl items-start justify-between gap-4">
-                                    <ul class="grid w-2/3 grid-cols-3 gap-2">
-                                        @foreach ($category->subcategories as $subcategory)
-                                            <li>
-                                                <a
-                                                    href="{{ route('products.subcategory', ['category' => $category->slug, 'subcategory' => $subcategory->slug]) }}"
-                                                    class="text-sm font-semibold leading-none tracking-tight text-black transition-colors hover:text-primary"
-                                                    wire:navigate
-                                                >
-                                                    {{ ucwords($subcategory->name) }}
-                                                </a>
-                                            </li>
-                                        @endforeach
-                                    </ul>
-                                    <a
-                                        href="{{ route('products.category', ['category' => $category->slug]) }}"
-                                        class="h-96 w-1/3"
-                                        wire:navigate
+                                    {{ ucwords($category->name) }}
+                                    <svg
+                                        class="size-4 shrink-0 transition-transform"
+                                        :class="{ 'rotate-180' : open }"
+                                        xmlns="http://www.w3.org/2000/svg"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        stroke-width="2"
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
                                     >
-                                        <figure
-                                            class="relative h-full w-full overflow-hidden rounded-xl border shadow-xl"
-                                        >
-                                            <div
-                                                class="absolute inset-0 z-[1] bg-gradient-to-t from-black to-transparent"
-                                            ></div>
-                                            <img
-                                                src="https://penguinui.s3.amazonaws.com/component-assets/carousel/default-slide-1.webp"
-                                                alt="Kategori {{ $category->name }}"
-                                                class="h-full w-full object-cover"
-                                                loading="lazy"
-                                            />
-                                            <figcaption class="absolute bottom-0 start-0 z-[2] p-8">
-                                                <x-common.button variant="secondary">
-                                                    Lihat {{ ucwords($category->name) }}
-                                                    <svg
-                                                        class="size-5 shrink-0"
-                                                        xmlns="http://www.w3.org/2000/svg"
-                                                        viewBox="0 0 24 24"
-                                                        fill="none"
-                                                        stroke="currentColor"
-                                                        stroke-width="2"
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
-                                                        aria-hidden="true"
+                                        <path d="m6 9 6 6 6-6" />
+                                    </svg>
+                                </button>
+                                <div
+                                    x-show="open"
+                                    class="absolute start-0 top-full mx-auto w-full rounded-b-lg bg-white px-12 py-6 shadow-lg"
+                                    x-transition:enter="transition-opacity"
+                                    x-transition:enter-start="opacity-0"
+                                    x-transition:enter-end="opacity-100"
+                                    x-transition:leave="transition-opacity"
+                                    x-transition:leave-start="opacity-100"
+                                    x-transition:leave-end="opacity-0"
+                                    x-cloak
+                                    x-on:click.stop
+                                >
+                                    <div class="mx-auto flex w-full max-w-screen-2xl items-start justify-between gap-4">
+                                        <ul class="grid w-2/3 grid-cols-3 gap-2">
+                                            @foreach ($category->subcategories as $subcategory)
+                                                <li>
+                                                    <a
+                                                        href="{{ route('products.subcategory', ['category' => $category->slug, 'subcategory' => $subcategory->slug]) }}"
+                                                        class="text-sm font-semibold leading-none tracking-tight text-black transition-colors hover:text-primary"
+                                                        wire:navigate
                                                     >
-                                                        <path d="M18 8L22 12L18 16" />
-                                                        <path d="M2 12H22" />
-                                                    </svg>
-                                                </x-common.button>
-                                            </figcaption>
-                                        </figure>
-                                    </a>
+                                                        {{ ucwords($subcategory->name) }}
+                                                    </a>
+                                                </li>
+                                            @endforeach
+                                        </ul>
+                                        <a
+                                            href="{{ route('products.category', ['category' => $category->slug]) }}"
+                                            class="h-96 w-1/3"
+                                            wire:navigate
+                                        >
+                                            <figure
+                                                class="relative h-full w-full overflow-hidden rounded-xl border shadow-xl"
+                                            >
+                                                <div
+                                                    class="absolute inset-0 z-[1] bg-gradient-to-t from-black to-transparent"
+                                                ></div>
+                                                <img
+                                                    src="{{ asset('images/backgrounds/banner-' . $loop->iteration . '.webp') }}"
+                                                    alt="Kategori {{ $category->name }}"
+                                                    class="h-full w-full object-cover"
+                                                    loading="lazy"
+                                                />
+                                                <figcaption class="absolute bottom-0 start-0 z-[2] p-8">
+                                                    <x-common.button variant="secondary">
+                                                        Lihat {{ ucwords($category->name) }}
+                                                        <svg
+                                                            class="size-5 shrink-0"
+                                                            xmlns="http://www.w3.org/2000/svg"
+                                                            viewBox="0 0 24 24"
+                                                            fill="none"
+                                                            stroke="currentColor"
+                                                            stroke-width="2"
+                                                            stroke-linecap="round"
+                                                            stroke-linejoin="round"
+                                                            aria-hidden="true"
+                                                        >
+                                                            <path d="M18 8L22 12L18 16" />
+                                                            <path d="M2 12H22" />
+                                                        </svg>
+                                                    </x-common.button>
+                                                </figcaption>
+                                            </figure>
+                                        </a>
+                                    </div>
                                 </div>
-                            </div>
-                        </li>
-                    @endforeach
+                            </li>
+                        @endforeach
+                    @endisset
 
                     <li>
                         <a
@@ -1489,30 +1493,32 @@ new class extends Component {
             >
                 <div class="w-full md:w-1/4">
                     <h2 class="mb-4 text-pretty leading-none text-black">Paling banyak dicari</h2>
-                    <ul class="flex flex-col gap-y-2">
-                        @foreach ($primaryCategories as $category)
-                            <li>
-                                <a
-                                    href="{{ route('products.category', ['category' => $category->slug]) }}"
-                                    class="text-base font-semibold leading-none tracking-tight text-black transition-colors hover:text-primary"
-                                    wire:navigate
-                                >
-                                    {{ ucwords($category->name) }}
-                                </a>
-                            </li>
-                            @foreach ($category->subcategories->take(5) as $subcategory)
+                    @isset($primaryCategories)
+                        <ul class="flex flex-col gap-y-2">
+                            @foreach ($primaryCategories as $category)
                                 <li>
                                     <a
-                                        href="{{ route('products.subcategory', ['category' => $category->slug, 'subcategory' => $subcategory->slug]) }}"
+                                        href="{{ route('products.category', ['category' => $category->slug]) }}"
                                         class="text-base font-semibold leading-none tracking-tight text-black transition-colors hover:text-primary"
                                         wire:navigate
                                     >
-                                        {{ ucwords($subcategory->name) }}
+                                        {{ ucwords($category->name) }}
                                     </a>
                                 </li>
+                                @foreach ($category->subcategories->take(5) as $subcategory)
+                                    <li>
+                                        <a
+                                            href="{{ route('products.subcategory', ['category' => $category->slug, 'subcategory' => $subcategory->slug]) }}"
+                                            class="text-base font-semibold leading-none tracking-tight text-black transition-colors hover:text-primary"
+                                            wire:navigate
+                                        >
+                                            {{ ucwords($subcategory->name) }}
+                                        </a>
+                                    </li>
+                                @endforeach
                             @endforeach
-                        @endforeach
-                    </ul>
+                        </ul>
+                    @endisset
                 </div>
                 <div class="relative w-full md:w-3/4">
                     <h2 class="mb-4 text-pretty leading-none text-black">Produk</h2>

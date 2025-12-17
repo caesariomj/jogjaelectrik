@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Order;
+use App\Models\ProductVariant;
 use App\Services\DocumentService;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\QueryException;
@@ -66,6 +67,7 @@ new class extends Component {
         ],
     ];
 
+    #[Url(as: 'status', except: '')]
     public string $status = '';
 
     #[Url(as: 'q', except: '')]
@@ -86,8 +88,6 @@ new class extends Component {
 
     public function mount(): void
     {
-        $this->status = 'all';
-
         $this->countOrdersByStatuses();
     }
 
@@ -97,6 +97,7 @@ new class extends Component {
     private function countOrdersByStatuses(): void
     {
         $statusCounts = DB::table('orders')
+            ->where('source', 'ecommerce')
             ->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->pluck('count', 'status')
@@ -519,6 +520,16 @@ new class extends Component {
                     $order->payment->update([
                         'status' => 'refunded',
                     ]);
+                }
+
+                foreach ($order->details as $item) {
+                    $productVariant = ProductVariant::find($item->product_variant_id);
+
+                    if (! $productVariant) {
+                        continue;
+                    }
+
+                    $productVariant->increment('stock', $item->quantity);
                 }
 
                 $cancelationReason = 'Dibatalkan oleh admin: ';
@@ -1035,7 +1046,9 @@ new class extends Component {
                                     <p class="text-sm font-semibold tracking-tight text-teal-800">
                                         Estimasi tiba:
 
-                                        @if ($order->estimated_shipping_min_days === 0 && $order->estimated_shipping_max_days === 0)
+                                        @if (is_null($order->estimated_shipping_min_days) || is_null($order->estimated_shipping_max_days))
+                                            -
+                                        @elseif ($order->estimated_shipping_min_days === 0 && $order->estimated_shipping_max_days === 0)
                                             <time datetime="{{ $order->created_at }}">Hari Ini</time>
                                         @elseif ($order->estimated_shipping_min_days === $order->estimated_shipping_max_days)
                                             <time
@@ -1253,6 +1266,8 @@ new class extends Component {
 
                         @php
                             [$courier, $service] = explode('-', $order->shipping_courier);
+
+                            $courierCode = extractCourierCode($courier);
                         @endphp
 
                         <dt class="inline-flex items-center text-sm font-medium tracking-tight text-black/70">
@@ -1275,8 +1290,8 @@ new class extends Component {
                         </dt>
                         <dd class="inline-flex items-center text-sm font-medium tracking-tight text-black">
                             <img
-                                src="{{ asset('images/logos/shipping/' . $courier . '.webp') }}"
-                                alt="Logo {{ strtoupper($courier) }}"
+                                src="{{ asset('images/logos/shipping/' . $courierCode . '.webp') }}"
+                                alt="Logo {{ strtoupper($courierCode) }}"
                                 class="me-2 h-auto w-10"
                                 loading="lazy"
                             />

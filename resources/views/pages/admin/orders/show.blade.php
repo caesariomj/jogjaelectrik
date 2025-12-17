@@ -95,26 +95,30 @@
                     <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                         <dt class="w-full tracking-tight text-black/70 md:w-1/3">Estimasi Pesanan Tiba</dt>
                         <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
-                            @php
-                                $paidAt = Carbon\Carbon::parse($order->payment->paid_at);
-                                $minDate = $paidAt->copy()->addDays($order->estimated_shipping_min_days);
-                                $maxDate = $paidAt->copy()->addDays($order->estimated_shipping_max_days);
-                            @endphp
+                            @if (! is_null($order->estimated_shipping_min_days) && ! is_null($order->estimated_shipping_max_days))
+                                @php
+                                    $paidAt = Carbon\Carbon::parse($order->payment->paid_at);
+                                    $minDate = $paidAt->copy()->addDays($order->estimated_shipping_min_days);
+                                    $maxDate = $paidAt->copy()->addDays($order->estimated_shipping_max_days);
+                                @endphp
 
-                            @if ($order->estimated_shipping_min_days === 0 && $order->estimated_shipping_max_days === 0)
-                                <time datetime="{{ $paidAt->toDateTimeString() }}">Hari Ini</time>
-                            @elseif ($order->estimated_shipping_min_days === $order->estimated_shipping_max_days)
-                                <time datetime="{{ $minDate->toDateTimeString() }}">
-                                    {{ formatDate($minDate->toDateTimeString()) }}
-                                </time>
+                                @if ($order->estimated_shipping_min_days === 0 && $order->estimated_shipping_max_days === 0)
+                                    <time datetime="{{ $paidAt->toDateTimeString() }}">Hari Ini</time>
+                                @elseif ($order->estimated_shipping_min_days === $order->estimated_shipping_max_days)
+                                    <time datetime="{{ $minDate->toDateTimeString() }}">
+                                        {{ formatDate($minDate->toDateTimeString()) }}
+                                    </time>
+                                @else
+                                    <time datetime="{{ $minDate->toDateTimeString() }}">
+                                        {{ formatDate($minDate->toDateTimeString()) }}
+                                    </time>
+                                    &mdash;
+                                    <time datetime="{{ $maxDate->toDateTimeString() }}">
+                                        {{ formatDate($maxDate->toDateTimeString()) }}
+                                    </time>
+                                @endif
                             @else
-                                <time datetime="{{ $minDate->toDateTimeString() }}">
-                                    {{ formatDate($minDate->toDateTimeString()) }}
-                                </time>
-                                &mdash;
-                                <time datetime="{{ $maxDate->toDateTimeString() }}">
-                                    {{ formatDate($maxDate->toDateTimeString()) }}
-                                </time>
+                                Belum tersedia
                             @endif
                         </dd>
                     </div>

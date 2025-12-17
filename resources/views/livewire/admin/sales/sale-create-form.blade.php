@@ -42,6 +42,13 @@ new class extends Component {
     public function addItems(array $productVariant): void
     {
         $variants = $productVariant['variants'] ?? [];
+
+        $hasOutOfStock = collect($variants)->contains(fn ($v) => (int) $v['stock'] <= 0);
+
+        if ($hasOutOfStock) {
+            return;
+        }
+
         $hasMultipleVariants = count($variants) > 1 || ($variants[0]['name'] ?? null) !== null;
 
         $existingIndex = collect($this->form->items)->search(fn ($item) => $item['id'] === $productVariant['id']);
@@ -440,7 +447,12 @@ new class extends Component {
                                     },
                                 }"
                             >
-                                <x-common.button variant="secondary" x-on:click="submit" class="mt-2 w-fit">
+                                <x-common.button
+                                    variant="secondary"
+                                    x-on:click="submit"
+                                    class="mt-2 w-fit"
+                                    disabled="{{ $product->variant_stocks <= 0 }}"
+                                >
                                     <svg
                                         class="size-5"
                                         xmlns="http://www.w3.org/2000/svg"
@@ -454,7 +466,11 @@ new class extends Component {
                                         <path d="M5 12h14" />
                                         <path d="M12 5v14" />
                                     </svg>
-                                    Tambah
+                                    @if ($product->variant_stocks > 0)
+                                        Tambah
+                                    @else
+                                        Habis
+                                    @endif
                                 </x-common.button>
                             </div>
                         @endif

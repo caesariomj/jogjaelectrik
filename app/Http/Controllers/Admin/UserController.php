@@ -65,7 +65,7 @@ class UserController extends Controller
         $user = (new User)->newFromBuilder(
             User::queryById(id: $id, columns: [
                 'users.id',
-                'users.city_id',
+                'users.district_id',
                 'users.name',
                 'users.email',
                 'users.password',

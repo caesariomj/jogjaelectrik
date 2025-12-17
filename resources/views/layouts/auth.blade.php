@@ -11,9 +11,9 @@
         </nav>
         <figure class="relative hidden w-full shrink md:block">
             <img
-                src="https://placehold.co/600x400"
+                src="{{ asset('images/backgrounds/banner-auth.webp') }}"
                 alt="Signup background"
-                class="absolute inset-0 h-full w-full object-cover opacity-90"
+                class="absolute inset-0 h-full w-full object-cover opacity-80"
             />
             <div class="absolute inset-0 bg-black/50"></div>
             <figcaption class="relative z-10 flex h-full flex-col justify-end p-12">

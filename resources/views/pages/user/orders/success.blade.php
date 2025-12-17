@@ -84,12 +84,14 @@
 
                             @php
                                 [$courier, $courierService] = explode('-', $order->shipping_courier);
+
+                                $courierCode = extractCourierCode($courier);
                             @endphp
 
                             <div class="flex items-center gap-x-2">
                                 <div class="h-8 w-14 rounded-md border border-neutral-300 px-2 py-1">
                                     <img
-                                        src="{{ asset('images/logos/shipping/' . $courier . '.webp') }}"
+                                        src="{{ asset('images/logos/shipping/' . $courierCode . '.webp') }}"
                                         alt="Logo {{ strtoupper($courier) }}"
                                         title="{{ strtoupper($courier) }}"
                                         class="h-full w-full object-contain"
@@ -106,16 +108,20 @@
                             </p>
                             <p class="text-base font-medium tracking-tight text-black/70">
                                 Estimasi tiba:
-                                @if ($order->estimated_shipping_min_days === 0 && $order->estimated_shipping_max_days === 0)
-                                    <span class="text-black">Hari Ini</span>
-                                @elseif ($order->estimated_shipping_min_days === $order->estimated_shipping_max_days)
-                                    <span class="text-black">{{ $order->estimated_shipping_max_days }} Hari</span>
+                                @if (! $order->estimated_shipping_min_days && ! $order->estimated_shipping_max_days)
+                                    <span class="text-black">Belum tersedia</span>
                                 @else
-                                    <span class="text-black">
-                                        {{ $order->estimated_shipping_min_days }}
-                                    </span>
-                                    &dash;
-                                    <span class="text-black">{{ $order->estimated_shipping_max_days }} Hari</span>
+                                    @if ($order->estimated_shipping_min_days === 0 && $order->estimated_shipping_max_days === 0)
+                                        <span class="text-black">Hari Ini</span>
+                                    @elseif ($order->estimated_shipping_min_days === $order->estimated_shipping_max_days)
+                                        <span class="text-black">{{ $order->estimated_shipping_max_days }} Hari</span>
+                                    @else
+                                        <span class="text-black">
+                                            {{ $order->estimated_shipping_min_days }}
+                                        </span>
+                                        &dash;
+                                        <span class="text-black">{{ $order->estimated_shipping_max_days }} Hari</span>
+                                    @endif
                                 @endif
                             </p>
                         </div>

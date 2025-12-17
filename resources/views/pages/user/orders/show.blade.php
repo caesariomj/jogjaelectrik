@@ -99,26 +99,30 @@
                         <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                             <dt class="w-full tracking-tight text-black/70 md:w-1/3">Estimasi Pesanan Tiba</dt>
                             <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
-                                @php
-                                    $paidAt = Carbon\Carbon::parse($order->payment->paid_at);
-                                    $minDate = $paidAt->copy()->addDays($order->estimated_shipping_min_days);
-                                    $maxDate = $paidAt->copy()->addDays($order->estimated_shipping_max_days);
-                                @endphp
+                                @if (! is_null($order->estimated_shipping_min_days) && ! is_null($order->estimated_shipping_max_days))
+                                    @php
+                                        $paidAt = Carbon\Carbon::parse($order->payment->paid_at);
+                                        $minDate = $paidAt->copy()->addDays($order->estimated_shipping_min_days);
+                                        $maxDate = $paidAt->copy()->addDays($order->estimated_shipping_max_days);
+                                    @endphp
 
-                                @if ($order->estimated_shipping_min_days === 0 && $order->estimated_shipping_max_days === 0)
-                                    <time datetime="{{ $paidAt->toDateTimeString() }}">Hari Ini</time>
-                                @elseif ($order->estimated_shipping_min_days === $order->estimated_shipping_max_days)
-                                    <time datetime="{{ $minDate->toDateTimeString() }}">
-                                        {{ formatDate($minDate->toDateTimeString()) }}
-                                    </time>
+                                    @if ($order->estimated_shipping_min_days === 0 && $order->estimated_shipping_max_days === 0)
+                                        <time datetime="{{ $paidAt->toDateTimeString() }}">Hari Ini</time>
+                                    @elseif ($order->estimated_shipping_min_days === $order->estimated_shipping_max_days)
+                                        <time datetime="{{ $minDate->toDateTimeString() }}">
+                                            {{ formatDate($minDate->toDateTimeString()) }}
+                                        </time>
+                                    @else
+                                        <time datetime="{{ $minDate->toDateTimeString() }}">
+                                            {{ formatDate($minDate->toDateTimeString()) }}
+                                        </time>
+                                        &mdash;
+                                        <time datetime="{{ $maxDate->toDateTimeString() }}">
+                                            {{ formatDate($maxDate->toDateTimeString()) }}
+                                        </time>
+                                    @endif
                                 @else
-                                    <time datetime="{{ $minDate->toDateTimeString() }}">
-                                        {{ formatDate($minDate->toDateTimeString()) }}
-                                    </time>
-                                    &mdash;
-                                    <time datetime="{{ $maxDate->toDateTimeString() }}">
-                                        {{ formatDate($maxDate->toDateTimeString()) }}
-                                    </time>
+                                    Belum tersedia
                                 @endif
                             </dd>
                         </div>
@@ -134,7 +138,7 @@
                                 <span>Rp {{ formatPrice($order->subtotal_amount) }}</span>
                             </p>
 
-                            @if ($order->discount_amount > 0)
+                            @if ($order->discount_amount)
                                 <p
                                     class="inline-flex items-center justify-between font-medium tracking-tight text-black/70"
                                 >
@@ -240,9 +244,14 @@
                                     @class([
                                         'inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium tracking-tight',
                                         'bg-yellow-100 text-yellow-800' => $order->payment->status === 'unpaid',
-                                        'bg-teal-100 text-teal-800' => in_array($order->payment->status, ['paid', 'settled']),
-                                        'bg-red-100 text-red-800' => $order->payment->status === 'expired',
-                                        'bg-blue-100 text-blue-800' => $order->payment->status === 'refunded',
+                                        'bg-teal-100 text-teal-800' =>
+                                            in_array($order->payment->status, ['paid', 'settled']) ||
+                                            (! is_null($order->refund) && $order->refund->status === 'succeeded'),
+                                        'bg-red-100 text-red-800' =>
+                                            $order->payment->status === 'expired' ||
+                                            (! is_null($order->refund) && in_array($order->refund->status, ['rejected', 'failed'])),
+                                        'bg-blue-100 text-blue-800' =>
+                                            $order->payment->status === 'refunded' || (! is_null($order->refund) && $order->refund->status === 'pending'),
                                     ])
                                     role="status"
                                 >
@@ -250,9 +259,14 @@
                                         @class([
                                             'inline-block size-1.5 rounded-full',
                                             'bg-yellow-800' => $order->payment->status === 'unpaid',
-                                            'bg-teal-800' => in_array($order->payment->status, ['paid', 'settled']),
-                                            'bg-red-800' => $order->payment->status === 'expired',
-                                            'bg-blue-800' => $order->payment->status === 'refunded',
+                                            'bg-teal-800' =>
+                                                in_array($order->payment->status, ['paid', 'settled']) ||
+                                                (! is_null($order->refund) && $order->refund->status === 'succeeded'),
+                                            'bg-red-800' =>
+                                                $order->payment->status === 'expired' ||
+                                                (! is_null($order->refund) && in_array($order->refund->status, ['rejected', 'failed'])),
+                                            'bg-blue-800' =>
+                                                $order->payment->status === 'refunded' || (! is_null($order->refund) && $order->refund->status === 'pending'),
                                         ])
                                     ></span>
                                     @if ($order->payment->status === 'unpaid')
@@ -261,8 +275,12 @@
                                         Berhasil
                                     @elseif ($order->payment->status === 'expired')
                                         Kadaluarsa
-                                    @elseif ($order->payment->status === 'refunded')
+                                    @elseif ($order->payment->status === 'refunded' && $order->refund->status === 'pending')
                                         Mengajukan Refund
+                                    @elseif ($order->payment->status === 'refunded' && $order->refund->status === 'succeeded')
+                                        Berhasil Direfund
+                                    @elseif ($order->payment->status === 'refunded' && $order->refund->status === 'failed')
+                                        Refund Ditolak
                                     @endif
                                 </span>
                             </dd>
@@ -270,7 +288,9 @@
 
                         @if ($order->payment->reference_number)
                             <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
-                                <dt class="w-full tracking-tight text-black/70 md:w-1/3">Nomor Virtual Account</dt>
+                                <dt class="w-full tracking-tight text-black/70 md:w-1/3">
+                                    Nomor Referensi Virtual Account
+                                </dt>
                                 <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
                                     {{ $order->payment->reference_number }}
                                 </dd>
@@ -289,7 +309,7 @@
                 </section>
             @endif
 
-            @if ($order->payment->status === 'refunded' && $order->payment->refund()->exists())
+            @if ($order->payment->status === 'refunded' && ! is_null($order->refund->xendit_refund_id))
                 <section class="mt-4">
                     <h2 class="mb-2 text-2xl text-black">Informasi Refund</h2>
                     <dl class="grid grid-cols-1">
@@ -299,25 +319,25 @@
                                 <span
                                     @class([
                                         'inline-flex items-center gap-x-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium tracking-tight',
-                                        'bg-yellow-100 text-yellow-800' => $order->payment->refund->status === 'pending',
-                                        'bg-teal-100 text-teal-800' => $order->payment->refund->status === 'succeeded',
-                                        'bg-red-100 text-red-800' => $order->payment->refund->status === 'failed',
+                                        'bg-yellow-100 text-yellow-800' => $order->refund->status === 'pending',
+                                        'bg-teal-100 text-teal-800' => $order->refund->status === 'succeeded',
+                                        'bg-red-100 text-red-800' => $order->refund->status === 'failed',
                                     ])
                                     role="status"
                                 >
                                     <span
                                         @class([
                                             'inline-block size-1.5 rounded-full',
-                                            'bg-yellow-800' => $order->payment->refund->status === 'pending',
-                                            'bg-teal-800' => $order->payment->refund->status === 'succeeded',
-                                            'bg-red-800' => $order->payment->refund->status === 'failed',
+                                            'bg-yellow-800' => $order->refund->status === 'pending',
+                                            'bg-teal-800' => $order->refund->status === 'succeeded',
+                                            'bg-red-800' => $order->refund->status === 'failed',
                                         ])
                                     ></span>
-                                    @if ($order->payment->refund->status === 'pending')
+                                    @if ($order->refund->status === 'pending')
                                         Menunggu Diproses
-                                    @elseif ($order->payment->refund->status === 'succeeded')
+                                    @elseif ($order->refund->status === 'succeeded')
                                         Berhasil
-                                    @elseif ($order->payment->refund->status === 'failed')
+                                    @elseif ($order->refund->status === 'failed')
                                         Gagal
                                     @endif
                                 </span>
@@ -326,15 +346,15 @@
                         <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                             <dt class="w-full tracking-tight text-black/70 md:w-1/3">Refund Diajukan Pada</dt>
                             <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
-                                {{ formatTimestamp($order->payment->refund->created_at) }}
+                                {{ formatTimestamp($order->refund->created_at) }}
                             </dd>
                         </div>
 
-                        @if ($order->payment->refund->succeeded_at)
+                        @if ($order->refund->succeeded_at)
                             <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                                 <dt class="w-full tracking-tight text-black/70 md:w-1/3">Direfund Pada</dt>
                                 <dd class="w-full font-medium tracking-tight text-black md:w-2/3">
-                                    {{ formatTimestamp($order->payment->refund->succeeded_at) }}
+                                    {{ formatTimestamp($order->refund->succeeded_at) }}
                                 </dd>
                             </div>
                         @endif
@@ -348,13 +368,15 @@
                     <div class="flex flex-col items-start gap-1 border-b border-neutral-300 py-2 md:flex-row">
                         @php
                             [$courier, $service] = explode('-', $order->shipping_courier);
+
+                            $courierCode = extractCourierCode($courier);
                         @endphp
 
                         <dt class="w-full tracking-tight text-black/70 md:w-1/3">Ekspedisi dan Layanan Kurir</dt>
                         <dd class="inline-flex w-full items-center font-medium tracking-tight text-black md:w-2/3">
                             <img
-                                src="{{ asset('images/logos/shipping/' . $courier . '.webp') }}"
-                                alt="Logo {{ strtoupper($courier) }}"
+                                src="{{ asset('images/logos/shipping/' . $courierCode . '.webp') }}"
+                                alt="Logo {{ strtoupper($courierCode) }}"
                                 class="me-2 h-auto w-10"
                                 loading="lazy"
                             />

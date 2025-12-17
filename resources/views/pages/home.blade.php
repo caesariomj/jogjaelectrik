@@ -9,7 +9,7 @@
         </section>
     @endif
 
-    @if (count($primaryCategories) > 0)
+    @if (isset($primaryCategories) && count($primaryCategories) > 0)
         <section
             class="container mx-auto grid h-full max-w-md grid-cols-1 gap-6 p-6 md:max-w-[96rem] md:grid-cols-2 md:gap-12 md:p-12"
         >
@@ -22,7 +22,7 @@
                     >
                         <div class="absolute inset-0 z-[1] bg-gradient-to-t from-black to-transparent"></div>
                         <img
-                            src="https://penguinui.s3.amazonaws.com/component-assets/carousel/default-slide-1.webp"
+                            src="{{ asset('images/backgrounds/banner-' . $loop->iteration . '.webp') }}"
                             alt="Kategori {{ $category->name }}"
                             class="h-full w-full object-cover"
                             loading="lazy"
@@ -102,7 +102,7 @@
             <a href="{{ route('products') }}" wire:navigate>
                 <div class="absolute inset-0 z-[1] bg-gradient-to-t from-black to-transparent"></div>
                 <img
-                    src="https://penguinui.s3.amazonaws.com/component-assets/carousel/default-slide-2.webp"
+                    src="{{ asset('images/backgrounds/banner-3.webp') }}"
                     alt="CTA"
                     class="h-full w-full object-cover"
                     loading="lazy"
