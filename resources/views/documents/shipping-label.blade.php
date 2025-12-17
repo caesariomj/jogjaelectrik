@@ -229,9 +229,15 @@
                             </td>
                         </tr>
                         <tr>
+                            @php
+                                $totalWeight = $order->details->sum(function ($item) {
+                                    return $item->productVariant->product->weight * $item->quantity;
+                                });
+                            @endphp
+
                             <td class="weight" colspan="2">
                                 Berat Paket:
-                                <strong>3 kg</strong>
+                                <strong>{{ formatPrice($totalWeight) }} gram</strong>
                             </td>
                         </tr>
                     </tbody>
