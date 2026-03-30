@@ -78,6 +78,8 @@ if (! function_exists('extractCourierCode')) {
 
         if (in_array('jnt', $courierCodes) && str_contains($courier, 'j&t')) {
             $courier = 'jnt';
+        } elseif (in_array('ide', $courierCodes) && str_contains($courier, 'id express')) {
+            $courier = 'ide';
         }
 
         $result = null;
