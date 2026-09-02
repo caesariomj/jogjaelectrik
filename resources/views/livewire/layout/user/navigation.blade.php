@@ -979,7 +979,7 @@ new class extends Component {
                                                     >
                                                         @if ($item->thumbnail)
                                                             <img
-                                                                src="{{ asset('storage/uploads/product-images/' . $item->thumbnail) }}"
+                                                                src="{{ supabasePublicUrl($item->thumbnail) }}"
                                                                 alt="Gambar produk {{ strtolower($item->name) }}"
                                                                 class="aspect-square h-full w-full scale-100 object-cover brightness-100 transition-all ease-in-out hover:scale-105 hover:brightness-95"
                                                                 loading="lazy"

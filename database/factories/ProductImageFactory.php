@@ -28,7 +28,7 @@ class ProductImageFactory extends Factory
     {
         return $this->afterCreating(function ($image) {
             if (app()->runningUnitTests()) {
-                \Illuminate\Support\Facades\Storage::disk('public_uploads')->put('product-images/'.$image->file_name, 'fake image content');
+                \Illuminate\Support\Facades\Storage::disk('supabase')->put('product-images/'.$image->file_name, 'fake image content');
             }
         });
     }

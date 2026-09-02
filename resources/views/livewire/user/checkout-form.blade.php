@@ -708,7 +708,7 @@ new class extends Component {
                         <div class="size-20 shrink-0 overflow-hidden rounded-md bg-neutral-100">
                             @if ($item->thumbnail)
                                 <img
-                                    src="{{ asset('storage/uploads/product-images/' . $item->thumbnail) }}"
+                                    src="{{ supabasePublicUrl($item->thumbnail) }}"
                                     alt="Gambar produk {{ strtolower($item->name) }}"
                                     class="aspect-square h-full w-full object-cover"
                                     loading="lazy"

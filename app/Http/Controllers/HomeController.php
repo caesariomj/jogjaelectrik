@@ -66,7 +66,7 @@ class HomeController extends Controller
                     'link' => $product->category_slug && $product->subcategory_slug ? route('products.detail', ['category' => $product->category_slug, 'subcategory' => $product->subcategory_slug, 'slug' => $product->slug]) : route('products.detail.without.category.subcategory', ['slug' => $product->slug]),
                     'price' => $product->base_price,
                     'price_discount' => $product->base_price_discount,
-                    'thumbnail' => asset('storage/uploads/product-images/'.$product->thumbnail),
+                    'thumbnail' => supabasePublicUrl($product->thumbnail),
                     'rating' => number_format($product->average_rating, 1),
                 ];
             });
@@ -112,7 +112,7 @@ class HomeController extends Controller
                     'link' => $product->category_slug && $product->subcategory_slug ? route('products.detail', ['category' => $product->category_slug, 'subcategory' => $product->subcategory_slug, 'slug' => $product->slug]) : route('products.detail.without.category.subcategory', ['slug' => $product->slug]),
                     'price' => $product->base_price,
                     'price_discount' => $product->base_price_discount,
-                    'thumbnail' => asset('storage/uploads/product-images/'.$product->thumbnail),
+                    'thumbnail' => supabasePublicUrl($product->thumbnail),
                     'rating' => number_format($product->average_rating, 1),
                 ];
             });
@@ -218,7 +218,7 @@ class HomeController extends Controller
                     'link' => $product->category_slug && $product->subcategory_slug ? route('products.detail', ['category' => $product->category_slug, 'subcategory' => $product->subcategory_slug, 'slug' => $product->slug]) : route('products.detail.without.category.subcategory', ['slug' => $product->slug]),
                     'price' => $product->base_price,
                     'price_discount' => $product->base_price_discount,
-                    'thumbnail' => asset('storage/uploads/product-images/'.$product->thumbnail),
+                    'thumbnail' => supabasePublicUrl($product->thumbnail),
                     'rating' => number_format($product->average_rating, 1),
                 ];
             });

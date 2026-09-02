@@ -399,8 +399,8 @@ new class extends Component {
                 foreach ($product->images as $image) {
                     $filePath = 'product-images/' . $image->file_name;
 
-                    if (Storage::disk('public_uploads')->exists($filePath)) {
-                        Storage::disk('public_uploads')->delete($filePath);
+                    if (Storage::disk('supabase')->exists($filePath)) {
+                        Storage::disk('supabase')->delete($filePath);
                     }
                 }
 
@@ -560,7 +560,7 @@ new class extends Component {
                                     class="aspect-square size-16 shrink-0 overflow-hidden rounded-md border border-neutral-300"
                                 >
                                     <img
-                                        src="{{ asset('storage/uploads/product-images/' . $product->thumbnail) }}"
+                                        src="{{ supabasePublicUrl($product->thumbnail) }}"
                                         class="h-full w-full object-cover"
                                         alt="Gambar utama produk {{ $product->name }}"
                                         loading="lazy"

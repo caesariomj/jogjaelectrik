@@ -33,7 +33,7 @@ test('product can be created', function () {
         ->assertOk()
         ->assertSeeVolt('admin.products.product-create-form');
 
-    Storage::fake('public_uploads');
+    Storage::fake('supabase');
 
     $thumbnail = UploadedFile::fake()->image('thumbnail.jpg');
     $images = [
@@ -75,11 +75,11 @@ test('product can be created', function () {
     $thumbnailImage = $product->images()->where('is_thumbnail', true)->first();
     $this->assertNotNull($thumbnailImage);
 
-    Storage::disk('public_uploads')->assertExists('product-images/'.$thumbnailImage->file_name);
+    Storage::disk('supabase')->assertExists('product-images/'.$thumbnailImage->file_name);
 
     $nonThumbnailImages = $product->images()->where('is_thumbnail', false)->get();
     foreach ($nonThumbnailImages as $img) {
-        Storage::disk('public_uploads')->assertExists('product-images/'.$img->file_name);
+        Storage::disk('supabase')->assertExists('product-images/'.$img->file_name);
     }
 });
 
@@ -99,7 +99,7 @@ test('product can be updated', function () {
         ->assertOk()
         ->assertSeeVolt('admin.products.product-edit-form');
 
-    Storage::fake('public_uploads');
+    Storage::fake('supabase');
 
     $product = (new \App\Models\Product)->newFromBuilder(
         \App\Models\Product::queryBySlug(slug: $product->slug, columns: [
@@ -129,7 +129,7 @@ test('product can be updated', function () {
     );
 
     foreach ($product->images as $img) {
-        Storage::disk('public_uploads')->put('product-images/'.$img->file_name, 'from debug test');
+        Storage::disk('supabase')->put('product-images/'.$img->file_name, 'from debug test');
     }
 
     $newSubcategory = \App\Models\Subcategory::factory()->create([
@@ -175,11 +175,11 @@ test('product can be updated', function () {
     $thumbnailImage = $product->images()->where('is_thumbnail', true)->first();
     $this->assertNotNull($thumbnailImage);
 
-    Storage::disk('public_uploads')->assertExists('product-images/'.$thumbnailImage->file_name);
+    Storage::disk('supabase')->assertExists('product-images/'.$thumbnailImage->file_name);
 
     $nonThumbnailImages = $product->images()->where('is_thumbnail', false)->get();
     foreach ($nonThumbnailImages as $img) {
-        Storage::disk('public_uploads')->assertExists('product-images/'.$img->file_name);
+        Storage::disk('supabase')->assertExists('product-images/'.$img->file_name);
     }
 });
 

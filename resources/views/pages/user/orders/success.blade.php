@@ -151,7 +151,7 @@
                         @foreach ($order->details as $item)
                             <li class="flex items-center gap-4">
                                 <img
-                                    src="{{ asset('storage/uploads/product-images/' . $item->thumbnail) }}"
+                                    src="{{ supabasePublicUrl($item->thumbnail) }}"
                                     class="h-14 w-14 rounded border object-cover"
                                     alt="Hoodie"
                                 />

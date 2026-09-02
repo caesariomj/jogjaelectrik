@@ -38,7 +38,7 @@
                 <figure class="relative h-auto w-full">
                     <img
                         class="mb-2 aspect-square h-full w-full rounded-md border border-neutral-300 object-cover"
-                        src="{{ asset('storage/uploads/product-images/' . $thumbnailImage->file_name) }}"
+                        src="{{ supabasePublicUrl($thumbnailImage->file_name) }}"
                         alt="Gambar produk {{ $product->name }}"
                         loading="lazy"
                     />
@@ -58,7 +58,7 @@
                     <figure class="h-auto w-full">
                         <img
                             class="mb-2 aspect-square h-full w-full rounded-md border border-neutral-300 object-cover"
-                            src="{{ asset('storage/uploads/product-images/' . $image->file_name) }}"
+                            src="{{ supabasePublicUrl($image->file_name) }}"
                             alt="Gambar produk {{ $product->name }}"
                             loading="lazy"
                         />

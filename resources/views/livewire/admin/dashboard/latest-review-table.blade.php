@@ -51,7 +51,7 @@ new class extends Component {
                                             class="aspect-square size-12 shrink-0 overflow-hidden rounded-md border border-neutral-300"
                                         >
                                             <img
-                                                src="{{ asset('storage/uploads/product-images/' . $review->product_thumbnail) }}"
+                                                src="{{ supabasePublicUrl($review->product_thumbnail) }}"
                                                 class="h-full w-full object-cover"
                                                 alt="Gambar utama produk {{ $review->product_name }}"
                                                 loading="lazy"

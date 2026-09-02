@@ -10,7 +10,7 @@
         >
             @if ($product->thumbnail)
                 <img
-                    src="{{ asset('storage/uploads/product-images/' . $product->thumbnail) }}"
+                    src="{{ supabasePublicUrl($product->thumbnail) }}"
                     alt="Gambar produk {{ $product->name }}"
                     class="aspect-square h-full w-full scale-100 object-cover transition-transform group-hover:scale-105"
                     loading="lazy"

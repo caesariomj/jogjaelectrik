@@ -140,7 +140,7 @@ new class extends Component {
 
                 $thumbnailName = uniqid() . '_' . microtime(true) . '.' . $validated['thumbnail']->extension();
 
-                $validated['thumbnail']->storeAs('product-images', $thumbnailName, 'public_uploads');
+                $validated['thumbnail']->storeAs('product-images', $thumbnailName, 'supabase');
 
                 $product->images()->create([
                     'file_name' => $thumbnailName,
@@ -151,7 +151,7 @@ new class extends Component {
                     foreach ($validated['images'] as $image) {
                         $fileName = uniqid() . '_' . microtime(true) . '.' . $image->extension();
 
-                        $image->storeAs('product-images', $fileName, 'public_uploads');
+                        $image->storeAs('product-images', $fileName, 'supabase');
 
                         $product->images()->create([
                             'file_name' => $fileName,

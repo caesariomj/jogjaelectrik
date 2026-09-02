@@ -995,7 +995,7 @@ new class extends Component {
                                 wire:navigate
                             >
                                 <img
-                                    src="{{ asset('storage/uploads/product-images/' . $item->thumbnail) }}"
+                                    src="{{ supabasePublicUrl($item->thumbnail) }}"
                                     alt="Gambar produk {{ strtolower($item->name) }}"
                                     class="aspect-square h-full w-20 scale-100 object-cover brightness-100 transition-all ease-in-out hover:scale-105 hover:brightness-95"
                                     loading="lazy"
@@ -1431,7 +1431,7 @@ new class extends Component {
                                                         wire:navigate
                                                     >
                                                         <img
-                                                            src="{{ asset('storage/uploads/product-images/' . $item->thumbnail) }}"
+                                                            src="{{ supabasePublicUrl($item->thumbnail) }}"
                                                             alt="Gambar produk {{ strtolower($item->name) }}"
                                                             class="aspect-square h-full w-20 scale-100 object-cover brightness-100 transition-all ease-in-out hover:scale-105 hover:brightness-95"
                                                             loading="lazy"

@@ -72,8 +72,8 @@ new class extends Component {
             DB::transaction(function () use ($image) {
                 $filePath = 'product-images/' . $image->file_name;
 
-                if (Storage::disk('public_uploads')->exists($filePath)) {
-                    Storage::disk('public_uploads')->delete($filePath);
+                if (Storage::disk('supabase')->exists($filePath)) {
+                    Storage::disk('supabase')->delete($filePath);
                 }
 
                 $image->delete();
@@ -248,8 +248,8 @@ new class extends Component {
                     if ($oldThumbnail) {
                         $filePath = 'product-images/' . $oldThumbnail->file_name;
 
-                        if (Storage::disk('public_uploads')->exists($filePath)) {
-                            Storage::disk('public_uploads')->delete($filePath);
+                        if (Storage::disk('supabase')->exists($filePath)) {
+                            Storage::disk('supabase')->delete($filePath);
                         }
 
                         $oldThumbnail->delete();
@@ -257,7 +257,7 @@ new class extends Component {
 
                     $thumbnailName = uniqid() . '_' . microtime(true) . '.' . $validated['newThumbnail']->extension();
 
-                    $validated['newThumbnail']->storeAs('product-images', $thumbnailName, 'public_uploads');
+                    $validated['newThumbnail']->storeAs('product-images', $thumbnailName, 'supabase');
 
                     $product->images()->create([
                         'file_name' => $thumbnailName,
@@ -269,7 +269,7 @@ new class extends Component {
                     foreach ($validated['newImages'] as $image) {
                         $fileName = uniqid() . '_' . microtime(true) . '.' . $image->extension();
 
-                        $image->storeAs('product-images', $fileName, 'public_uploads');
+                        $image->storeAs('product-images', $fileName, 'supabase');
 
                         $product->images()->create([
                             'file_name' => $fileName,
@@ -415,7 +415,7 @@ new class extends Component {
                             class="relative size-28 overflow-hidden rounded-md border-2 border-dashed border-neutral-300"
                         >
                             <img
-                                src="{{ asset('storage/uploads/product-images/' . $form->thumbnail->file_name) }}"
+                                src="{{ supabasePublicUrl($form->thumbnail->file_name) }}"
                                 alt="Gambar thumbnail produk"
                                 class="h-full w-full rounded-md object-cover"
                             />
@@ -873,7 +873,7 @@ new class extends Component {
                                         class="relative aspect-square w-full overflow-hidden rounded-lg border border-neutral-300 shadow"
                                     >
                                         <img
-                                            src="{{ asset('storage/uploads/product-images/' . $image->file_name) }}"
+                                            src="{{ supabasePublicUrl($image->file_name) }}"
                                             alt="Preview Gambar Produk"
                                             class="absolute inset-0 h-full w-full object-cover"
                                         />

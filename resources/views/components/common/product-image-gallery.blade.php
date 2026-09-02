@@ -19,7 +19,7 @@
     <section
         class="relative flex w-full flex-col-reverse gap-2 overflow-y-hidden lg:sticky lg:top-[4.5rem] lg:h-[38rem] lg:w-1/2 lg:flex-row lg:gap-4"
         x-data="productImageGallery(
-                    '{{ asset('storage/uploads/product-images/' . $thumbnail->file_name) }}',
+                    '{{ supabasePublicUrl($thumbnail->file_name) }}',
                 )"
     >
         <div class="relative h-full">
@@ -33,22 +33,22 @@
                     <button
                         class="group size-20 overflow-hidden rounded-xl border transition-colors"
                         :class="{
-                        'border-primary': selectedImage === '{{ asset('storage/uploads/product-images/' . $thumbnail->file_name) }}',
-                        'border-neutral-300 hover:border-primary': selectedImage !== '{{ asset('storage/uploads/product-images/' . $thumbnail->file_name) }}'
+                        'border-primary': selectedImage === '{{ supabasePublicUrl($thumbnail->file_name) }}',
+                        'border-neutral-300 hover:border-primary': selectedImage !== '{{ supabasePublicUrl($thumbnail->file_name) }}'
                     }"
                         aria-label="Tampilkan gambar utama produk {{ $productName }} - 1"
                         x-on:click="
                             selectImage(
-                                '{{ asset('storage/uploads/product-images/' . $thumbnail->file_name) }}',
+                                '{{ supabasePublicUrl($thumbnail->file_name) }}',
                             )
                         "
                     >
                         <img
-                            src="{{ asset('storage/uploads/product-images/' . $thumbnail->file_name) }}"
+                            src="{{ supabasePublicUrl($thumbnail->file_name) }}"
                             class="h-auto w-full object-cover transition-colors"
                             :class="{
-                            'brightness-[0.9]': selectedImage === '{{ asset('storage/uploads/product-images/' . $thumbnail->file_name) }}',
-                            'brightness-100 group-hover:brightness-[0.9]': selectedImage !== '{{ asset('storage/uploads/product-images/' . $thumbnail->file_name) }}'
+                            'brightness-[0.9]': selectedImage === '{{ supabasePublicUrl($thumbnail->file_name) }}',
+                            'brightness-100 group-hover:brightness-[0.9]': selectedImage !== '{{ supabasePublicUrl($thumbnail->file_name) }}'
                         }"
                             alt="Gambar produk {{ $productName }} - 1"
                             loading="lazy"
@@ -61,22 +61,22 @@
                             <button
                                 class="group size-20 overflow-hidden rounded-xl border transition-colors"
                                 :class="{
-                                'border-primary': selectedImage === '{{ asset('storage/uploads/product-images/' . $image->file_name) }}',
-                                'border-neutral-300 hover:border-primary': selectedImage !== '{{ asset('storage/uploads/product-images/' . $image->file_name) }}'
+                                'border-primary': selectedImage === '{{ supabasePublicUrl($image->file_name) }}',
+                                'border-neutral-300 hover:border-primary': selectedImage !== '{{ supabasePublicUrl($image->file_name) }}'
                             }"
                                 aria-label="Tampilkan gambar utama produk {{ $productName . ' - ' . $loop->index + 2 }}"
                                 x-on:click="
                                     selectImage(
-                                        '{{ asset('storage/uploads/product-images/' . $image->file_name) }}',
+                                        '{{ supabasePublicUrl($image->file_name) }}',
                                     )
                                 "
                             >
                                 <img
-                                    src="{{ asset('storage/uploads/product-images/' . $image->file_name) }}"
+                                    src="{{ supabasePublicUrl($image->file_name) }}"
                                     class="h-auto w-full object-cover transition-colors"
                                     :class="{
-                                    'brightness-[0.9]': selectedImage === '{{ asset('storage/uploads/product-images/' . $image->file_name) }}',
-                                    'brightness-100 group-hover:brightness-[0.9]': selectedImage !== '{{ asset('storage/uploads/product-images/' . $image->file_name) }}'
+                                    'brightness-[0.9]': selectedImage === '{{ supabasePublicUrl($image->file_name) }}',
+                                    'brightness-100 group-hover:brightness-[0.9]': selectedImage !== '{{ supabasePublicUrl($image->file_name) }}'
                                 }"
                                     alt="Gambar produk {{ $productName . ' - ' . $loop->index + 2 }}"
                                     loading="lazy"
