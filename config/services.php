@@ -46,4 +46,7 @@ return [
         'webhook_token' => env('XENDIT_WEBHOOK_TOKEN'),
     ],
 
+    'supabase' => [
+        'url' => env('SUPABASE_URL'),
+    ],
 ];
