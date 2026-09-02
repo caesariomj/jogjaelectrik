@@ -13,13 +13,13 @@ use Xendit\Refund\RefundApi;
 
 class PaymentService
 {
-    public string $secretKey;
-
     public function __construct()
     {
-        $this->secretKey = config('services.xendit.secret_key');
+        $secretKey = config('services.xendit.secret_key');
 
-        Configuration::setXenditKey($this->secretKey);
+        if ($secretKey) {
+            Configuration::setXenditKey($secretKey);
+        }
     }
 
     private function findOrderById(string $id)
