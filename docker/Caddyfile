@@ -1,0 +1,11 @@
+{
+    frankenphp
+}
+
+:80 {
+    root * /app/public
+
+    encode gzip
+
+    php_server
+}
