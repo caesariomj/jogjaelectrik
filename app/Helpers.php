@@ -93,3 +93,13 @@ if (! function_exists('extractCourierCode')) {
         return $result;
     }
 }
+
+if (! function_exists('supabasePublicUrl')) {
+    function supabasePublicUrl(string $path): string
+    {
+        return rtrim(config('services.supabase.url'), '/')
+            . '/storage/v1/object/public/'
+            . config('filesystems.disks.supabase.bucket')
+            . '/product-images/' . ltrim($path, '/');
+    }
+}
